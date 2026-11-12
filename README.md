@@ -58,6 +58,15 @@ List mode is a scrollable reading timeline. The sticky progress navigator tracks
 
 ## Landscape and CV content
 
-The timeline now contains the real CV history: early programming, Panta Rhei, Navel Development, ROC Hilversum, GmodStore, Coding College Amsterdam, Q-Lite, Shopify assignments, Fletcher Holdings BV, Fifty Five, the June 2023 Fletcher promotion, Aquablu, Get-E, Appjection, and Navel Cloud. Events have optional `role`, `period`, `location`, `via`, and `tags`, plus a `landmark` art type. Every detail page is generated from that same source.
+The timeline contains the real CV history: early programming, Panta Rhei, Navel Development, ROC Hilversum, GmodStore, Coding College Amsterdam, Q-Lite, Shopify assignments, Fletcher Holdings BV, Fifty Five, Aquablu, Get-E, Appjection, and Navel Cloud. Events have optional `role`, `period`, `location`, `via`, and `tags`, plus a `landmark` art type. Every detail page is generated from that same source.
 
 `data/world.ts` generates level clearings at each event and continuous hillside ramps between them. `terrainHeight` is shared by collision physics, landmark placement, and route generation so the artwork and walkable surface agree. `WorldTerrain.vue` draws the actual surface and rock strata; `WorldAtmosphere.vue` provides clouds, mountains, valley water, two forest depths, and haze; the foreground canopy occludes parts of the world at a faster parallax rate. `ChapterLandmark.vue` supplies original SVG scenery with lit interiors, roof planes, and side faces.
+
+
+## Return travel and mobile gestures
+
+The Fletcher leadership details are included in its main chapter. Short milestone/education events use proximity tooltips and do not interrupt travel with a detail-page prompt.
+
+Swipe left/right anywhere in the world outside controls to move through the timeline. Trackpads and horizontal mouse-wheel input work too (Shift+wheel is supported). Vertical touch scrolling and pinch zoom stay native. Buttons remain available. Reverse input immediately cancels a slide, and the return journey bypasses platforms, ladders, and slide triggers until forward input is given again.
+
+One Tutorial sign appears near the start. The character is a taller, slim pixel silhouette based on the supplied portrait references, with dark textured hair, short facial hair, a black jacket, navy shirt and long trousers. Reference photos are not bundled in the project. The jump shadow is a separate world object projected onto the support below the character, with size/opacity based on height.

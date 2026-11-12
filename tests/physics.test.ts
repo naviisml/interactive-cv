@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stepMotion, cameraTarget, type Motion } from '../app/composables/physics.ts'
+import { stepMotion, cameraTarget, shadowSurface, travelMotion, type Motion } from '../app/composables/physics.ts'
 const initial: Motion = { x: 200, y: 0, vx: 0, vy: 0, grounded: true }
 test('motion is consistent at 30 and 120 fps', () => {
   const run = (fps: number) => { let s = { ...initial }; for(let i=0;i<fps*2;i++) s=stepMotion(s,1,false,1/fps,5000); return s }
@@ -51,8 +51,9 @@ test('ladders climb, hold position, descend and release sideways', () => {
 })
 test('slides carry the character down to the same ground plane', () => {
   let s: Motion = {...initial,x:540,y:-120}
-  const first=stepMotion(s,0,false,1/60,2000,route)
+  const first=stepMotion(s,1,false,1/60,2000,route)
   assert.equal(first.mode,'sliding'); assert.ok(first.x>s.x); assert.ok(first.y>s.y)
+  s=first
   for(let i=0;i<70;i++) s=stepMotion(s,0,false,1/60,2000,route)
   assert.ok(s.x>=780); assert.equal(s.y,0)
 })
@@ -74,4 +75,35 @@ test('walking follows uphill and downhill terrain without hovering or falling th
   assert.ok(s.y < -20)
   for(let i=0;i<100;i++) s=stepMotion(s,0,false,1/60,2000,world)
   assert.equal(s.y,-20)
+})
+
+
+test('reverse input immediately cancels slide velocity and bypasses all obstacles', () => {
+  let s: Motion = {...initial,x:650,y:-65,vx:340,mode:'sliding'}
+  const reversed=stepMotion(s,-1,false,1/60,2000,route)
+  assert.ok(reversed.x<s.x); assert.ok(reversed.vx<0)
+  assert.equal(reversed.returning,true); assert.notEqual(reversed.mode,'sliding')
+  s=reversed
+  for(let i=0;i<150;i++) s=stepMotion(s,-1,false,1/60,2000,route)
+  assert.ok(s.x<300); assert.equal(s.y,0)
+  // Releasing Left cannot reactivate a slide.
+  const stopped=stepMotion({...initial,x:650,y:-65,returning:true},0,false,.05,2000,route)
+  assert.notEqual(stopped.mode,'sliding'); assert.ok(stopped.vx<=0)
+})
+test('forward input re-enables obstacles after a return journey', () => {
+  const s=stepMotion({...initial,x:540,y:-120,returning:true},1,false,.02,2000,route)
+  assert.equal(s.mode,'sliding'); assert.equal(s.returning,false)
+})
+test('touch/trackpad travel works in both directions across slide courses', () => {
+  const forward=travelMotion({...initial,x:540,y:-120},80,2000,route)
+  assert.ok(forward.x>540)
+  const backward=travelMotion(forward,-500,2000,route)
+  assert.ok(backward.x<300); assert.equal(backward.y,0); assert.equal(backward.returning,true)
+  assert.equal(travelMotion({...initial,x:45},-500,2000,route).x,45)
+})
+test('jump shadow stays on its support surface instead of following the character', () => {
+  assert.equal(shadowSurface({...initial,x:200,y:-70,grounded:false},route),0)
+  assert.equal(shadowSurface({...initial,x:200,y:-150,grounded:false},route),0)
+  assert.equal(shadowSurface({...initial,x:400,y:-180,grounded:false},route),-120)
+  assert.equal(shadowSurface({...initial,x:400,y:-180,grounded:false,returning:true},route),0)
 })

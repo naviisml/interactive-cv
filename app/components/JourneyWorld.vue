@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { timeline, eventX, WORLD_WIDTH } from '~/data/timeline'
+import { timeline, eventX, WORLD_WIDTH, isBriefEvent } from '~/data/timeline'
 import { worldGeometry } from '~/data/world'
-import { terrainHeight } from '~/composables/physics'
+import { terrainHeight, shadowSurface } from '~/composables/physics'
 import { readingProgress } from '~/composables/readingProgress'
 const journey = useJourney()
-const { motion, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop } = journey
+const { motion, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance } = journey
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
@@ -14,7 +14,34 @@ const activeIndex = computed(() => listMode.value ? listActive.value : nearestIn
 const displayProgress = computed(() => listMode.value ? listProgress.value : progress.value)
 const current = computed(() => timeline[nearestIndex.value]!)
 const walking = computed(() => Math.abs(motion.vx) > 15 && motion.grounded && motion.mode !== 'sliding')
-const layer = (factor: number) => ({ transform: `translate3d(${-camera.value * factor}px,0,0)` })
+const shadowY = computed(() => shadowSurface(motion,worldGeometry))
+const shadowDistance = computed(() => Math.max(0,shadowY.value-motion.y))
+let gesture: { id: number; startX: number; startY: number; lastX: number; horizontal: boolean } | undefined
+function gestureStart(event: PointerEvent) {
+  if (event.pointerType === 'mouse' || !event.isPrimary || (event.target as HTMLElement)?.closest('button,a,input')) return
+  gesture = { id:event.pointerId,startX:event.clientX,startY:event.clientY,lastX:event.clientX,horizontal:false }
+}
+function gestureMove(event: PointerEvent) {
+  if (!gesture || gesture.id !== event.pointerId) return
+  if (!gesture.horizontal) {
+    const dx=event.clientX-gesture.startX,dy=event.clientY-gesture.startY
+    if (Math.abs(dy)>Math.abs(dx) && Math.abs(dy)>8) { gesture=undefined; return }
+    if (Math.abs(dx)<8) return
+    gesture.horizontal=true
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  }
+  if (event.cancelable) event.preventDefault()
+  scrollByDistance((gesture.lastX-event.clientX)*1.4)
+  gesture.lastX=event.clientX
+}
+function gestureEnd(event: PointerEvent) { if (gesture?.id===event.pointerId) gesture=undefined }
+function wheelTravel(event: WheelEvent) {
+  if (event.ctrlKey || paused.value) return
+  if (Math.abs(event.deltaX)<=Math.abs(event.deltaY) && !event.shiftKey) return
+  const delta=event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX
+  event.preventDefault()
+  scrollByDistance(delta*(event.deltaMode===1 ? 16 : event.deltaMode===2 ? 400 : 1))
+}
 watch(activeIndex, async () => {
   await nextTick()
   const rail = timelineScroll.value
@@ -51,7 +78,7 @@ async function toggleList() {
 function navigateTimeline(index: number) { if (listMode.value) scrollToEvent(index); else goTo(index) }
 function press(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchDirection.value = direction }
 function climb(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchVertical.value = direction }
-function interact(event: KeyboardEvent) { if (!listMode.value && event.key.toLowerCase() === 'e' && nearby.value && !(event.target as HTMLElement)?.closest('button,a,input')) navigateTo(`/events/${nearby.value.id}`) }
+function interact(event: KeyboardEvent) { if (!listMode.value && event.key.toLowerCase() === 'e' && nearby.value && !isBriefEvent(nearby.value) && !(event.target as HTMLElement)?.closest('button,a,input')) navigateTo(`/events/${nearby.value.id}`) }
 onMounted(async () => {
   paused.value = listMode.value
   window.addEventListener('keydown', interact)
@@ -64,7 +91,7 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', interact); window.
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode }">
     <header class="topbar"><NuxtLink class="wordmark" to="/">navi<span>®</span></NuxtLink><span class="topbar-caption">DEVELOPER. BUILDER. STILL CURIOUS.</span><button class="text-button" @click="toggleList">{{ listMode ? '← Back to world' : 'Explore as a list ↗' }}</button></header>
-    <section v-if="!listMode" class="world" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
+    <section v-if="!listMode" class="world" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <WorldAtmosphere :camera="camera" />
       <div class="intro-copy" :style="{ opacity: Math.max(0, 1-camera/500), transform: `translateX(${-camera*.45}px)` }"><p class="eyebrow">THE INTERACTIVE PORTFOLIO</p><h1>A life<br>in progress<span>.</span></h1><p>I’m Navi, a senior software developer<br>from Amsterdam. This is my journey.</p><div class="start-hint"><span>→</span> Every story starts with a step.</div></div>
       <div class="world-content" :style="{ transform: `translate3d(${-camera}px,0,0)`, width: `${WORLD_WIDTH}px` }">
@@ -78,21 +105,23 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', interact); window.
             <path :d="`M 0 10 L ${slide.width} ${slide.from-slide.to+10}`" fill="none" stroke="#c8a67a" stroke-width="7"/>
             <path :d="`M 0 0 L ${slide.width} ${slide.from-slide.to}`" fill="none" stroke="#e4c9a0" stroke-width="3"/>
           </svg>
-          <div v-for="ladder in worldGeometry.ladders" :key="`hint-${ladder.id}`" class="route-sign" :style="{ left: `${ladder.x-20}px`, bottom: `calc(var(--ground-y) + ${ladder.bottom+24}px)` }"><span>↑</span> TAKE THE HIGH ROAD</div>
+          <div class="route-sign tutorial-sign" :style="{ left: '410px', bottom: `calc(var(--ground-y) + ${terrainHeight(410,worldGeometry.terrain)+25}px)` }"><strong>TUTORIAL</strong><span>↔</span> Walk or swipe<br>Space / ↥ to jump<br>↑ ↓ to climb<br><small>Going back? Walk freely.</small></div>
         </div>
         <div v-for="(event, index) in timeline" :key="event.id" class="event-stop" :class="{ active: nearby?.id === event.id }" :style="{ left: `${eventX(index)}px`, '--accent': event.accent, bottom: `calc(var(--ground-y) + ${terrainHeight(eventX(index),worldGeometry.terrain)}px)` }">
           <div class="event-label"><span>{{ event.label }}</span><h2>{{ event.title }}</h2></div>
           <ChapterLandmark :kind="event.landmark" :name="event.title.toUpperCase()" />
           <div class="marker"><i/></div>
-          <NuxtLink class="event-open" :to="`/events/${event.id}`" :tabindex="nearby?.id===event.id ? 0 : -1"><span>{{ event.kind==='project' ? 'Explore project' : 'Read the story' }}</span><kbd>E</kbd><span>↗</span></NuxtLink>
+          <div v-if="isBriefEvent(event) && nearby?.id===event.id" class="event-tooltip" role="status" :aria-label="event.title"><strong>{{ event.period || event.label }}<template v-if="event.location"> · {{ event.location }}</template></strong><p>{{ event.summary }}</p></div>
+          <NuxtLink v-if="!isBriefEvent(event)" class="event-open" :to="`/events/${event.id}`" :tabindex="nearby?.id===event.id ? 0 : -1"><span>{{ event.kind==='project' ? 'Explore project' : 'Read the story' }}</span><kbd>E</kbd><span>↗</span></NuxtLink>
         </div>
+        <div class="player-shadow" :style="{ left: `${motion.x}px`, bottom: `calc(var(--ground-y) - ${shadowY}px)`, transform: `translateX(-50%) scale(${Math.max(.38,1-shadowDistance/330)})`, opacity: Math.max(.12,.4-shadowDistance/650) }" aria-hidden="true" />
         <div class="player" :style="{ left: `${motion.x}px`, transform: `translate(-50%, ${motion.y}px)` }"><div class="player-tag">{{ motion.mode==='sliding' ? 'WHEEE!' : motion.mode==='climbing' ? 'GOING UP' : 'YOU ARE HERE' }}</div><PixelCharacter :walking="walking" :facing="facing" :airborne="!motion.grounded" :climbing="motion.mode==='climbing'" :sliding="motion.mode==='sliding'"/></div>
         <div class="end-sign" :style="{ left: `${WORLD_WIDTH-390}px` }"><p>THE NEXT CHAPTER</p><h2>Let’s write<br>it together.</h2><a class="world-contact" href="mailto:contact@navel.dev">contact@navel.dev ↗</a><button @click="goTo(0)">Back to the beginning ↺</button></div>
       </div>
       <svg class="canopy-foreground" :style="{ transform: `translate3d(${-camera*1.08}px,0,0)`, width: `${WORLD_WIDTH+1700}px` }" :viewBox="`0 0 ${WORLD_WIDTH+1700} 640`" preserveAspectRatio="none" aria-hidden="true"><g v-for="n in Math.ceil(WORLD_WIDTH/1150)+2" :key="n" :transform="`translate(${(n-1)*1150-38} 0)`" fill="#183c3c"><path d="M0 640V0h45l-7 155 20 38-11 9-14-24-9 216 17 36-8 19-11-18-6 209Z"/><path d="M12 55 85 84l55 65-12 5-53-51-60-12ZM25 145l80-36 20-44 10 5-15 53-90 49Z"/><path d="M0 0h170v20h-26v22h-34v22H65v20H20Z" fill="#244c45"/><path d="M10 25h100v14H80v20H40v13H10Z" fill="#355a47"/></g></svg>
       <div class="ground" aria-hidden="true" />
       <aside class="chapter-card"><span class="eyebrow">CHAPTER {{ String(nearestIndex+1).padStart(2,'0') }} / {{ String(timeline.length).padStart(2,'0') }}</span><h3>{{ current.chapter }}</h3><p>{{ nearby ? nearby.summary : 'Keep walking. There’s more to discover.' }}</p></aside>
-      <div class="movement-hint">{{ nearLadder ? '↑ / ↓ Climb the ladder' : motion.mode==='sliding' ? 'Enjoy the ride' : 'Walk, jump, or take the high road' }}</div>
+      <div class="movement-hint">{{ nearLadder ? '↑ / ↓ Climb the ladder' : motion.mode==='sliding' ? 'Enjoy the ride' : 'Swipe ↔ or walk · free return path' }}</div>
       <div class="touch-controls" aria-label="Movement controls">
         <button aria-label="Walk left" @pointerdown.prevent="press(-1,$event)" @pointerup="touchDirection=0" @pointercancel="touchDirection=0" @lostpointercapture="touchDirection=0">←</button>
         <button aria-label="Walk right" @pointerdown.prevent="press(1,$event)" @pointerup="touchDirection=0" @pointercancel="touchDirection=0" @lostpointercapture="touchDirection=0">→</button>
@@ -104,7 +133,7 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', interact); window.
       <div class="list-intro"><p class="eyebrow">THE STORY SO FAR</p><h1>A few moments<br>that made me.</h1><p>Same journey. At your own pace.<br>Scroll to follow the story.</p></div>
       <article v-for="(event,index) in timeline" :key="event.id" :data-timeline-index="index" :id="`chapter-${event.id}`" class="reading-event" :class="{ 'is-current': index===listActive, 'is-past': index<listActive }" :style="{ '--accent': event.accent }">
         <div class="reading-rail"><i/><span>{{ String(index+1).padStart(2,'0') }}</span></div>
-        <div class="reading-content"><p class="eyebrow">{{ event.label }} / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><p v-for="paragraph in event.body" :key="paragraph">{{ paragraph }}</p><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><NuxtLink class="reading-link" :to="`/events/${event.id}`">{{ event.kind==='project' ? 'Explore the project' : 'Open this chapter' }} ↗</NuxtLink></div>
+        <div class="reading-content"><p class="eyebrow">{{ event.label }} / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><template v-if="!isBriefEvent(event)"><p v-for="paragraph in event.body" :key="paragraph">{{ paragraph }}</p></template><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><NuxtLink v-if="!isBriefEvent(event)" class="reading-link" :to="`/events/${event.id}`">{{ event.kind==='project' ? 'Explore the project' : 'Open this chapter' }} ↗</NuxtLink></div>
       </article>
       <div class="list-ending"><span class="eyebrow">THE NEXT CHAPTER</span><h2>Let’s write<br>it together.</h2><p>Have a project in mind? Let’s talk.</p><a class="reading-link" href="mailto:contact@navel.dev">Get in touch ↗</a><br><button class="text-button" @click="toggleList">Step back into the world →</button></div>
     </section>

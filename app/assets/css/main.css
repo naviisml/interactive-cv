@@ -65,3 +65,26 @@
 .end-sign{color:#f2e4bd;text-shadow:0 2px 6px #183e35;bottom:185px}.end-sign h2{font-size:31px}.end-sign button{display:block;margin-top:20px;color:#d2d6b3}.world-contact{font-size:13px;border-bottom:1px solid #b4bf8e;padding-bottom:5px}
 .timeline-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#a7b296 transparent;padding:4px 5px 9px;margin:6px -5px -4px}.timeline-nav{margin-top:10px;gap:0}.timeline-nav button{flex:1;min-width:88px}.timeline-nav button span{max-width:82px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.footer-meta{margin-top:17px}.reading-role,.event-role{color:#536b58;font-weight:500;font-size:14px;line-height:1.8}.reading-role span,.event-role span{color:#7a8571;font-size:12px;font-weight:400}.tech-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:23px}.tech-tags span{font:10px 'Space Grotesk';padding:6px 9px;border:1px solid #cbd1bf;color:#677d62;background:#edf0e4}.event-page article>.event-role{font-size:16px!important}.event-page article>.event-role span{font-size:13px}
 @media(max-width:700px){.world{height:max(640px,calc(100svh - 240px));min-height:640px}.intro-copy{left:9%;top:9%}.intro-copy h1{font-size:58px;letter-spacing:-3.7px}.intro-copy>p:not(.eyebrow){font-size:13px}.start-hint{max-width:190px;line-height:1.6;margin-top:12px}.sky-glow{left:67%;top:45px;width:75px;height:75px}.far-peaks{height:87%}.valley-layer{height:75%}.chapter-card{width:calc(100% - 218px);max-width:140px}.event-label h2{font-size:21px}.event-label{bottom:275px}.timeline-nav button{font-size:8px}.timeline-nav{min-height:30px}.journey-footer{padding-top:16px}.footer-meta{margin-top:13px}.is-list .footer-meta{margin-top:10px}.reading-role{font-size:12px!important}.reading-role span{font-size:10px}}
+
+/* Horizontal gestures belong to the world; vertical scrolling stays with the page. */
+.world{touch-action:pan-y pinch-zoom;user-select:none;-webkit-user-select:none}
+.event-open,.event-tooltip{user-select:text;-webkit-user-select:text}
+.player,.character{width:40px;height:90px}
+.player:after{display:none}
+.player-tag{bottom:102px}
+.player-shadow{position:absolute;width:36px;height:7px;margin-bottom:-4px;background:#0c2628;border-radius:50%;z-index:3;pointer-events:none;transform-origin:center}
+.character .leg{transform-origin:14px 37px}
+.character.walking .leg-a{animation:tall-stride .32s steps(4) infinite alternate}
+.character.walking .leg-b{animation:tall-stride .32s steps(4) infinite alternate-reverse}
+@keyframes tall-stride{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.character.sliding .leg-a{transform:translate(3px,-2px) rotate(-15deg)}
+.tutorial-sign{transform:none;width:145px;padding:10px 9px;font-size:9px;line-height:1.7;text-align:left;z-index:1;box-shadow:3px 4px 0 #163c3233}
+.tutorial-sign strong{font-size:10px;letter-spacing:2px;display:block;color:#f0dda6}
+.tutorial-sign>span{float:right;font-size:25px;line-height:1.2;margin-top:5px}
+.tutorial-sign small{display:block;margin-top:6px;opacity:.8;font-size:8px;line-height:1.5}
+.tutorial-sign:after{height:25px;left:20px}
+.event-tooltip{position:absolute;z-index:7;left:50%;bottom:126px;transform:translateX(-50%);width:260px;max-width:75vw;padding:15px 17px;color:#345247;background:#f2e6ca;border:1px solid #cabb90;box-shadow:5px 5px 0 #183b3444;font-size:12px;line-height:1.7}
+.event-tooltip:after{content:'';position:absolute;left:50%;top:100%;border:8px solid transparent;border-top-color:#f2e6ca}
+.event-tooltip strong{font-family:'Space Grotesk';font-size:10px;font-weight:500;letter-spacing:.5px}
+.event-tooltip p{margin:7px 0 0}
+@media(prefers-reduced-motion:reduce){.character.walking .leg{animation:none}}
