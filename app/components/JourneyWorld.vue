@@ -3,12 +3,14 @@ import { timeline, eventX, WORLD_WIDTH, isBriefEvent } from '~/data/timeline'
 import { worldGeometry } from '~/data/world'
 import { terrainHeight, shadowSurface } from '~/composables/physics'
 import { readingProgress } from '~/composables/readingProgress'
+import { lockSwipeAxis, type SwipeAxis } from '~/composables/swipeDirection'
 const journey = useJourney()
 const { motion, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance } = journey
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 const listRoot = ref<HTMLElement>()
+const worldRoot = ref<HTMLElement>()
 const timelineScroll = ref<HTMLElement>()
 const activeIndex = computed(() => listMode.value ? listActive.value : nearestIndex.value)
 const displayProgress = computed(() => listMode.value ? listProgress.value : progress.value)
@@ -18,7 +20,7 @@ const shadowY = computed(() => shadowSurface(motion,worldGeometry))
 const shadowDistance = computed(() => Math.max(0,shadowY.value-motion.y))
 let gesture: { id: number; startX: number; startY: number; lastX: number; horizontal: boolean } | undefined
 function gestureStart(event: PointerEvent) {
-  if (event.pointerType === 'mouse' || !event.isPrimary || (event.target as HTMLElement)?.closest('button,a,input')) return
+  if (event.pointerType !== 'pen' || !event.isPrimary || (event.target as HTMLElement)?.closest('button,a,input')) return
   gesture = { id:event.pointerId,startX:event.clientX,startY:event.clientY,lastX:event.clientX,horizontal:false }
 }
 function gestureMove(event: PointerEvent) {
@@ -35,6 +37,44 @@ function gestureMove(event: PointerEvent) {
   gesture.lastX=event.clientX
 }
 function gestureEnd(event: PointerEvent) { if (gesture?.id===event.pointerId) gesture=undefined }
+// Native touchmove must be non-passive before the gesture starts: cancelling a
+// PointerEvent alone does not consistently cancel Safari's page-scrolling touch.
+let touchGesture: { id: number; startX: number; startY: number; lastX: number; axis: SwipeAxis } | undefined
+function touchStart(event: TouchEvent) {
+  touchGesture=undefined
+  if (event.touches.length!==1 || (event.target as Element)?.closest('button,a,input,textarea,select')) return
+  const touch=event.touches[0]!
+  touchGesture={id:touch.identifier,startX:touch.clientX,startY:touch.clientY,lastX:touch.clientX,axis:'pending'}
+}
+function touchMove(event: TouchEvent) {
+  if (!touchGesture) return
+  if (event.touches.length!==1) { touchGesture=undefined; return }
+  const touch=Array.from(event.touches).find(t=>t.identifier===touchGesture!.id)
+  if (!touch) { touchGesture=undefined; return }
+  touchGesture.axis=lockSwipeAxis(touchGesture.axis,touch.clientX-touchGesture.startX,touch.clientY-touchGesture.startY)
+  if (touchGesture.axis!=='horizontal') return
+  // Keep cancelling every move after horizontal lock, even when Y drifts later.
+  if (event.cancelable) event.preventDefault()
+  scrollByDistance((touchGesture.lastX-touch.clientX)*1.4)
+  touchGesture.lastX=touch.clientX
+}
+function touchEnd() { touchGesture=undefined }
+function detachTouch(element?: HTMLElement) {
+  if (!element) return
+  element.removeEventListener('touchstart',touchStart)
+  element.removeEventListener('touchmove',touchMove)
+  element.removeEventListener('touchend',touchEnd)
+  element.removeEventListener('touchcancel',touchEnd)
+  touchEnd()
+}
+watch(worldRoot,(element,previous)=>{
+  detachTouch(previous)
+  if (!element) return
+  element.addEventListener('touchstart',touchStart,{passive:true})
+  element.addEventListener('touchmove',touchMove,{passive:false})
+  element.addEventListener('touchend',touchEnd,{passive:true})
+  element.addEventListener('touchcancel',touchEnd,{passive:true})
+},{flush:'post'})
 function wheelTravel(event: WheelEvent) {
   if (event.ctrlKey || paused.value) return
   if (Math.abs(event.deltaX)<=Math.abs(event.deltaY) && !event.shiftKey) return
@@ -86,12 +126,12 @@ onMounted(async () => {
   window.addEventListener('resize', queueListUpdate)
   if (listMode.value) { await nextTick(); scrollToEvent(listActive.value) }
 })
-onBeforeUnmount(() => { window.removeEventListener('keydown', interact); window.removeEventListener('scroll', queueListUpdate); window.removeEventListener('resize', queueListUpdate); cancelAnimationFrame(scrollFrame) })
+onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener('keydown', interact); window.removeEventListener('scroll', queueListUpdate); window.removeEventListener('resize', queueListUpdate); cancelAnimationFrame(scrollFrame) })
 </script>
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode }">
     <header class="topbar"><NuxtLink class="wordmark" to="/">navi<span>®</span></NuxtLink><span class="topbar-caption">DEVELOPER. BUILDER. STILL CURIOUS.</span><button class="text-button" @click="toggleList">{{ listMode ? '← Back to world' : 'Explore as a list ↗' }}</button></header>
-    <section v-if="!listMode" class="world" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
+    <section v-if="!listMode" ref="worldRoot" class="world" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <WorldAtmosphere :camera="camera" />
       <div class="intro-copy" :style="{ opacity: Math.max(0, 1-camera/500), transform: `translateX(${-camera*.45}px)` }"><p class="eyebrow">THE INTERACTIVE PORTFOLIO</p><h1>A life<br>in progress<span>.</span></h1><p>I’m Navi, a senior software developer<br>from Amsterdam. This is my journey.</p><div class="start-hint"><span>→</span> Every story starts with a step.</div></div>
       <div class="world-content" :style="{ transform: `translate3d(${-camera}px,0,0)`, width: `${WORLD_WIDTH}px` }">
