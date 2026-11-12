@@ -84,3 +84,7 @@ The header follows both walking and list progress. The info panel keeps debt, sa
 `terrainPlacement.ts` aligns rocks to the slope and keeps them away from sharp terrain corners. Plants have their own terrain anchors. `WorldCourse.vue` draws decks, posts, ladders, slides, and the single tutorial board in the same world coordinates as the physics; support posts end at the sampled terrain under each post.
 
 The character has four pixel poses selected by distance travelled, with a planted foot baseline. There is no CSS bobbing, whole-body rotation, or competing animation loop. Swipe input is buffered and consumed by the same elapsed-time movement step as keys, at a capped pace; lifting a finger clears pending travel. Decorative courses appear only between selected chapters.
+
+## Connected character rig
+
+`characterRig.ts` computes each upper/lower limb from a shared shoulder or hip and a hand/foot target. Segment lengths remain fixed across the eight-frame walk cycle and the idle, climbing, jumping, falling and sliding actions. This replaces the old unrelated leg polygons and arm translations. Reduced-motion preferences freeze the cycle without moving limbs away from their joints.

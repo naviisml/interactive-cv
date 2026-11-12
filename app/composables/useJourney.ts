@@ -51,7 +51,7 @@ export function useJourney() {
       if (!manualDirection) scrollDistance=consumeSwipeDistance(scrollDistance,motion.x-oldX)
       if (motion.mode==='climbing') strideDistance+=Math.abs(motion.y-oldY)
       else if (motion.grounded && motion.mode!=='sliding') strideDistance+=Math.abs(motion.x-oldX)
-      animationFrame.value = motion.mode==='climbing' || (motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding') ? Math.floor(strideDistance/16)%4 : 0
+      animationFrame.value = motion.mode==='climbing' || (motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding') ? Math.floor(strideDistance/12)%8 : 0
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, WORLD_WIDTH)
       camera.value += (target - camera.value) * (1 - Math.exp(-7 * dt))
