@@ -15,7 +15,7 @@ const detailEvent=computed(()=>detailIndex.value===null?undefined:timeline[detai
 const moneyOpen=ref(false)
 let detailOpener:HTMLElement|undefined
 const journey = useJourney(trackIndices)
-const { worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
+const { cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
@@ -175,15 +175,15 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
       <div class="world-scene" :inert="!!detailEvent">
       <WorldAtmosphere :camera="camera" :world-width="WORLD_WIDTH" :level="activeLevel.id" />
       <div class="intro-copy" :style="{ opacity: Math.max(0,1-Math.abs(motion.x-eventPosition(firstInLevel(activeLevel.id))+610)/650), transform: `translateX(${-(motion.x-eventPosition(firstInLevel(activeLevel.id))+610)*.35}px)` }"><p class="eyebrow">LEVEL {{ levels.indexOf(activeLevel)+1 }} / {{ levels.length }}</p><h1>{{ activeLevel.title }}<span>.</span></h1><p>{{ activeLevel.subtitle }}</p><div class="start-hint">Swipe ↔ or use ← →</div></div>
-      <div class="world-content" :style="{ transform: `translate3d(${-camera}px,0,0)`, width: `${WORLD_WIDTH}px` }">
+      <div class="world-content" :style="{ transform: `translate3d(${-camera}px,${cameraY}px,0)`, width: `${WORLD_WIDTH}px` }">
         <WorldTerrain :geometry="worldGeometry" :width="WORLD_WIDTH" />
         <WorldCourse :geometry="worldGeometry" :width="WORLD_WIDTH" />
         <div v-for="(level,index) in levels" :key="`gateway-${level.id}`" class="level-gateway" :style="{left:`${eventPosition(firstInLevel(level.id))-440}px`,bottom:`calc(var(--ground-y) + ${terrainHeight(eventPosition(firstInLevel(level.id))-440,worldGeometry.terrain)}px)`,'--level-color':level.color}"><span>LEVEL {{ String(index+1).padStart(2,'0') }}</span><strong>{{ level.title }}</strong></div>
         <div v-for="{event,index} in entries" :key="event.id" class="event-stop" :data-category="event.category" :class="{ active: nearby?.id === event.id }" :style="{ left: `${eventPosition(index)}px`, '--accent': categoryColors[event.category], bottom: `calc(var(--ground-y) + ${terrainHeight(eventPosition(index),worldGeometry.terrain)}px)` }">
-          <div class="event-label"><span><i class="category-symbol"/>{{ categoryNames[event.category] }} · {{ event.label }}</span><h2>{{ event.title }}</h2></div>
-          <WorldChapterScene :id="event.id" :active="nearby?.id===event.id" />
+          <div class="event-label"><span><i class="category-symbol"/>{{ categoryNames[event.category] }} · {{ event.label }}</span><h2>{{ event.title }}</h2><p v-if="isBriefEvent(event) && nearby?.id===event.id" class="milestone-summary">{{event.summary}}</p></div>
+          <WorldChapterScene :id="event.id" :active="nearby?.id===event.id" :paused="paused" :player-x="motion.x-eventPosition(index)+300" :player-y="310+motion.y+terrainHeight(eventPosition(index),worldGeometry.terrain)" :velocity="motion.vx" @unlock-route="unlockRoute(event.id)" />
           <div class="marker"><i/></div>
-          <div v-if="isBriefEvent(event) && nearby?.id===event.id" class="event-tooltip" role="status" :aria-label="event.title"><strong>{{ event.period || event.label }}<template v-if="event.location"> · {{ event.location }}</template></strong><p>{{ event.summary }}</p></div>
+
           <button v-if="!isBriefEvent(event) && event.id!=='contact'" @click="openDetail(index)" class="event-open" :tabindex="nearby?.id===event.id ? 0 : -1"><span>{{ event.category==='projects' ? 'View project' : event.category==='skills' ? 'View skills' : 'Read experience' }}</span><kbd>E</kbd><span>↗</span></button>
         </div>
         <div class="player-shadow" :style="{ left: `${motion.x}px`, bottom: `calc(var(--ground-y) - ${shadowY}px)`, transform: `translateX(-50%) scale(${Math.max(.38,1-shadowDistance/330)})`, opacity: Math.max(.12,.4-shadowDistance/650) }" aria-hidden="true" />

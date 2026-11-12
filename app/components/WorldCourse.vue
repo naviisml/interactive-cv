@@ -7,7 +7,7 @@ const base=420
 </script>
 <template>
   <svg class="course-art" :viewBox="`0 0 ${width} ${base}`" :style="{width:`${width}px`}" aria-hidden="true" shape-rendering="crispEdges">
-    <g v-for="p in geometry.platforms" :key="p.id">
+    <g v-for="p in geometry.platforms.filter(platform=>!platform.id.startsWith('portal-'))" :key="p.id">
       <rect v-for="x in [p.x+14,p.x+p.width-20]" :key="x" :x="x" :y="base-p.height+9" width="7" :height="Math.max(0,p.height-groundAt(x)-9)" fill="#687858"/>
       <path :d="`M${p.x+16} ${base-p.height+12} L${p.x+p.width-17} ${base-groundAt(p.x+p.width-17)-12}`" stroke="#607454" stroke-width="5"/>
       <path :d="`M${p.x} ${base-p.height}h${p.width}v10H${p.x}Z`" fill="#5f6950"/>

@@ -3,10 +3,22 @@ import {journeyEvents as timeline} from '~/data/levels'
 import { createWorld } from '~/data/world'
 import {advanceDestination,navigationDuration,type JourneyDestination} from './navigation'
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from './swipeTravel'
+import { portalPlatforms } from './worldActivities'
 import { stepMotion, cameraTarget, findLadder, terrainHeight, type Motion } from './physics'
 export function useJourney(trackIndices: ComputedRef<number[]>) {
   const scene=computed(()=>createWorld(trackIndices.value.length))
-  const worldGeometry=computed(()=>scene.value.geometry)
+  const unlockedRoutes=useState<string[]>('journey-unlocked-routes',()=>[])
+  const worldGeometry=computed(()=>{
+    const geometry=scene.value.geometry
+    const additions=unlockedRoutes.value.flatMap(id=>{
+      const index=timeline.findIndex(event=>event.id===id),slot=trackIndices.value.indexOf(index)
+      if(slot<0)return []
+      const x=eventX(slot),ground=terrainHeight(x,geometry.terrain)
+      return portalPlatforms(x,ground)
+    })
+    return {...geometry,platforms:[...geometry.platforms,...additions]}
+  })
+  function unlockRoute(id:string){if(!unlockedRoutes.value.includes(id))unlockedRoutes.value.push(id)}
   const worldWidth=computed(()=>scene.value.width)
   const eventPosition=(index:number)=>eventX(Math.max(0,trackIndices.value.indexOf(index)))
   const destination=ref<JourneyDestination|null>(null)
@@ -16,7 +28,7 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
   const motion = reactive<Motion>({ ...saved.value, vx: 0, vy: 0 })
   const animationFrame = ref(0)
   let strideDistance=0, lastScrollTime=0
-  const camera = ref(0), viewport = ref(1200), facing = ref(1), paused = ref(false)
+  const camera = ref(0), cameraY=ref(0), viewport = ref(1200), facing = ref(1), paused = ref(false)
   const keys = new Set<string>()
   const touchDirection = ref(0), touchVertical = ref(0)
   let frame = 0, previous = 0, jumpQueued = false, scrollDistance = 0
@@ -38,6 +50,7 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
     const next=indices.reduce((best,i)=>Math.abs(i-previousIndex)<Math.abs(best-previousIndex)?i:best,indices[0]!)
     stop();motion.x=eventPosition(next);motion.y=-terrainHeight(motion.x,worldGeometry.value.terrain);motion.vy=0;motion.grounded=true;motion.mode='walking'
     camera.value=cameraTarget(motion.x,viewport.value,worldWidth.value)
+    cameraY.value=Math.max(0,terrainHeight(motion.x,worldGeometry.value.terrain)-30)
   })
   function scrollByDistance(distance: number) {
     if (paused.value || !Number.isFinite(distance)) return
@@ -85,12 +98,14 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, worldWidth.value)
       camera.value += (target - camera.value) * (1 - Math.exp(-7 * dt))
+      const verticalTarget=Math.max(0,terrainHeight(motion.x,worldGeometry.value.terrain)-30)
+      cameraY.value+=(verticalTarget-cameraY.value)*(1-Math.exp(-4*dt))
     }
     jumpQueued = false
     frame = requestAnimationFrame(tick)
   }
   watch(paused,value=>{if(value)stop()})
-  onMounted(() => { resize(); camera.value = cameraTarget(motion.x, viewport.value, worldWidth.value); window.addEventListener('resize', resize); window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); window.addEventListener('blur', stop); document.addEventListener('visibilitychange', visibility); frame = requestAnimationFrame(tick) })
+  onMounted(() => { resize();cameraY.value=Math.max(0,terrainHeight(motion.x,worldGeometry.value.terrain)-30); camera.value = cameraTarget(motion.x, viewport.value, worldWidth.value); window.addEventListener('resize', resize); window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); window.addEventListener('blur', stop); document.addEventListener('visibilitychange', visibility); frame = requestAnimationFrame(tick) })
   onBeforeUnmount(() => { saved.value = { ...motion, vx: 0, vy: 0 }; cancelAnimationFrame(frame); window.removeEventListener('resize', resize); window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); window.removeEventListener('blur', stop); document.removeEventListener('visibilitychange', visibility); stop() })
-  return { trackIndices,worldGeometry,worldWidth,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel }
+  return { cameraY,unlockRoute,trackIndices,worldGeometry,worldWidth,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel }
 }

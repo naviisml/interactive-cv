@@ -1,15 +1,16 @@
 <script setup lang="ts">
-const props=defineProps<{id:string;active:boolean}>()
-const switched=ref(false)
+const props=defineProps<{id:string;active:boolean;paused:boolean;playerX:number;playerY:number;velocity:number}>()
+const emit=defineEmits<{unlockRoute:[]}>()
+const portalReady=useState('portal-ready',()=>false)
+const switched=computed(()=>props.id==='gmodstore'?portalReady.value:props.active)
+function unlockPortal(){portalReady.value=true;emit('unlockRoute')}
 const scene=computed(()=>props.id.startsWith('skills-')?props.id:props.id)
 const school=computed(()=>['panta-rhei','roc-hilversum','coding-college'].includes(scene.value))
-const actions:Record<string,string>={'first-lines':'Power on','panta-rhei':'Kick the ball','roc-hilversum':'Ring the bell','coding-college':'Run the code','gmodstore':'Open the portal','q-lite':'Start the show','shopify':'Open the market','fifty-five':'Start the fountain','aquablu':'Turn the wheel','get-e':'Clear for takeoff','appjection':'Connect the platforms','navel-cloud':'Bring it online','navel-development':'Light the workshop','skills-backend':'Send a request','skills-frontend':'Change the canvas','skills-infrastructure':'Launch a signal','skills-practice':'Connect the tools','contact':'Light the fire'}
-const responses:Record<string,string>={'first-lines':'Computer on.','panta-rhei':'Nice shot.','roc-hilversum':'Class is in session.','coding-college':'Code compiled.','gmodstore':'Portal open.','q-lite':'Lights on.','shopify':'Open for business.','fifty-five':'Fountain running.','fletcher':'Fountain running.','aquablu':'Water flowing.','get-e':'Cleared for takeoff.','appjection':'Platforms connected.','navel-cloud':'Network online.','navel-development':'Workshop ready.','skills-backend':'200 OK.','skills-frontend':'Canvas updated.','skills-infrastructure':'Signal sent.','skills-practice':'Tools connected.','contact':'Fire lit.'}
-const label=computed(()=>actions[scene.value]||'Switch on')
 </script>
 <template>
- <div class="world-chapter" :class="{'is-powered':switched,'is-near':active}" :data-scene="scene">
- <svg viewBox="0 0 600 310" shape-rendering="crispEdges" aria-hidden="true">
+ <div class="world-chapter" :class="{'is-powered':switched,'is-near':active,'is-paused':paused}" :data-scene="scene">
+ <SchoolWorldScene v-if="school" :id="id" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" :velocity="velocity" />
+ <svg v-else viewBox="0 0 600 310" shape-rendering="crispEdges" aria-hidden="true">
   <!-- The scene is a place on the trail, with a clear path through its centre. -->
   <g v-if="scene==='first-lines'||scene==='contact'">
    <path d="M90 300V125h12v175" fill="#6a6250"/><path d="M96 160 55 118m43 52 46-70" stroke="#6a6250" stroke-width="9"/><path d="M24 114V74h25V45h65v18h39v44h-25v31H55v-24Z" fill="#6e8866"/><path d="M47 76h31V55h35v23h27v24H92v15H47Z" fill="#95a17a"/>
@@ -18,13 +19,6 @@ const label=computed(()=>actions[scene.value]||'Switch on')
     <path d="M167 236h139v9H167m9 0v64m119-64v64" stroke="#7e7056" stroke-width="6" fill="none"/><rect x="195" y="179" width="77" height="52" fill="#344c50"/><rect x="202" y="186" width="63" height="37" :fill="switched?'#91c8b3':'#536b68'"/><path v-if="switched" d="m214 196-8 7 8 7m25-14 8 7-8 7m-11-16-6 20" stroke="#e7e7bc" stroke-width="3" fill="none"/><path d="M230 230v6m-20 0h47" stroke="#344c50" stroke-width="5"/><path d="M182 251h35v9h-35m0 0v47m30-47v47" stroke="#5b6b5a" stroke-width="5"/><rect x="275" y="202" width="20" height="34" fill="#526b65"/>
    </template>
    <template v-else><path d="m235 304 44-11m-43-1 46 13" stroke="#7b6048" stroke-width="9"/><path class="fire" d="m242 292 10-29 9 13 8-33 10 28 9-10 4 32Z" :fill="switched?'#d5a55f':'#8b8061'"/><path d="M331 309V207h7v102" fill="#786b51"/><rect x="319" y="190" width="44" height="27" rx="3" fill="#91a18a"/><path d="M334 196h22v13h-22z" fill="#e5d4ab"/></template>
-  </g>
-  <g v-else-if="school">
-   <path d="M107 307h350m-310-48h220v48H147m110-48v48" stroke="#e2d9b4" stroke-width="3" fill="none" opacity=".6"/>
-   <path d="M129 308V146h6v162" fill="#758878"/><path d="M113 145h57v39h-57Z" fill="#d3c9a2"/><path d="M143 157h19v18h-19Z" fill="none" stroke="#a1835b" stroke-width="3"/><path d="M150 187h32m-28 0 5 21h15l5-21" stroke="#a77d55" stroke-width="3" fill="none"/>
-   <circle class="school-ball" cx="220" cy="296" r="12" fill="#c2996c" stroke="#8a7052" stroke-width="2"/><path d="M208 296h24m-12-12v24" stroke="#8a7052" stroke-width="2" class="ball-lines"/>
-   <path d="M352 233h114v65H352Z" fill="#40695e" stroke="#a7946b" stroke-width="6"/><path v-if="!switched" d="M366 252h67m-67 12h81m-81 12h47" stroke="#bec8a9" stroke-width="3"/><path v-else d="m376 250 13 12-13 12m25 0h34" stroke="#e9d9a7" stroke-width="4" fill="none"/>
-   <path d="M358 300v10m102-10v10" stroke="#796c52" stroke-width="5"/><path d="M287 285h45v8h-45m4 8h36m-32-8v17m27-17v17" stroke="#a48b62" stroke-width="4"/>
   </g>
   <g v-else-if="scene==='gmodstore'">
    <path d="M133 307V192h18v-29h20v-17h20v-13h68v13h20v17h20v29h18v115h-35V199l-19-27h-57l-20 27v108Z" fill="#66747c"/><path d="M151 192h17v-22h24v-21h66v21h24v22h17" fill="none" stroke="#9da1a1" stroke-width="8"/>
@@ -93,13 +87,14 @@ const label=computed(()=>actions[scene.value]||'Switch on')
    </template>
   </g>
  </svg>
- <button class="scene-action" :tabindex="active?0:-1" :aria-pressed="switched" :aria-label="`${label} at ${id}`" @click="switched=!switched"><span aria-hidden="true">{{switched?'◼':'▷'}}</span>{{switched?'Reset':label}}</button>
- <span v-if="switched" class="scene-response" role="status">{{responses[scene]||'Switched on.'}}</span>
+ <PortalWorldActivity v-if="scene==='gmodstore'" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" @unlock="unlockPortal"/>
+ <a v-if="scene==='contact'" class="mailbox-link" href="mailto:contact@navel.dev" :tabindex="active?0:-1" aria-label="Email Navi at contact@navel.dev">contact@navel.dev ↗</a>
  </div>
 </template>
 <style scoped>
-.world-chapter{position:absolute;bottom:0;left:-160px;width:600px;height:310px;pointer-events:none}.world-chapter svg{width:600px;height:310px;overflow:visible}.scene-action{pointer-events:auto;position:absolute;bottom:20px;left:365px;white-space:nowrap;padding:7px 10px;background:#e5ddbf;border:2px solid #7c8c72;box-shadow:3px 3px 0 #344f4940;font:10px 'Space Grotesk',sans-serif;letter-spacing:.4px;opacity:0;transform:translateY(4px);transition:opacity .2s,transform .2s}.is-near .scene-action,.scene-action:focus-visible{opacity:1;transform:none}.scene-action span{margin-right:7px}.scene-response{position:absolute;bottom:72px;left:310px;background:#e8e2ce;padding:8px 12px;font-size:11px;max-width:195px;color:#36554d;border-left:3px solid #8da384}.is-powered .portal-stream{animation:portal 1.8s ease-in-out infinite alternate}.is-powered .aeroplane{animation:takeoff 4s cubic-bezier(.5,0,.4,1) forwards}.is-powered .school-ball,.is-powered .ball-lines{animation:ball 1.5s ease-out forwards}.is-powered .waterwheel{transform-origin:229px 255px;animation:wheel 7s linear infinite}.is-powered .water-lines,.is-powered .fountain{animation:shimmer 1s ease-in-out infinite alternate}.is-powered .data-pulse{animation:pulse 1.4s linear infinite}.is-powered .network-lights{animation:shimmer 1.2s steps(2) infinite}.is-powered .fire{animation:shimmer .4s steps(2) infinite alternate}.is-powered .signal{animation:shimmer 1.6s ease-in-out infinite}.is-powered .stage-beam{animation:shimmer 1.4s ease-in-out infinite alternate}
-@keyframes takeoff{0%{transform:translate(0,0)}25%{transform:translate(35px,0)}100%{transform:translate(570px,-210px)}}@keyframes ball{0%{transform:translate(0,0)}40%{transform:translate(-55px,-125px)}65%{transform:translate(-44px,-85px)}100%{transform:translate(90px,0)}}@keyframes portal{to{opacity:.3;transform:translateY(-5px)}}@keyframes wheel{to{transform:rotate(360deg)}}@keyframes shimmer{from{opacity:.45}to{opacity:1}}@keyframes pulse{to{stroke-dashoffset:-64}}
-.world-chapter:not(.is-near) *{animation-play-state:paused!important}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.is-powered .aeroplane{transform:translate(120px,-50px)}.is-powered .school-ball,.is-powered .ball-lines{transform:translate(90px,0)}}
+.mailbox-link{position:absolute;left:323px;bottom:96px;pointer-events:auto;font-size:10px;background:#e5ddc4;padding:5px 8px;white-space:nowrap;opacity:0}.is-near .mailbox-link,.mailbox-link:focus-visible{opacity:1}
+.world-chapter{position:absolute;bottom:0;left:-160px;width:600px;height:310px;pointer-events:none}.world-chapter svg{width:600px;height:310px;overflow:visible}.is-powered .portal-stream{animation:portal 1.8s ease-in-out infinite alternate}.is-powered .aeroplane{animation:takeoff 4s cubic-bezier(.5,0,.4,1) forwards}.is-powered .waterwheel{transform-origin:229px 255px;animation:wheel 7s linear infinite}.is-powered .water-lines,.is-powered .fountain{animation:shimmer 1s ease-in-out infinite alternate}.is-powered .data-pulse{animation:pulse 1.4s linear infinite}.is-powered .network-lights{animation:shimmer 1.2s steps(2) infinite}.is-powered .fire{animation:shimmer .4s steps(2) infinite alternate}.is-powered .signal{animation:shimmer 1.6s ease-in-out infinite}.is-powered .stage-beam{animation:shimmer 1.4s ease-in-out infinite alternate}
+@keyframes takeoff{0%{transform:translate(0,0)}25%{transform:translate(35px,0)}100%{transform:translate(570px,-210px)}}@keyframes portal{to{opacity:.3;transform:translateY(-5px)}}@keyframes wheel{to{transform:rotate(360deg)}}@keyframes shimmer{from{opacity:.45}to{opacity:1}}@keyframes pulse{to{stroke-dashoffset:-64}}
+.world-chapter:not(.is-near) *,.world-chapter.is-paused *{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.is-powered .aeroplane{transform:translate(120px,-50px)}}
 </style>

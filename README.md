@@ -41,7 +41,7 @@ Horizontal swipes and trackpad scrolling use buffered distance at the same cappe
 
 The avatar has dark hair, short facial hair, a black jacket and longer proportions, based on the supplied references. Reference photos are not bundled. Its shadow is a separate world object projected onto the support below the character.
 
-Regenerate the 24-frame atlas with `npm run sprites:generate`. Set `CHARACTER_REVIEW_DIR` to an absolute temporary directory to also generate a contact sheet and walk frames for review. `public/sprites/walk-preview.gif` is a visual animation sample, not a runtime dependency.
+Regenerate the 32-frame atlas with `npm run sprites:generate`. Set `CHARACTER_REVIEW_DIR` to an absolute temporary directory to also generate a contact sheet and walk frames for review. `public/sprites/walk-preview.gif` is a visual animation sample, not a runtime dependency.
 
 The CSS ground datum `--ground-y` anchors the terrain, character and event scenery on all viewport sizes. Camera and position survive client-side navigation through Nuxt state. No persistent database, CMS, analytics or external game engine is included.
 
@@ -55,6 +55,8 @@ Fonts load from Google Fonts with system fallbacks. Self-host them for a fully o
 
 ## Interactive world scenes
 
-`WorldChapterScene.vue` replaces the repeated landmark buildings in the walking world. The CV content stays in the existing timeline. Each stop has an open scene and a nearby action: schoolyard ball, game portal, stage lights, airport takeoff, market stalls, hotel fountain, waterwheel, workshop, or network garden. Actions can be reset and respect reduced motion. All scene props fit inside the level clearing; background trees stay behind the route.
+`WorldChapterScene.vue` replaces the repeated landmark buildings in the walking world. The CV content stays in the existing timeline. The three schools have distinct activities: a physical football and goal at Panta Rhei, a six-wire circuit puzzle at ROC Hilversum, and a stepping-stone code sequence at Coding College. The portal collects three runes through jumping and unlocks three physical side-route platforms. Other scene objects react to proximity. All scene props fit inside the level clearing; background trees stay behind the route.
 
 The character atlas now has 32 frames: twelve walk, twelve run, four climb and the idle/jump/fall/slide poses. `npm run sprites:generate` regenerates the committed bitmap. Gait phase follows distance travelled, with a grounded stance, lifted recovery foot and running flight poses. Timeline travel has a fixed distance-based pace.
+
+`worldActivities.ts` owns the testable football simulation, circuit tracing, code sequence and platform positions. Activities pause with world dialogs and remain optional. `SchoolWorldScene.vue` supports walking, taps and keyboard focus. `PortalWorldActivity.vue` uses the character’s real bounds for collection. Scene drawings and collisions share world pixels; portal ledges are drawn once by their scene. The vertical camera follows the terrain rather than the character’s jump, keeping elevated scenes in view.

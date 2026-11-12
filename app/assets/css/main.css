@@ -99,3 +99,10 @@
 /* Open scenes keep the walking lane and interaction target clear. */
 .event-stop .event-label{bottom:325px}.event-stop .event-open{bottom:110px}.event-stop .event-tooltip{bottom:110px}.event-stop .marker{opacity:.35}
 @media(max-width:700px){.event-stop .event-label{bottom:315px}.event-stop .event-open{bottom:105px}}
+
+/* Chapter copy stays above the scenery. Small event summaries do not cover controls. */
+.milestone-summary{font-size:11px;line-height:1.5;color:#344f48;background:#e9e3d2ed;padding:7px 10px;margin:0;text-shadow:none;max-width:300px}.event-label{pointer-events:none}.event-stop .event-open{bottom:335px;left:316px;padding:8px 11px;font-size:10px}.event-stop .event-open kbd{display:none}.event-stop .event-label{bottom:340px}.world-chapter{z-index:1}.world-chapter .is-paused{pointer-events:none}
+@media(max-width:700px){.event-stop .event-open{bottom:325px;left:297px}.event-stop .event-label{bottom:340px}.milestone-summary{font-size:10px;max-width:280px}}
+
+.event-stop .event-open{bottom:305px;left:140px;padding:7px 11px}.event-stop .event-label{bottom:340px}
+@media(max-width:700px){.event-stop .event-open{bottom:305px;left:140px}}
