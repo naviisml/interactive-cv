@@ -68,3 +68,9 @@ The character atlas now has 32 frames: twelve walk, twelve run, four climb and t
 `useWorldViewport` observes the actual game area and `worldProjection` computes its scale and viewport in world units. Terrain, props, collisions, avatar and camera share that projection; HUD, touch controls, chapter text and timeline remain outside it. The game shell uses the small viewport height and safe-area padding. `main.css` contains the consolidated application styles instead of successive scene offsets.
 
 Skills scenery has dedicated backend, frontend, infrastructure and Git/CI views. Chapter text is presented in one fixed world caption. Timeline markers use skill names, and climbing controls only appear beside a ladder.
+
+## Artwork and bounded rendering
+
+`StoryWorldScene.vue` and `SkillsWorldScene.vue` use closed primitives for painted surfaces; open paths inherit `fill="none"`. Props sit either side of the walking lane. Database bodies, fountain tiers, benches, shelves and transport props are complete connected objects. Q-Lite uses a travel-information shelter and speaker.
+
+`renderWindow` bounds the visible terrain/course SVG and mounted chapters. `parallaxTiles` repeats finite background tiles instead of stretching layers across the entire journey. Terrain keeps its original 360-pixel surface datum while its clipped view extends to 480 pixels, so ground alignment and collisions remain unchanged. `overflow: clip` prevents focused puzzle controls from scrolling the game container. Automatic destination travel cannot kick the football. Detail/list paragraphs omit repeated summaries, and the contact ending is shown once.

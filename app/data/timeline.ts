@@ -35,3 +35,5 @@ export const WORLD_WIDTH = eventX(timeline.length - 1) + 750
 export const isBriefEvent = (event: TimelineEvent) => event.presentation === 'tooltip' || event.kind === 'milestone'
 
 export const filteredIndexes = (filter: TimelineFilter) => timeline.flatMap((event,index)=>filter==='all'||event.category===filter ? [index] : [])
+
+export function storyParagraphs(event:TimelineEvent){return [...new Set(event.body.map(text=>text.trim()))].filter(text=>text&&text!==event.summary.trim())}

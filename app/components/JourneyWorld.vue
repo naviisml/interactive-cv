@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import {timeline as cvTimeline,isBriefEvent,categoryNames,categoryColors,type TimelineFilter} from '~/data/timeline'
+import {timeline as cvTimeline,isBriefEvent,storyParagraphs,categoryNames,categoryColors,type TimelineFilter} from '~/data/timeline'
 import {journeyEvents as timeline,levels,levelForEvent,firstInLevel,type LevelId} from '~/data/levels'
+import {renderWindow} from '~/composables/worldProjection'
 import {sceneLayout} from '~/data/sceneLayout'
 import { terrainHeight, shadowSurface } from '~/composables/physics'
 import { readingProgress } from '~/composables/readingProgress'
@@ -21,6 +22,8 @@ const activityHints=reactive<Record<string,string>>({})
 const levelNavigation=ref<HTMLElement>()
 const journey = useJourney(trackIndices,view)
 const { cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
+const windowBounds=computed(()=>renderWindow(camera.value,view.value.viewport,WORLD_WIDTH.value))
+const visibleEntries=computed(()=>entries.value.filter(({index})=>eventPosition(index)>=windowBounds.value.start&&eventPosition(index)<=windowBounds.value.end))
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
@@ -178,7 +181,7 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories"><button v-for="filter in filters" :key="filter" :aria-pressed="selectedFilter===filter" :data-category="filter" @click="changeFilter(filter)"><i/><span>{{ filter==='all'?'All':categoryNames[filter] }}</span><small>{{ filteredIndexes(filter).length }}</small></button></nav>
     <section v-if="!listMode" ref="worldRoot" class="world" :style="{'--ground-y':`${view.groundInset}px`}" :class="`level-${activeLevel.id}`" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <div class="world-scene" :inert="!!detailEvent">
-      <WorldAtmosphere :camera="camera" :world-width="WORLD_WIDTH" :level="activeLevel.id" />
+      <WorldAtmosphere :camera="camera*view.scale" :viewport-width="view.viewport*view.scale" :level="activeLevel.id" />
       <header class="world-caption" :class="{'is-intro':!nearby}">
         <p class="caption-meta"><CategoryBadge :category="current.category"/><span v-if="current.label!=='SKILLS'&&current.category!=='contact'">{{current.label}}</span></p>
         <div class="caption-title"><h1>{{nearby?current.title:activeLevel.title}}</h1><button v-if="nearby&&!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" @click="openDetail(nearestIndex)">Details <span aria-hidden="true">↗&#xfe0e;</span></button></div>
@@ -187,12 +190,12 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
         <p v-else-if="nearby&&activityHints[current.id]" class="caption-activity" role="status">{{activityHints[current.id]}}</p>
       </header>
       <div class="world-content" :style="{ transform: `translate3d(${-camera*view.scale}px,${cameraY*view.scale}px,0) scale(${view.scale})`, width: `${WORLD_WIDTH}px` }">
-        <WorldTerrain :geometry="worldGeometry" :width="WORLD_WIDTH" />
-        <WorldCourse :geometry="worldGeometry" :width="WORLD_WIDTH" />
+        <WorldTerrain :geometry="worldGeometry" :width="WORLD_WIDTH" :window="windowBounds" />
+        <WorldCourse :geometry="worldGeometry" :width="WORLD_WIDTH" :window="windowBounds" />
         <div v-for="(level,index) in levels" :key="`gateway-${level.id}`" class="level-gateway" :style="{left:`${eventPosition(firstInLevel(level.id))-440}px`,bottom:`calc(var(--ground-y) + ${terrainHeight(eventPosition(firstInLevel(level.id))-440,worldGeometry.terrain)}px)`,'--level-color':level.color}"><span>LEVEL {{ String(index+1).padStart(2,'0') }}</span><strong>{{ level.title }}</strong></div>
-        <div v-for="{event,index} in entries" :key="event.id" class="event-stop" :data-category="event.category" :class="{ active: nearby?.id === event.id }" :style="{ left: `${eventPosition(index)}px`, '--accent': categoryColors[event.category], bottom: `calc(var(--ground-y) + ${terrainHeight(eventPosition(index),worldGeometry.terrain)}px)` }">
+        <div v-for="{event,index} in visibleEntries" :key="event.id" class="event-stop" :data-category="event.category" :class="{ active: nearby?.id === event.id }" :style="{ left: `${eventPosition(index)}px`, '--accent': categoryColors[event.category], bottom: `calc(var(--ground-y) + ${terrainHeight(eventPosition(index),worldGeometry.terrain)}px)` }">
 
-          <WorldChapterScene :id="event.id" :active="nearby?.id===event.id" :paused="paused" :player-x="motion.x-eventPosition(index)+sceneLayout.originX" :player-y="sceneLayout.height+motion.y+terrainHeight(eventPosition(index),worldGeometry.terrain)" :velocity="motion.vx" @unlock-route="unlockRoute(event.id)" @status="activityHints[event.id]=$event" />
+          <WorldChapterScene :id="event.id" :active="nearby?.id===event.id" :paused="paused" :navigating="running" :player-x="motion.x-eventPosition(index)+sceneLayout.originX" :player-y="sceneLayout.height+motion.y+terrainHeight(eventPosition(index),worldGeometry.terrain)" :velocity="motion.vx" @unlock-route="unlockRoute(event.id)" @status="activityHints[event.id]=$event" />
 
         </div>
         <div class="player-shadow" :style="{ left: `${motion.x}px`, bottom: `calc(var(--ground-y) - ${shadowY}px)`, transform: `translateX(-50%) scale(${Math.max(.38,1-shadowDistance/330)})`, opacity: Math.max(.12,.4-shadowDistance/650) }" aria-hidden="true" />
@@ -216,9 +219,9 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
       <div class="list-intro"><p class="eyebrow">THE STORY SO FAR</p><h1>A few moments<br>that made me.</h1><p>Same journey. At your own pace.<br>Scroll to follow the story.</p></div>
       <article v-for="{event,index} in entries" :key="event.id" :data-timeline-index="index" :id="`chapter-${event.id}`" class="reading-event" :data-category="event.category" :class="{ 'is-current': index===listActive, 'is-past': index<listActive }" :style="{ '--accent': categoryColors[event.category] }">
         <div class="reading-rail"><i/><span>{{ String(trackIndices.indexOf(index)+1).padStart(2,'0') }}</span></div>
-        <div class="reading-content"><p class="eyebrow">{{ categoryNames[event.category] }} / {{ event.label }} / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><template v-if="!isBriefEvent(event)"><p v-for="paragraph in event.body" :key="paragraph">{{ paragraph }}</p></template><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><button v-if="!isBriefEvent(event) && event.id!=='contact'" class="reading-link" @click="openDetail(index)">{{ event.category==='projects' ? 'View project' : event.category==='skills' ? 'View skills' : 'Read experience' }} ↗</button></div>
+        <div class="reading-content"><p class="eyebrow">{{ categoryNames[event.category] }}<template v-if="event.label!=='SKILLS'"> / {{event.label}}</template> / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><template v-if="!isBriefEvent(event)"><p v-for="paragraph in storyParagraphs(event)" :key="paragraph">{{ paragraph }}</p></template><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><button v-if="!isBriefEvent(event) && event.id!=='contact'" class="reading-link" @click="openDetail(index)">{{ event.category==='projects' ? 'View project' : event.category==='skills' ? 'View skills' : 'Read experience' }} ↗</button><a v-if="event.id==='contact'" class="reading-link" href="mailto:contact@navel.dev">contact@navel.dev ↗&#xfe0e;</a></div>
       </article>
-      <div class="list-ending"><span class="eyebrow">THE NEXT CHAPTER</span><h2>Let’s write<br>it together.</h2><p>Have a project in mind? Let’s talk.</p><a class="reading-link" href="mailto:contact@navel.dev">Get in touch ↗</a><br><button class="text-button" @click="toggleList">Step back into the world →</button></div>
+      <div class="list-ending"><button class="text-button" @click="toggleList">Back to the world →</button></div>
     </section>
     <footer class="journey-footer"><div class="footer-heading"><span class="eyebrow">YOUR JOURNEY</span><span>{{ displayProgress }}% {{ listMode ? 'READ' : 'EXPLORED' }}</span></div><div ref="timelineScroll" class="timeline-scroll"><nav class="timeline-nav" aria-label="Jump to a timeline event" :style="{ '--timeline-progress': `${displayProgress}%`, minWidth: `${entries.length*104}px` }"><button v-for="{event,index} in entries" :key="event.id" :aria-label="`${event.title}, ${event.period || event.label}`" :data-category="event.category" :class="{selected:index===activeIndex, visited:trackIndices.indexOf(index)<trackIndices.indexOf(activeIndex)}" :aria-current="index===activeIndex ? 'step' : undefined" @click="navigateTimeline(index)"><i/><span :title="`${event.title} · ${event.period || event.label}`">{{ event.category==='skills'?event.title:event.label }}</span></button></nav></div><div class="footer-meta"><span>{{timeline[activeIndex]?.title}}</span><span>{{String(trackIndices.indexOf(activeIndex)+1).padStart(2,'0')}} / {{entries.length}}</span></div></footer>
   </main>

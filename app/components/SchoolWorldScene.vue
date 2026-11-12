@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {sceneLayout,schoolLayout,circuitLayout,circuitCell,circuitInput,circuitOutput,circuitWire,circuitBattery,circuitLamp,circuitInputLead,circuitOutputLead} from '~/data/sceneLayout'
 import {newFootball,kickFootball,stepFootball,traceCircuit,codeSequence,stepCode} from '~/composables/worldActivities'
-const props=defineProps<{id:string;active:boolean;paused:boolean;playerX:number;playerY:number;velocity:number}>()
+const props=defineProps<{id:string;active:boolean;paused:boolean;playerX:number;playerY:number;velocity:number;navigating?:boolean}>()
 const emit=defineEmits<{status:[message:string]}>()
 const ball=useState('school-football',newFootball),goals=useState('school-goals',()=>0),turns=useState('school-circuit',()=>[3,0,1,2,1,3]),code=useState('school-code',()=>0)
 const circuit=computed(()=>traceCircuit(turns.value))
@@ -16,7 +16,7 @@ function rotate(index:number){if(props.paused||!props.active)return;turns.value[
 function enterPad(index:number){if(props.paused||!props.active||code.value===4)return;const previous=code.value;code.value=stepCode(code.value,padTokens[index]!);feedback.value=code.value===4?'Build passed.':code.value>previous?'':'Start with { again.'}
 watch(()=>[props.playerX,props.playerY,props.velocity,props.active],()=>{
  if(!props.active||props.paused)return
- if(props.id==='panta-rhei'&&Math.abs(props.playerX-ball.value.x)<24&&props.playerY>278&&props.velocity>15)kick()
+ if(props.id==='panta-rhei'&&!props.navigating&&Math.abs(props.playerX-ball.value.x)<24&&props.playerY>278&&props.velocity>15)kick()
  if(props.id==='coding-college'){
   const pad=props.playerY>294?padX.findIndex(x=>Math.abs(x-props.playerX)<27):-1
   if(pad!==standing.value){standing.value=pad;if(pad>=0)enterPad(pad)}

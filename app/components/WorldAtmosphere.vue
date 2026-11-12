@@ -1,27 +1,19 @@
 <script setup lang="ts">
-const props=defineProps<{camera:number;worldWidth:number;level:string}>()
-const width=computed(()=>props.worldWidth+2400)
-const fir = 'M0 0 L-17 28 H-10 L-26 55 H-16 L-34 88 H-23 L-42 122 H42 L23 88 H34 L16 55 H26 L10 28 H17 Z'
+import {parallaxTiles,parallaxOffset} from '~/composables/worldProjection'
+const props=defineProps<{camera:number;viewportWidth:number;level:string}>()
+const tiles=computed(()=>parallaxTiles(props.viewportWidth))
+const shift=(speed:number)=>`translate3d(${parallaxOffset(props.camera,speed)}px,0,0)`
+const fir='0,0 -14,25 -7,25 -23,51 -14,51 -31,80 -20,80 -39,113 39,113 20,80 31,80 14,51 23,51 7,25 14,25'
 </script>
 <template>
-  <div class="atmosphere" :data-level="level" :style="{ '--atmosphere-width': `${width}px` }" aria-hidden="true">
-    <div class="sky-glow"/>
-    <svg class="distant-clouds" preserveAspectRatio="none" viewBox="0 0 6000 400" :style="{ transform: `translate3d(${-camera*.06}px,0,0)` }"><g fill="#fce4be" opacity=".55"><path v-for="n in 15" :key="n" :transform="`translate(${n*390-350} ${25+(n*31%105)}) scale(${.6+n%3*.25})`" d="M0 22h28V12h26V0h48v8h30v14h40v12h-25v7H-10V29H0z"/></g><g fill="#fff5db"><rect v-for="n in 35" :key="n" :x="n*157" :y="n*73%240" width="2" height="2" opacity=".6"/></g></svg>
-    <svg class="depth-layer far-peaks" viewBox="0 0 6000 520" preserveAspectRatio="none" :style="{ transform: `translate3d(${-camera*.13}px,0,0)` }">
-      <defs><linearGradient id="far-mist" x2="0" y2="1"><stop stop-color="#8d9aab"/><stop offset="1" stop-color="#b3b5b0"/></linearGradient></defs>
-      <path fill="url(#far-mist)" d="M0 290 90 265 150 280 320 120 390 175 490 70 610 195 680 180 840 330 1010 245 1190 80 1270 155 1390 25 1550 200 1700 170 1840 315 1980 270 2100 140 2200 190 2360 60 2560 280 2720 210 2880 100 3030 255 3170 175 3300 310 3480 110 3610 155 3780 45 3920 185 4060 150 4230 280 4400 130 4560 220 4700 100 4900 270 5060 170 5200 300 5400 100 5590 250 5800 120 6000 220V520H0Z"/>
-      <g fill="#d9d5c4" opacity=".6"><path d="m490 70-45 61 41-15 17 24 12-32 28 28zM1390 25l-44 65 40-24 26 37 6-40 28 17zM2360 60l-53 73 38-17 16 25 19-42 28 25zM3780 45l-51 72 38-20 20 30 12-44 22 15z"/></g>
-    </svg>
-    <svg class="depth-layer valley-layer" viewBox="0 0 6000 440" preserveAspectRatio="none" :style="{ transform: `translate3d(${-camera*.28}px,0,0)` }">
-      <path fill="#748f91" d="M0 230 140 245 290 200 460 180 600 225 830 275 1020 230 1210 265 1400 200 1580 245 1800 195 2000 250 2250 225 2440 275 2620 220 2810 245 3000 190 3220 250 3420 210 3600 280 3820 230 4000 270 4200 190 4440 240 4650 190 4900 270 5100 230 5340 265 5580 200 5800 250 6000 230V440H0Z"/>
-      <path fill="#476f76" d="M0 350 200 310 460 330 680 300 850 350 1070 320 1260 365 1460 325 1680 350 1860 300 2060 350 2280 330 2480 370 2700 325 2960 350 3200 300 3420 345 3660 315 3890 370 4120 325 4340 350 4560 315 4780 360 5020 320 5260 355 5500 315 5780 360 6000 320V440H0Z"/>
-      <path fill="#aec3b7" opacity=".65" d="M0 385 Q300 315 600 375T1200 380T1800 370T2400 390T3000 380T3600 390T4200 370T4800 390T5400 375T6000 390V440H0Z"/>
-      <g fill="#cce0cc" opacity=".5"><rect v-for="n in 70" :key="n" :x="n*87" :y="390+n*17%40" :width="12+n%4*9" height="2"/></g>
-    </svg>
-    <svg class="depth-layer forest-layer" :viewBox="`0 0 ${width} 420`" preserveAspectRatio="none" :style="{ transform: `translate3d(${-camera*.5}px,0,0)` }"><g v-for="n in Math.ceil(width/118)" :key="n" :transform="`translate(${n*118-130} ${140+n*47%130}) scale(${.65+n%4*.22})`"><path :d="fir" fill="#335f60"/><path d="M0 7V122H42L23 88H34L16 55H26L10 28H17Z" fill="#264d52" opacity=".5"/><rect x="-4" y="115" width="8" height="85" fill="#34564e"/></g><path d="M0 395Q350 340 700 390T1400 380T2100 395T2800 380T3500 390T4200 380T4900 395T5600 380L6000 390V420H0Z" fill="#315b58"/></svg>
-    <svg v-if="level==='work'||level==='company'" class="depth-layer city-layer" :viewBox="`0 0 ${width} 420`" :style="{transform:`translate3d(${-camera*.45}px,0,0)`}" aria-hidden="true"><g v-for="n in Math.ceil(width/150)" :key="n" :transform="`translate(${n*150-100} 0)`"><rect x="0" :y="140+n%4*25" width="95" :height="280-n%4*25" fill="#395e61"/><rect x="4" :y="146+n%4*25" width="12" :height="274-n%4*25" fill="#517374"/><path v-for="row in 5" :key="row" :d="`M25 ${265+row*24}h12m12 0h12m12 0h12`" stroke="#c6c49b" stroke-width="8" opacity=".45"/></g></svg>
-    <svg v-if="level==='skills'" class="depth-layer circuit-layer" viewBox="0 0 1200 500" preserveAspectRatio="none" :style="{transform:`translate3d(${-camera*.08}px,0,0)`}" aria-hidden="true"><g fill="none" stroke="#abc8c3" stroke-width="2" opacity=".4"><path v-for="n in 14" :key="n" :d="`M${n*100} 500v-${150+n%4*65}l60-60v-90h60`"/></g></svg>
-    <div class="distance-haze"/>
-    <svg class="depth-layer near-forest" :viewBox="`0 0 ${width} 460`" :style="{ transform: `translate3d(${-camera*.77}px,0,0)` }"><g v-for="n in Math.ceil(width/380)" :key="n" :transform="`translate(${n*380+30} ${105+n*31%70}) scale(${1.1+n%3*.2})`"><rect x="-7" y="90" width="14" height="260" fill="#294d43"/><path :d="fir" fill="#386c56"/><path :d="fir" transform="translate(0 50) scale(1.1)" fill="#2c5d4d"/><path d="M-30 113 0 100 0 175-15 155z" fill="#477963"/></g></svg>
-  </div>
+ <div class="atmosphere" :data-level="level" :style="{'--atmosphere-width':`${tiles.width}px`}" aria-hidden="true">
+  <div class="sky-glow"/>
+  <svg class="distant-clouds" :viewBox="`0 0 ${tiles.width} 260`" preserveAspectRatio="none" :style="{transform:shift(.06)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`" fill="#f1dfb7" opacity=".45"><polygon points="70,62 70,54 128,54 128,45 193,45 193,52 262,52 262,64 337,64 337,72 62,72 62,62"/><polygon points="640,113 640,104 689,104 689,97 752,97 752,104 817,104 817,115 907,115 907,122 628,122 628,113"/></g></svg>
+  <svg class="depth-layer far-peaks" :viewBox="`0 0 ${tiles.width} 520`" preserveAspectRatio="none" :style="{transform:shift(.13)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`"><polygon points="0,310 85,270 144,286 316,133 395,190 505,77 641,217 715,198 885,338 1055,252 1200,310 1200,520 0,520" fill="#97a8a7"/><polygon points="505,77 460,139 505,123 525,148 537,113 569,146" fill="#bdc8b6" opacity=".7"/></g></svg>
+  <svg class="depth-layer valley-layer" :viewBox="`0 0 ${tiles.width} 420`" preserveAspectRatio="none" :style="{transform:shift(.28)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`"><polygon points="0,280 150,235 330,254 490,288 690,232 902,261 1070,240 1200,280 1200,420 0,420" fill="#6c9189"/><polygon points="0,356 230,340 435,367 650,348 890,366 1200,356 1200,420 0,420" fill="#829f8d"/></g></svg>
+  <svg class="depth-layer forest-layer" :viewBox="`0 0 ${tiles.width} 420`" preserveAspectRatio="none" :style="{transform:shift(.5)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`"><g v-for="(x,i) in [60,220,450,650,860,1090]" :key="x" :transform="`translate(${x} ${155+i%3*26}) scale(${.85+i%3*.18})`"><rect x="-4" y="99" width="8" height="110" fill="#436b58"/><polygon :points="fir" fill="#3c7063"/><polygon points="0,0 0,113 39,113 20,80 31,80 14,51 23,51 7,25 14,25" fill="#315c55"/></g></g></svg>
+  <svg v-if="level==='work'||level==='company'" class="depth-layer city-layer" :viewBox="`0 0 ${tiles.width} 420`" preserveAspectRatio="none" :style="{transform:shift(.43)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`"><g v-for="n in 8" :key="n" :transform="`translate(${35+(n-1)*140} 0)`"><rect x="0" :y="130+n%4*32" width="95" :height="290-n%4*32" fill="#426c67"/><rect x="5" :y="136+n%4*32" width="10" :height="284-n%4*32" fill="#648578"/><g v-for="row in 4" :key="row" fill="#bac09d" opacity=".6"><rect v-for="col in 3" :key="col" :x="22+col*18" :y="285+row*23" width="9" height="6"/></g></g></g></svg>
+  <svg v-if="level==='skills'" class="depth-layer circuit-layer" :viewBox="`0 0 ${tiles.width} 420`" preserveAspectRatio="none" :style="{transform:shift(.08)}"><g v-for="copy in tiles.copies" :key="copy" :transform="`translate(${(copy-1)*1200} 0)`" fill="none" stroke="#b6d0b6" stroke-width="2" opacity=".25"><path v-for="n in 7" :key="n" :d="`M${n*150} 420V${180+n%3*40}l40-40v-80h40`"/></g></svg>
+  <div class="distance-haze"/>
+ </div>
 </template>
