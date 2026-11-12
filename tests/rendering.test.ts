@@ -26,3 +26,16 @@ test('detail copy omits repeated summary paragraphs',()=>{
  const event={summary:'Laravel and Vue.',body:['Laravel and Vue.','Additional detail.','Additional detail.']} as TimelineEvent
  assert.deepEqual(storyParagraphs(event),['Additional detail.'])
 })
+
+test('three-part game shell gives the world the flexible row after the unified header',()=>{
+ const css=fs.readFileSync(new URL('../app/assets/css/main.css',import.meta.url),'utf8')
+ const shell=css.match(/\.journey-shell:not\(\.is-list\)\{([^}]+)\}/)?.[1]
+ assert.ok(shell,'game shell rule exists')
+ assert.match(shell,/grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)\s+auto\s*;/)
+ assert.ok(!/min-height:\s*660px/.test(shell),'short mobile viewports must not force a taller page')
+})
+test('responsive header keeps money counters on their own grid row',()=>{
+ const header=fs.readFileSync(new URL('../app/components/PortfolioHeader.vue',import.meta.url),'utf8')
+ assert.match(header,/grid-template-columns:minmax\(0,1fr\) auto;grid-template-rows:44px 36px/)
+ assert.match(header,/grid-column:1\/-1;grid-row:2/)
+})
