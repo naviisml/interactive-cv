@@ -11,5 +11,5 @@ const frameIndex=computed(()=>spriteFrame(action.value,reduced.value?0:props.fra
 </script>
 <template><div class="navi-pixel" role="img" aria-label="Navi" :style="{transform:`scaleX(${facing})`,backgroundPosition:`${-frameIndex*48}px 0`}"/></template>
 <style scoped>
-.navi-pixel{width:48px;height:96px;background-image:url('/sprites/navi.png');background-size:1152px 96px;background-repeat:no-repeat;image-rendering:pixelated;transform-origin:50% 100%}
+.navi-pixel{width:48px;height:96px;background-image:url('/sprites/navi.png');background-size:1536px 96px;background-repeat:no-repeat;image-rendering:pixelated;transform-origin:50% 100%}
 </style>

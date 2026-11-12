@@ -17,5 +17,5 @@ for(const [fromX,toX] of [[100,1400],[1400,100]])test(`destination travel is con
 })
 test('long journeys retain a bounded running speed instead of accelerating with distance',()=>{
  assert.ok(navigationDuration(15000)>20)
- assert.equal(navigationDuration(1200),2)
+ assert.equal(navigationDuration(1200),1200/360)
 })

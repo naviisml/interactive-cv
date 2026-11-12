@@ -52,3 +52,9 @@ Edit `app/data/finances.json`. Each original CV event ID has debt, savings, a fe
 The header maps each stop to its original CV snapshot even though the levels reorganize the journey. Skills and contact show no financial snapshot. The information panel explains the counters and links to support resources for the Netherlands, Flanders, Germany, the UK and the US, with a manual country selector and browser-locale suggestion.
 
 Fonts load from Google Fonts with system fallbacks. Self-host them for a fully offline build.
+
+## Interactive world scenes
+
+`WorldChapterScene.vue` replaces the repeated landmark buildings in the walking world. The CV content stays in the existing timeline. Each stop has an open scene and a nearby action: schoolyard ball, game portal, stage lights, airport takeoff, market stalls, hotel fountain, waterwheel, workshop, or network garden. Actions can be reset and respect reduced motion. All scene props fit inside the level clearing; background trees stay behind the route.
+
+The character atlas now has 32 frames: twelve walk, twelve run, four climb and the idle/jump/fall/slide poses. `npm run sprites:generate` regenerates the committed bitmap. Gait phase follows distance travelled, with a grounded stance, lifted recovery foot and running flight poses. Timeline travel has a fixed distance-based pace.
