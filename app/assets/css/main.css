@@ -37,3 +37,6 @@
 }
 @media(pointer:coarse){.touch-instruction{display:inline}.desktop-instruction{display:none}}
 @media(prefers-reduced-motion:reduce){.world-content{transition:none}.level-navigation{scroll-behavior:auto}}
+
+.is-list .portfolio-header{position:sticky;top:0}
+@media(max-width:900px){.is-list .journey-filters{top:78px}}

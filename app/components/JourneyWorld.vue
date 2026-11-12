@@ -19,7 +19,6 @@ let detailOpener:HTMLElement|undefined
 const worldRoot = ref<HTMLElement>()
 const view=useWorldViewport(worldRoot)
 const activityHints=reactive<Record<string,string>>({})
-const levelNavigation=ref<HTMLElement>()
 const journey = useJourney(trackIndices,view)
 const { cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
 const windowBounds=computed(()=>renderWindow(camera.value,view.value.viewport,WORLD_WIDTH.value))
@@ -53,7 +52,6 @@ const activeIndex = computed(() => listMode.value ? listActive.value : nearestIn
 const displayProgress = computed(() => listMode.value ? listProgress.value : progress.value)
 const current = computed(() => timeline[nearestIndex.value]!)
 const activeLevel=computed(()=>levelForEvent(activeIndex.value))
-watch(activeLevel,async()=>{await nextTick();const nav=levelNavigation.value,button=nav?.querySelector<HTMLElement>('[aria-current="step"]');if(nav&&button)nav.scrollTo({left:button.offsetLeft-(nav.clientWidth-button.offsetWidth)/2,behavior:'smooth'})})
 const financeIndex=computed(()=>cvTimeline.findIndex(event=>event.id===timeline[activeIndex.value]?.id))
 watch(destination,value=>{if(value||pendingDetailIndex.value===null)return;const index=pendingDetailIndex.value;pendingDetailIndex.value=null;if(Math.abs(motion.x-eventPosition(index))<3)detailIndex.value=index})
 async function navigateLevel(id:LevelId){if(selectedFilter.value!=='all'){await changeFilter('all');await nextTick()}const index=firstInLevel(id);if(listMode.value)scrollToEvent(index);else goTo(index)}
@@ -176,8 +174,7 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
 </script>
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode,'scene-changing':sceneChanging }">
-    <header class="topbar"><NuxtLink class="wordmark" to="/">navi<span>®</span></NuxtLink><span class="topbar-caption">DEVELOPER. BUILDER. STILL CURIOUS.</span><MoneyCounter :index="financeIndex" :context-title="timeline[activeIndex]?.title" @toggle="moneyOpen=$event"/><button class="text-button" @click="toggleList">{{ listMode ? '← Back to world' : 'List view' }}</button></header>
-    <nav ref="levelNavigation" class="level-navigation" aria-label="Portfolio levels"><button v-for="(level,index) in levels" :key="level.id" :class="{active:activeLevel.id===level.id}" :style="{'--level-color':level.color}" :aria-current="activeLevel.id===level.id?'step':undefined" @click="navigateLevel(level.id)"><span>{{ String(index+1).padStart(2,'0') }}</span>{{ level.title }}</button></nav>
+    <PortfolioHeader :active="activeLevel.id" :finance-index="financeIndex" :context-title="timeline[activeIndex]?.title" :list-mode="listMode" @navigate="navigateLevel" @toggle-list="toggleList" @money-toggle="moneyOpen=$event"/>
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories"><button v-for="filter in filters" :key="filter" :aria-pressed="selectedFilter===filter" :data-category="filter" @click="changeFilter(filter)"><i/><span>{{ filter==='all'?'All':categoryNames[filter] }}</span><small>{{ filteredIndexes(filter).length }}</small></button></nav>
     <section v-if="!listMode" ref="worldRoot" class="world" :style="{'--ground-y':`${view.groundInset}px`}" :class="`level-${activeLevel.id}`" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <div class="world-scene" :inert="!!detailEvent">
