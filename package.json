@@ -1,0 +1,22 @@
+{
+  "name": "navi-timeline-engine",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "nuxt": "4.6.4",
+    "vue": "^3.5.0",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.1.0"
+  }
+}
