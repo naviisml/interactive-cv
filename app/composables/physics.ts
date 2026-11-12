@@ -14,7 +14,7 @@ export function terrainHeight(x: number, points: TerrainPoint[] = []): number {
   }
   return points[points.length-1]!.height
 }
-export const motionConfig = { speed: 265, acceleration: 1250, friction: 1550, gravity: 1600, jump: 590, climb: 145, slide: 340 }
+export const motionConfig = { speed: 210, acceleration: 1000, friction: 1550, gravity: 1600, jump: 590, climb: 145, slide: 280 }
 export const slideSurface = (slide: Slide, x: number) => -(slide.from + (slide.to - slide.from) * Math.max(0, Math.min(1, (x - slide.x) / slide.width)))
 export function findLadder(state: Motion, ladders: Ladder[]) {
   return ladders.find(l => Math.abs(state.x - l.x) <= 30 && state.y >= -l.top - 5 && state.y <= -l.bottom + 5)
@@ -73,14 +73,3 @@ export function shadowSurface(state: Motion, world: WorldGeometry): number {
   return Math.min(...surfaces.filter(surface=>surface>=state.y-.5))
 }
 
-// Touch/trackpad travel shares collisions and reverse rules with keyboard movement.
-export function travelMotion(state: Motion, distance: number, width: number, world: WorldGeometry): Motion {
-  const direction = Math.sign(distance)
-  let remaining = Math.abs(distance), next = {...state}
-  while (remaining > .01) {
-    const step = Math.min(8,remaining)
-    next = stepMotion({...next,vx:direction*motionConfig.speed},direction,false,step/motionConfig.speed,width,world)
-    remaining -= step
-  }
-  return next
-}

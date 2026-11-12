@@ -72,3 +72,15 @@ Swipe left/right anywhere in the world outside controls to move through the time
 One Tutorial sign appears near the start. The character is a taller, slim pixel silhouette based on the supplied portrait references, with dark textured hair, short facial hair, a black jacket, navy shirt and long trousers. Reference photos are not bundled in the project. The jump shadow is a separate world object projected onto the support below the character, with size/opacity based on height.
 
 Safari touch scrolling uses a non-passive native `touchmove` listener on the world, installed before interaction starts. A swipe locks to its initial direction: horizontal travel cancels page panning for the rest of that gesture; a vertical start stays native. Pinch gestures, controls, and list-mode scrolling remain separate. Touch listeners are removed when the world is hidden or unmounted.
+
+## Money through the years
+
+Edit `app/data/finances.json`. Each chapter ID has independent `debt` and `savings` balances, a `featured` choice (`debt` or `savings`), and `yearlyIncome`. Amounts are in the root `currency` (EUR by default). `null` means undisclosed; an omitted field carries the previous chapter’s value forward. An income entry must provide `amount`, `year`, and `basis` (`gross` or `net`). Actual balances have intentionally been left unset.
+
+The header follows both walking and list progress. The info panel keeps debt, savings and income separate and links to verified support resources for the Netherlands, Flanders, Germany, the UK and the US. The country selector uses a saved selection or a supported browser-locale region as a suggestion; it does not perform an IP-location lookup.
+
+## Scenery and animation alignment
+
+`terrainPlacement.ts` aligns rocks to the slope and keeps them away from sharp terrain corners. Plants have their own terrain anchors. `WorldCourse.vue` draws decks, posts, ladders, slides, and the single tutorial board in the same world coordinates as the physics; support posts end at the sampled terrain under each post.
+
+The character has four pixel poses selected by distance travelled, with a planted foot baseline. There is no CSS bobbing, whole-body rotation, or competing animation loop. Swipe input is buffered and consumed by the same elapsed-time movement step as keys, at a capped pace; lifting a finger clears pending travel. Decorative courses appear only between selected chapters.

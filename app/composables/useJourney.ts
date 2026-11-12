@@ -1,9 +1,12 @@
 import { timeline, eventX, WORLD_WIDTH } from '~/data/timeline'
 import { worldGeometry } from '~/data/world'
-import { stepMotion, cameraTarget, findLadder, terrainHeight, travelMotion, type Motion } from './physics'
+import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from './swipeTravel'
+import { stepMotion, cameraTarget, findLadder, terrainHeight, type Motion } from './physics'
 export function useJourney() {
   const saved = useState<Motion>('journey-motion', () => ({ x: 170, y: 0, vx: 0, vy: 0, grounded: true, mode: 'walking' }))
   const motion = reactive<Motion>({ ...saved.value, vx: 0, vy: 0 })
+  const animationFrame = ref(0)
+  let strideDistance=0, lastScrollTime=0
   const camera = ref(0), viewport = ref(1200), facing = ref(1), paused = ref(false)
   const keys = new Set<string>()
   const touchDirection = ref(0), touchVertical = ref(0)
@@ -17,10 +20,11 @@ export function useJourney() {
   function goTo(index: number) { if (!timeline[index]) return; stop(); Object.assign(motion, { x: eventX(index), y: -terrainHeight(eventX(index), worldGeometry.terrain), vy: 0, grounded: true, mode: 'walking', returning: false }); saved.value = { ...motion }; camera.value = cameraTarget(motion.x, viewport.value, WORLD_WIDTH) }
   function scrollByDistance(distance: number) {
     if (paused.value || !Number.isFinite(distance)) return
-    if (Math.sign(scrollDistance) !== Math.sign(distance)) scrollDistance = 0
-    scrollDistance = Math.max(-1200,Math.min(1200,scrollDistance+distance))
+    scrollDistance = addSwipeDistance(scrollDistance,distance)
+    lastScrollTime = performance.now()
     keys.clear(); touchDirection.value=0; touchVertical.value=0
   }
+  function endScrollTravel() { scrollDistance=0 }
   function resize() { viewport.value = window.innerWidth }
   function keydown(e: KeyboardEvent) {
     if (paused.value || (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable]')) return
@@ -37,16 +41,17 @@ export function useJourney() {
     const dt = previous ? Math.min((time - previous) / 1000, 0.05) : 0
     previous = time
     if (!paused.value) {
-      const direction = touchDirection.value || Number(keys.has('arrowright') || keys.has('d')) - Number(keys.has('arrowleft') || keys.has('a'))
+      if (time-lastScrollTime>SWIPE_TIMEOUT) scrollDistance=0
+      const manualDirection = touchDirection.value || Number(keys.has('arrowright') || keys.has('d')) - Number(keys.has('arrowleft') || keys.has('a'))
+      const direction = manualDirection || Math.sign(scrollDistance)*.85
       const vertical = touchVertical.value || Number(keys.has('arrowdown') || keys.has('s')) - Number(keys.has('arrowup') || keys.has('w'))
-      if (scrollDistance) {
-        const travel = scrollDistance
-        scrollDistance = 0
-        Object.assign(motion, travelMotion(motion,travel,WORLD_WIDTH,worldGeometry))
-        facing.value = Math.sign(travel)
-      }
-      if (direction) facing.value = direction
+      const oldX=motion.x,oldY=motion.y
+      if (direction) facing.value = Math.sign(direction)
       Object.assign(motion, stepMotion(motion, direction, jumpQueued, dt, WORLD_WIDTH, worldGeometry, vertical))
+      if (!manualDirection) scrollDistance=consumeSwipeDistance(scrollDistance,motion.x-oldX)
+      if (motion.mode==='climbing') strideDistance+=Math.abs(motion.y-oldY)
+      else if (motion.grounded && motion.mode!=='sliding') strideDistance+=Math.abs(motion.x-oldX)
+      animationFrame.value = motion.mode==='climbing' || (motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding') ? Math.floor(strideDistance/16)%4 : 0
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, WORLD_WIDTH)
       camera.value += (target - camera.value) * (1 - Math.exp(-7 * dt))
@@ -57,5 +62,5 @@ export function useJourney() {
   watch(paused, stop)
   onMounted(() => { resize(); camera.value = cameraTarget(motion.x, viewport.value, WORLD_WIDTH); window.addEventListener('resize', resize); window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); window.addEventListener('blur', stop); document.addEventListener('visibilitychange', visibility); frame = requestAnimationFrame(tick) })
   onBeforeUnmount(() => { saved.value = { ...motion, vx: 0, vy: 0 }; cancelAnimationFrame(frame); window.removeEventListener('resize', resize); window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); window.removeEventListener('blur', stop); document.removeEventListener('visibilitychange', visibility); stop() })
-  return { motion, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance }
+  return { motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel }
 }

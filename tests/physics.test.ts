@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stepMotion, cameraTarget, shadowSurface, travelMotion, type Motion } from '../app/composables/physics.ts'
+import { stepMotion, cameraTarget, shadowSurface, type Motion } from '../app/composables/physics.ts'
 const initial: Motion = { x: 200, y: 0, vx: 0, vy: 0, grounded: true }
 test('motion is consistent at 30 and 120 fps', () => {
   const run = (fps: number) => { let s = { ...initial }; for(let i=0;i<fps*2;i++) s=stepMotion(s,1,false,1/fps,5000); return s }
@@ -93,13 +93,6 @@ test('reverse input immediately cancels slide velocity and bypasses all obstacle
 test('forward input re-enables obstacles after a return journey', () => {
   const s=stepMotion({...initial,x:540,y:-120,returning:true},1,false,.02,2000,route)
   assert.equal(s.mode,'sliding'); assert.equal(s.returning,false)
-})
-test('touch/trackpad travel works in both directions across slide courses', () => {
-  const forward=travelMotion({...initial,x:540,y:-120},80,2000,route)
-  assert.ok(forward.x>540)
-  const backward=travelMotion(forward,-500,2000,route)
-  assert.ok(backward.x<300); assert.equal(backward.y,0); assert.equal(backward.returning,true)
-  assert.equal(travelMotion({...initial,x:45},-500,2000,route).x,45)
 })
 test('jump shadow stays on its support surface instead of following the character', () => {
   assert.equal(shadowSurface({...initial,x:200,y:-70,grounded:false},route),0)

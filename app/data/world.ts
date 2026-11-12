@@ -14,9 +14,10 @@ for (let i = 0; i < timeline.length; i++) {
 terrain.push({ x: WORLD_WIDTH - 220, height: 15 }, { x: WORLD_WIDTH, height: 15 })
 export const worldGeometry: WorldGeometry = { terrain, platforms: [], ladders: [], slides: [] }
 for (let i = 0; i < timeline.length - 1; i++) {
+  if (i % 4 !== 0) continue
   const x = eventX(i) + 270
-  const base = terrainHeight(x, terrain)
-  const height = base + 95 + (i % 2) * 30
+  const highestGround = Math.max(...Array.from({length:30},(_,n)=>terrainHeight(x+n*15,terrain)))
+  const height = highestGround + 85
   worldGeometry.platforms.push({ id: `deck-${i}`, x, width: 235, height })
   worldGeometry.ladders.push({ id: `ladder-${i}`, x: x + 35, bottom: terrainHeight(x+35, terrain), top: height })
   worldGeometry.slides.push({ id: `slide-${i}`, x: x+235, width: 200, from: height, to: terrainHeight(x+435, terrain) })
