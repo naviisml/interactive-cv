@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { WORLD_WIDTH } from '~/data/timeline'
-defineProps<{ camera: number }>()
-const width = WORLD_WIDTH + 2400
+const props=defineProps<{camera:number;worldWidth:number}>()
+const width=computed(()=>props.worldWidth+2400)
 const fir = 'M0 0 L-17 28 H-10 L-26 55 H-16 L-34 88 H-23 L-42 122 H42 L23 88 H34 L16 55 H26 L10 28 H17 Z'
 </script>
 <template>

@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { terrain } from '~/data/world'
-import { WORLD_WIDTH } from '~/data/timeline'
+import type {WorldGeometry} from '~/composables/physics'
+const props=defineProps<{geometry:WorldGeometry;width:number}>()
+const terrain=computed(()=>props.geometry.terrain ?? [])
 import { terrainPose, awayFromTerrainCorners } from '~/composables/terrainPlacement'
-const surface = terrain.map(p=>`${p.x},${360-p.height}`).join(' ')
-const polygon = `0,480 ${surface} ${WORLD_WIDTH},480`
-const rocks = Array.from({length:Math.ceil(WORLD_WIDTH/215)},(_,i)=>({x:i*215+85,size:8+(i%3)*3})).filter(r=>awayFromTerrainCorners(r.x,r.size+8,terrain)).map(r=>({...r,...terrainPose(r.x,r.size,terrain)}))
-const plants = Array.from({length:Math.ceil(WORLD_WIDTH/310)},(_,i)=>terrainPose(i*310+225,5,terrain)).filter(p=>awayFromTerrainCorners(p.x,10,terrain))
+const surface=computed(()=>terrain.value.map(p=>`${p.x},${360-p.height}`).join(' '))
+const polygon=computed(()=>`0,480 ${surface.value} ${props.width},480`)
+const rocks = computed(()=>Array.from({length:Math.ceil(props.width/215)},(_,i)=>({x:i*215+85,size:8+(i%3)*3})).filter(r=>awayFromTerrainCorners(r.x,r.size+8,terrain.value)).map(r=>({...r,...terrainPose(r.x,r.size,terrain.value)})))
+const plants = computed(()=>Array.from({length:Math.ceil(props.width/310)},(_,i)=>terrainPose(i*310+225,5,terrain.value)).filter(p=>awayFromTerrainCorners(p.x,10,terrain.value)))
 </script>
 <template>
-  <svg class="terrain-art" :viewBox="`0 0 ${WORLD_WIDTH} 360`" :style="{ width: `${WORLD_WIDTH}px` }" aria-hidden="true">
+  <svg class="terrain-art" :viewBox="`0 0 ${width} 360`" :style="{ width: `${width}px` }" aria-hidden="true">
     <defs>
       <linearGradient id="earth" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#56614e"/><stop offset=".45" stop-color="#374c43"/><stop offset="1" stop-color="#233e3b"/></linearGradient>
       <pattern id="stone-grain" width="88" height="63" patternUnits="userSpaceOnUse"><path d="M10 15h20v4H10zM54 43h28v3H54zM0 58h9v3H0z" fill="#c3b286" opacity=".12"/><path d="M37 26h8v9h-8zM73 6h4v8h-4z" fill="#112f31" opacity=".3"/></pattern>

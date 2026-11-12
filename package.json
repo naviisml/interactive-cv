@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "sprites:generate": "node scripts/generate-character.mjs"
   },
   "dependencies": {
     "nuxt": "4.6.4",

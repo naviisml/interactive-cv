@@ -34,7 +34,7 @@ Movement is continuous in CSS pixels, while artwork uses a fixed pixel grid. Phy
 
 ## Next extensions
 
-Replace the sample avatar/art; move chapter scenery into data-driven scene definitions; add foreground occlusion, audio with explicit opt-in, and custom product layouts. For an editor, replace the timeline import with a CMS/content adapter that validates the same schema and preserves unique IDs. Do not let content execute arbitrary code.
+Replace the sample avatar/art; move chapter scenery into data-driven scene definitions; add audio with explicit opt-in, and custom product layouts. For an editor, replace the timeline import with a CMS/content adapter that validates the same schema and preserves unique IDs. Do not let content execute arbitrary code.
 
 Fonts load from Google Fonts with system fallbacks. Self-host them for a fully offline build. No external image assets or game engine dependencies are required.
 
@@ -60,7 +60,7 @@ List mode is a scrollable reading timeline. The sticky progress navigator tracks
 
 The timeline contains the real CV history: early programming, Panta Rhei, Navel Development, ROC Hilversum, GmodStore, Coding College Amsterdam, Q-Lite, Shopify assignments, Fletcher Holdings BV, Fifty Five, Aquablu, Get-E, Appjection, and Navel Cloud. Events have optional `role`, `period`, `location`, `via`, and `tags`, plus a `landmark` art type. Every detail page is generated from that same source.
 
-`data/world.ts` generates level clearings at each event and continuous hillside ramps between them. `terrainHeight` is shared by collision physics, landmark placement, and route generation so the artwork and walkable surface agree. `WorldTerrain.vue` draws the actual surface and rock strata; `WorldAtmosphere.vue` provides clouds, mountains, valley water, two forest depths, and haze; the foreground canopy occludes parts of the world at a faster parallax rate. `ChapterLandmark.vue` supplies original SVG scenery with lit interiors, roof planes, and side faces.
+`data/world.ts` generates level clearings at each event and continuous hillside ramps between them. `terrainHeight` is shared by collision physics, landmark placement, and route generation so the artwork and walkable surface agree. `WorldTerrain.vue` draws the actual surface and rock strata; `WorldAtmosphere.vue` provides clouds, mountains, valley water, two forest depths, and haze. `ChapterLandmark.vue` supplies original SVG scenery with lit interiors, roof planes, and side faces.
 
 
 ## Return travel and mobile gestures
@@ -83,8 +83,12 @@ The header follows both walking and list progress. The info panel keeps debt, sa
 
 `terrainPlacement.ts` aligns rocks to the slope and keeps them away from sharp terrain corners. Plants have their own terrain anchors. `WorldCourse.vue` draws decks, posts, ladders, slides, and the single tutorial board in the same world coordinates as the physics; support posts end at the sampled terrain under each post.
 
-The character has four pixel poses selected by distance travelled, with a planted foot baseline. There is no CSS bobbing, whole-body rotation, or competing animation loop. Swipe input is buffered and consumed by the same elapsed-time movement step as keys, at a capped pace; lifting a finger clears pending travel. Decorative courses appear only between selected chapters.
+The character uses fixed bitmap action frames, with a planted foot baseline. There is no CSS bobbing, whole-body rotation, or competing animation loop. Swipe input is buffered and consumed by the same elapsed-time movement step as keys, at a capped pace; lifting a finger clears pending travel. Decorative courses appear only between selected chapters.
 
-## Connected character rig
+## Categories, running navigation and in-world details
 
-`characterRig.ts` computes each upper/lower limb from a shared shoulder or hip and a hand/foot target. Segment lengths remain fixed across the eight-frame walk cycle and the idle, climbing, jumping, falling and sliding actions. This replaces the old unrelated leg polygons and arm translations. Reduced-motion preferences freeze the cycle without moving limbs away from their joints.
+Every event has a `category`: `work`, `projects` or `school`. All follows the full chronology. Selecting a category rebuilds a shorter track from that category’s events in the same chronological order, with a short fade to connect the change. Colours, text labels and marker shapes distinguish the categories. Financial context still uses the event’s original chronological index.
+
+Timeline clicks set a running destination. `navigation.ts` moves through intermediate positions along the terrain, eases to a stop, and can be interrupted by movement input or Cancel. It never jumps directly to the selected stop. Character rendering uses committed bitmap frames from `public/sprites/navi.png`; regenerate them with `npm run sprites:generate`. There is no live joint rig or CSS limb animation. Walking, running, jumping, falling, climbing and sliding each use their own frames.
+
+Long chapter details open in `WorldEventPanel.vue`, an overlay bounded by the world. Escape, the close button, or the shaded world outside the panel closes it; keyboard focus returns to the opener. Standalone event URLs remain available through Open full page. Foreground framing trunks have been removed; the background forest remains behind the landmarks.
