@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const props=defineProps<{camera:number;worldWidth:number}>()
+const props=defineProps<{camera:number;worldWidth:number;level:string}>()
 const width=computed(()=>props.worldWidth+2400)
 const fir = 'M0 0 L-17 28 H-10 L-26 55 H-16 L-34 88 H-23 L-42 122 H42 L23 88 H34 L16 55 H26 L10 28 H17 Z'
 </script>
 <template>
-  <div class="atmosphere" :style="{ '--atmosphere-width': `${width}px` }" aria-hidden="true">
+  <div class="atmosphere" :data-level="level" :style="{ '--atmosphere-width': `${width}px` }" aria-hidden="true">
     <div class="sky-glow"/>
     <svg class="distant-clouds" preserveAspectRatio="none" viewBox="0 0 6000 400" :style="{ transform: `translate3d(${-camera*.06}px,0,0)` }"><g fill="#fce4be" opacity=".55"><path v-for="n in 15" :key="n" :transform="`translate(${n*390-350} ${25+(n*31%105)}) scale(${.6+n%3*.25})`" d="M0 22h28V12h26V0h48v8h30v14h40v12h-25v7H-10V29H0z"/></g><g fill="#fff5db"><rect v-for="n in 35" :key="n" :x="n*157" :y="n*73%240" width="2" height="2" opacity=".6"/></g></svg>
     <svg class="depth-layer far-peaks" viewBox="0 0 6000 520" preserveAspectRatio="none" :style="{ transform: `translate3d(${-camera*.13}px,0,0)` }">
@@ -19,6 +19,8 @@ const fir = 'M0 0 L-17 28 H-10 L-26 55 H-16 L-34 88 H-23 L-42 122 H42 L23 88 H34
       <g fill="#cce0cc" opacity=".5"><rect v-for="n in 70" :key="n" :x="n*87" :y="390+n*17%40" :width="12+n%4*9" height="2"/></g>
     </svg>
     <svg class="depth-layer forest-layer" :viewBox="`0 0 ${width} 420`" preserveAspectRatio="none" :style="{ transform: `translate3d(${-camera*.5}px,0,0)` }"><g v-for="n in Math.ceil(width/118)" :key="n" :transform="`translate(${n*118-130} ${140+n*47%130}) scale(${.65+n%4*.22})`"><path :d="fir" fill="#335f60"/><path d="M0 7V122H42L23 88H34L16 55H26L10 28H17Z" fill="#264d52" opacity=".5"/><rect x="-4" y="115" width="8" height="85" fill="#34564e"/></g><path d="M0 395Q350 340 700 390T1400 380T2100 395T2800 380T3500 390T4200 380T4900 395T5600 380L6000 390V420H0Z" fill="#315b58"/></svg>
+    <svg v-if="level==='work'||level==='company'" class="depth-layer city-layer" :viewBox="`0 0 ${width} 420`" :style="{transform:`translate3d(${-camera*.45}px,0,0)`}" aria-hidden="true"><g v-for="n in Math.ceil(width/150)" :key="n" :transform="`translate(${n*150-100} 0)`"><rect x="0" :y="140+n%4*25" width="95" :height="280-n%4*25" fill="#395e61"/><rect x="4" :y="146+n%4*25" width="12" :height="274-n%4*25" fill="#517374"/><path v-for="row in 5" :key="row" :d="`M25 ${265+row*24}h12m12 0h12m12 0h12`" stroke="#c6c49b" stroke-width="8" opacity=".45"/></g></svg>
+    <svg v-if="level==='skills'" class="depth-layer circuit-layer" viewBox="0 0 1200 500" preserveAspectRatio="none" :style="{transform:`translate3d(${-camera*.08}px,0,0)`}" aria-hidden="true"><g fill="none" stroke="#abc8c3" stroke-width="2" opacity=".4"><path v-for="n in 14" :key="n" :d="`M${n*100} 500v-${150+n%4*65}l60-60v-90h60`"/></g></svg>
     <div class="distance-haze"/>
     <svg class="depth-layer near-forest" :viewBox="`0 0 ${width} 460`" :style="{ transform: `translate3d(${-camera*.77}px,0,0)` }"><g v-for="n in Math.ceil(width/380)" :key="n" :transform="`translate(${n*380+30} ${105+n*31%70}) scale(${1.1+n%3*.2})`"><rect x="-7" y="90" width="14" height="260" fill="#294d43"/><path :d="fir" fill="#386c56"/><path :d="fir" transform="translate(0 50) scale(1.1)" fill="#2c5d4d"/><path d="M-30 113 0 100 0 175-15 155z" fill="#477963"/></g></svg>
   </div>

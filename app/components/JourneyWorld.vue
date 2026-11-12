@@ -1,29 +1,31 @@
 <script setup lang="ts">
-import { timeline, isBriefEvent, filteredIndexes, categoryNames, categoryColors, type TimelineFilter } from '~/data/timeline'
+import {timeline as cvTimeline,isBriefEvent,categoryNames,categoryColors,type TimelineFilter} from '~/data/timeline'
+import {journeyEvents as timeline,levels,levelForEvent,firstInLevel,type LevelId} from '~/data/levels'
 import { terrainHeight, shadowSurface } from '~/composables/physics'
 import { readingProgress } from '~/composables/readingProgress'
 import { lockSwipeAxis, type SwipeAxis } from '~/composables/swipeDirection'
 const selectedFilter=useState<TimelineFilter>('journey-category',()=> 'all')
+const filteredIndexes=(filter:TimelineFilter)=>timeline.flatMap((event,index)=>filter==='all'||event.category===filter?[index]:[])
 const trackIndices=computed(()=>filteredIndexes(selectedFilter.value))
 const entries=computed(()=>trackIndices.value.map(index=>({event:timeline[index]!,index})))
-const filters=['all','work','projects','school'] as const
+const filters=['all','work','projects','school','skills'] as const
 const sceneChanging=ref(false)
-const detailIndex=ref<number|null>(null)
+const detailIndex=ref<number|null>(null),pendingDetailIndex=ref<number|null>(null)
 const detailEvent=computed(()=>detailIndex.value===null?undefined:timeline[detailIndex.value])
 const moneyOpen=ref(false)
 let detailOpener:HTMLElement|undefined
 const journey = useJourney(trackIndices)
-const { worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
+const { worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch([listMode,detailIndex,moneyOpen],()=>{paused.value=listMode.value||detailIndex.value!==null||moneyOpen.value},{immediate:true})
-function openDetail(index:number,event?:MouseEvent){
+async function openDetail(index:number,event?:MouseEvent){
  if(event&&(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return
  event?.preventDefault()
- if(isBriefEvent(timeline[index]!))return
+ if(isBriefEvent(timeline[index]!)||timeline[index]!.id==='contact')return
  detailOpener=(event?.currentTarget as HTMLElement)||worldRoot.value
- stop();detailIndex.value=index
+ if(listMode.value){if(selectedFilter.value!=='all')await changeFilter('all');listMode.value=false;pendingDetailIndex.value=index;goTo(index);if(!destination.value){pendingDetailIndex.value=null;detailIndex.value=index}}else{stop();detailIndex.value=index}
 }
 async function closeDetail(){detailIndex.value=null;await nextTick();if(detailOpener?.isConnected)detailOpener.focus();else worldRoot.value?.focus()}
 async function changeFilter(filter:TimelineFilter){
@@ -43,6 +45,10 @@ const timelineScroll = ref<HTMLElement>()
 const activeIndex = computed(() => listMode.value ? listActive.value : nearestIndex.value)
 const displayProgress = computed(() => listMode.value ? listProgress.value : progress.value)
 const current = computed(() => timeline[nearestIndex.value]!)
+const activeLevel=computed(()=>levelForEvent(activeIndex.value))
+const financeIndex=computed(()=>cvTimeline.findIndex(event=>event.id===timeline[activeIndex.value]?.id))
+watch(destination,value=>{if(value||pendingDetailIndex.value===null)return;const index=pendingDetailIndex.value;pendingDetailIndex.value=null;if(Math.abs(motion.x-eventPosition(index))<3)detailIndex.value=index})
+async function navigateLevel(id:LevelId){if(selectedFilter.value!=='all'){await changeFilter('all');await nextTick()}const index=firstInLevel(id);if(listMode.value)scrollToEvent(index);else goTo(index)}
 const walking = computed(() => Math.abs(motion.vx) > 15 && motion.grounded && motion.mode !== 'sliding')
 const shadowY = computed(() => shadowSurface(motion,worldGeometry.value))
 const shadowDistance = computed(() => Math.max(0,shadowY.value-motion.y))
@@ -136,15 +142,18 @@ function scrollToEvent(index: number) {
   queueListUpdate()
 }
 async function toggleList() {
+  detailIndex.value=null;pendingDetailIndex.value=null
   if (listMode.value) {
-    goTo(listActive.value); listMode.value = false; paused.value = false
+    const returnIndex=listActive.value
+    if(selectedFilter.value!=='all')await changeFilter('all')
+    goTo(returnIndex); listMode.value = false; paused.value = false
     await nextTick(); window.scrollTo({ top: 0, behavior: 'instant' })
   } else {
     listActive.value = nearestIndex.value; listMode.value = true; paused.value = true
     await nextTick(); scrollToEvent(listActive.value)
   }
 }
-function navigateTimeline(index: number) { detailIndex.value=null; if (listMode.value) scrollToEvent(index); else goTo(index) }
+function navigateTimeline(index: number) { if (listMode.value) scrollToEvent(index); else goTo(index) }
 function press(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchDirection.value = direction }
 function climb(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchVertical.value = direction }
 function interact(event:KeyboardEvent){if(!listMode.value&&detailIndex.value===null&&event.key.toLowerCase()==='e'&&nearby.value&&!isBriefEvent(nearby.value)&&!(event.target as HTMLElement)?.closest('button,a,input'))openDetail(nearestIndex.value)}
@@ -159,27 +168,30 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
 </script>
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode,'scene-changing':sceneChanging }">
-    <header class="topbar"><NuxtLink class="wordmark" to="/">navi<span>®</span></NuxtLink><span class="topbar-caption">DEVELOPER. BUILDER. STILL CURIOUS.</span><MoneyCounter :index="activeIndex" @toggle="moneyOpen=$event"/><button class="text-button" @click="toggleList">{{ listMode ? '← Back to world' : 'Explore as a list ↗' }}</button></header>
-    <nav class="journey-filters" aria-label="Timeline categories"><button v-for="filter in filters" :key="filter" :aria-pressed="selectedFilter===filter" :data-category="filter" @click="changeFilter(filter)"><i/><span>{{ filter==='all'?'All':categoryNames[filter] }}</span><small>{{ filteredIndexes(filter).length }}</small></button></nav>
-    <section v-if="!listMode" ref="worldRoot" class="world" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
-      <WorldAtmosphere :camera="camera" :world-width="WORLD_WIDTH" />
-      <div class="intro-copy" :style="{ opacity: Math.max(0, 1-camera/500), transform: `translateX(${-camera*.45}px)` }"><p class="eyebrow">THE INTERACTIVE PORTFOLIO</p><h1>A life<br>in progress<span>.</span></h1><p>I’m Navi, a senior software developer<br>from Amsterdam. This is my journey.</p><div class="start-hint">Swipe ↔ or use ← →</div></div>
+    <header class="topbar"><NuxtLink class="wordmark" to="/">navi<span>®</span></NuxtLink><span class="topbar-caption">DEVELOPER. BUILDER. STILL CURIOUS.</span><MoneyCounter :index="financeIndex" :context-title="timeline[activeIndex]?.title" @toggle="moneyOpen=$event"/><button class="text-button" @click="toggleList">{{ listMode ? '← Back to world' : 'Explore as a list ↗' }}</button></header>
+    <nav class="level-navigation" aria-label="Portfolio levels"><button v-for="(level,index) in levels" :key="level.id" :class="{active:activeLevel.id===level.id}" :style="{'--level-color':level.color}" :aria-current="activeLevel.id===level.id?'step':undefined" @click="navigateLevel(level.id)"><span>{{ String(index+1).padStart(2,'0') }}</span>{{ level.title }}</button></nav>
+    <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories"><button v-for="filter in filters" :key="filter" :aria-pressed="selectedFilter===filter" :data-category="filter" @click="changeFilter(filter)"><i/><span>{{ filter==='all'?'All':categoryNames[filter] }}</span><small>{{ filteredIndexes(filter).length }}</small></button></nav>
+    <section v-if="!listMode" ref="worldRoot" class="world" :class="`level-${activeLevel.id}`" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
+      <div class="world-scene" :inert="!!detailEvent">
+      <WorldAtmosphere :camera="camera" :world-width="WORLD_WIDTH" :level="activeLevel.id" />
+      <div class="intro-copy" :style="{ opacity: Math.max(0,1-Math.abs(motion.x-eventPosition(firstInLevel(activeLevel.id))+610)/650), transform: `translateX(${-(motion.x-eventPosition(firstInLevel(activeLevel.id))+610)*.35}px)` }"><p class="eyebrow">LEVEL {{ levels.indexOf(activeLevel)+1 }} / {{ levels.length }}</p><h1>{{ activeLevel.title }}<span>.</span></h1><p>{{ activeLevel.subtitle }}</p><div class="start-hint">Swipe ↔ or use ← →</div></div>
       <div class="world-content" :style="{ transform: `translate3d(${-camera}px,0,0)`, width: `${WORLD_WIDTH}px` }">
         <WorldTerrain :geometry="worldGeometry" :width="WORLD_WIDTH" />
         <WorldCourse :geometry="worldGeometry" :width="WORLD_WIDTH" />
+        <div v-for="(level,index) in levels" :key="`gateway-${level.id}`" class="level-gateway" :style="{left:`${eventPosition(firstInLevel(level.id))-440}px`,bottom:`calc(var(--ground-y) + ${terrainHeight(eventPosition(firstInLevel(level.id))-440,worldGeometry.terrain)}px)`,'--level-color':level.color}"><span>LEVEL {{ String(index+1).padStart(2,'0') }}</span><strong>{{ level.title }}</strong></div>
         <div v-for="{event,index} in entries" :key="event.id" class="event-stop" :data-category="event.category" :class="{ active: nearby?.id === event.id }" :style="{ left: `${eventPosition(index)}px`, '--accent': categoryColors[event.category], bottom: `calc(var(--ground-y) + ${terrainHeight(eventPosition(index),worldGeometry.terrain)}px)` }">
           <div class="event-label"><span><i class="category-symbol"/>{{ categoryNames[event.category] }} · {{ event.label }}</span><h2>{{ event.title }}</h2></div>
           <ChapterLandmark :kind="event.landmark" :name="event.title.toUpperCase()" />
           <div class="marker"><i/></div>
           <div v-if="isBriefEvent(event) && nearby?.id===event.id" class="event-tooltip" role="status" :aria-label="event.title"><strong>{{ event.period || event.label }}<template v-if="event.location"> · {{ event.location }}</template></strong><p>{{ event.summary }}</p></div>
-          <a v-if="!isBriefEvent(event)" @click="openDetail(index,$event)" class="event-open" :href="`/events/${event.id}`" :tabindex="nearby?.id===event.id ? 0 : -1"><span>{{ event.category==='work' ? 'View experience' : 'Explore project' }}</span><kbd>E</kbd><span>↗</span></a>
+          <button v-if="!isBriefEvent(event) && event.id!=='contact'" @click="openDetail(index)" class="event-open" :tabindex="nearby?.id===event.id ? 0 : -1"><span>{{ event.category==='projects' ? 'View project' : event.category==='skills' ? 'View skills' : 'Read experience' }}</span><kbd>E</kbd><span>↗</span></button>
         </div>
         <div class="player-shadow" :style="{ left: `${motion.x}px`, bottom: `calc(var(--ground-y) - ${shadowY}px)`, transform: `translateX(-50%) scale(${Math.max(.38,1-shadowDistance/330)})`, opacity: Math.max(.12,.4-shadowDistance/650) }" aria-hidden="true" />
         <div class="player" :style="{ left: `${motion.x}px`, transform: `translate(-50%, ${motion.y}px)` }"><PixelCharacter :running="running" :falling="motion.vy>=0" :frame="animationFrame" :walking="walking" :facing="facing" :airborne="!motion.grounded" :climbing="motion.mode==='climbing'" :sliding="motion.mode==='sliding'"/></div>
         <div class="end-sign" :style="{ left: `${WORLD_WIDTH-390}px` }"><p>THE NEXT CHAPTER</p><h2>Let’s write<br>it together.</h2><a class="world-contact" href="mailto:contact@navel.dev">contact@navel.dev ↗</a><button @click="goTo(trackIndices[0]!)">Back to the beginning ↺</button></div>
       </div>
       <div class="ground" aria-hidden="true" />
-      <aside class="chapter-card"><span class="eyebrow">CHAPTER {{ String(trackIndices.indexOf(nearestIndex)+1).padStart(2,'0') }} / {{ String(entries.length).padStart(2,'0') }}</span><h3>{{ current.chapter }}</h3><p>{{ current.summary }}</p></aside>
+      <aside class="chapter-card"><span class="eyebrow">{{ activeLevel.title }}</span><h3>{{ current.chapter }}</h3><p>{{ current.summary }}</p></aside>
       <div v-if="running" class="destination-notice"><span>→ {{ destinationTitle }}</span><button @click="stop">Cancel</button></div>
       <div class="movement-hint">{{ nearLadder ? '↑ / ↓ Climb the ladder' : motion.mode==='sliding' ? 'Enjoy the ride' : 'Swipe ↔ · Space / ↥ to jump' }}</div>
       <div class="touch-controls" aria-label="Movement controls">
@@ -188,13 +200,14 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
         <button aria-label="Jump" @pointerdown.prevent="jump">↥</button>
         <div class="climb-controls" :class="{ available: nearLadder }"><button aria-label="Climb up" @pointerdown.prevent="climb(-1,$event)" @pointerup="touchVertical=0" @pointercancel="touchVertical=0" @lostpointercapture="touchVertical=0">↑</button><button aria-label="Climb down" @pointerdown.prevent="climb(1,$event)" @pointerup="touchVertical=0" @pointercancel="touchVertical=0" @lostpointercapture="touchVertical=0">↓</button></div>
       </div>
+      </div>
       <WorldEventPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail"/>
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <div class="list-intro"><p class="eyebrow">THE STORY SO FAR</p><h1>A few moments<br>that made me.</h1><p>Same journey. At your own pace.<br>Scroll to follow the story.</p></div>
       <article v-for="{event,index} in entries" :key="event.id" :data-timeline-index="index" :id="`chapter-${event.id}`" class="reading-event" :data-category="event.category" :class="{ 'is-current': index===listActive, 'is-past': index<listActive }" :style="{ '--accent': categoryColors[event.category] }">
         <div class="reading-rail"><i/><span>{{ String(trackIndices.indexOf(index)+1).padStart(2,'0') }}</span></div>
-        <div class="reading-content"><p class="eyebrow">{{ categoryNames[event.category] }} / {{ event.label }} / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><template v-if="!isBriefEvent(event)"><p v-for="paragraph in event.body" :key="paragraph">{{ paragraph }}</p></template><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><NuxtLink v-if="!isBriefEvent(event)" class="reading-link" :to="`/events/${event.id}`">{{ event.kind==='project' ? 'Explore the project' : 'Open this chapter' }} ↗</NuxtLink></div>
+        <div class="reading-content"><p class="eyebrow">{{ categoryNames[event.category] }} / {{ event.label }} / {{ event.chapter }}</p><h2>{{ event.title }}</h2><p v-if="event.role" class="reading-role">{{ event.role }}<br><span>{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template><template v-if="event.via"> · via {{ event.via }}</template></span></p><p class="reading-summary">{{ event.summary }}</p><template v-if="!isBriefEvent(event)"><p v-for="paragraph in event.body" :key="paragraph">{{ paragraph }}</p></template><div v-if="event.tags?.length" class="tech-tags"><span v-for="tag in event.tags" :key="tag">{{ tag }}</span></div><button v-if="!isBriefEvent(event) && event.id!=='contact'" class="reading-link" @click="openDetail(index)">{{ event.category==='projects' ? 'View project' : event.category==='skills' ? 'View skills' : 'Read experience' }} ↗</button></div>
       </article>
       <div class="list-ending"><span class="eyebrow">THE NEXT CHAPTER</span><h2>Let’s write<br>it together.</h2><p>Have a project in mind? Let’s talk.</p><a class="reading-link" href="mailto:contact@navel.dev">Get in touch ↗</a><br><button class="text-button" @click="toggleList">Step back into the world →</button></div>
     </section>

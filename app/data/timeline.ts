@@ -1,7 +1,7 @@
-export type EventCategory = 'work' | 'projects' | 'school'
+export type EventCategory = 'work' | 'projects' | 'school' | 'skills' | 'contact'
 export type TimelineFilter = EventCategory | 'all'
-export const categoryNames = {work:'Work',projects:'Projects',school:'School'} as const
-export const categoryColors = {work:'#ae7954',projects:'#467f74',school:'#667eaa'} as const
+export const categoryNames = {work:'Work',projects:'Projects',school:'School',skills:'Skills',contact:'Contact'} as const
+export const categoryColors = {work:'#ae7954',projects:'#467f74',school:'#667eaa',skills:'#618b9b',contact:'#b88b69'} as const
 export type Landmark = 'home' | 'school' | 'studio' | 'arcade' | 'station' | 'shop' | 'hotel' | 'office' | 'cloud'
 export interface TimelineEvent {
   category: EventCategory; id: string; label: string; title: string; chapter: string

@@ -1,21 +1,21 @@
-import{test}from'node:test'
-import assert from'node:assert/strict'
-import{advanceDestination,navigationDuration,type JourneyDestination}from'../app/composables/navigation.ts'
-const geometry={terrain:[{x:0,height:0},{x:1000,height:100},{x:2000,height:100}],platforms:[],ladders:[],slides:[]}
-test('timeline navigation travels through intermediate positions and arrives exactly',()=>{
- const nav:JourneyDestination={index:1,fromX:100,fromY:-10,toX:1800,elapsed:0,duration:navigationDuration(1700)}
- let previous=100,done=false
- for(let i=0;i<400;i++){
-  const next=advanceDestination(nav,1/60,geometry)
-  assert.ok(next.motion.x>=previous);assert.ok(next.motion.x-previous<50)
-  previous=next.motion.x
-  if(next.done){done=true;assert.equal(next.motion.x,1800);assert.equal(next.motion.y,-100);break}
+import {test} from 'node:test'
+import assert from 'node:assert/strict'
+import {advanceDestination,navigationDuration} from '../app/composables/navigation.ts'
+import {terrainHeight} from '../app/composables/physics.ts'
+const world={terrain:[{x:0,height:0},{x:500,height:90},{x:1500,height:30}],platforms:[],ladders:[],slides:[]}
+for(const [fromX,toX] of [[100,1400],[1400,100]])test(`destination travel is continuous from ${fromX} to ${toX}`,()=>{
+ const nav={index:0,fromX,fromY:-terrainHeight(fromX,world.terrain),toX,elapsed:0,duration:navigationDuration(toX-fromX)}
+ let previous=fromX,done=false
+ for(let n=0;n<10000&&!done;n++){
+  const next=advanceDestination(nav,1/60,world)
+  assert.ok(Math.abs(next.motion.x-previous)<16)
+  assert.ok((next.motion.x-previous)*Math.sign(toX-fromX)>=0)
+  if(nav.elapsed>.25)assert.ok(Math.abs(next.motion.y+terrainHeight(next.motion.x,world.terrain))<.001)
+  previous=next.motion.x;done=next.done
  }
- assert.equal(done,true)
+ assert.ok(done);assert.equal(previous,toX)
 })
-test('running backward remains continuous and bypasses obstacles',()=>{
- const nav:JourneyDestination={index:0,fromX:1800,fromY:-100,toX:100,elapsed:0,duration:navigationDuration(1700)}
- const next=advanceDestination(nav,1/60,geometry)
- assert.ok(next.motion.x<1800&&next.motion.x>100)
- assert.equal(next.motion.returning,true)
+test('long journeys retain a bounded running speed instead of accelerating with distance',()=>{
+ assert.ok(navigationDuration(15000)>20)
+ assert.equal(navigationDuration(1200),2)
 })

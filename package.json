@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "nuxt typecheck",
-    "sprites:generate": "node scripts/generate-character.mjs"
+    "sprites:generate": "node scripts/build-character.mjs"
   },
   "dependencies": {
     "nuxt": "4.6.4",
@@ -17,6 +17,7 @@
     "vue-router": "5.4.0"
   },
   "devDependencies": {
+    "sharp": "^0.34.5",
     "typescript": "^5.9.0",
     "vue-tsc": "^3.1.0"
   }

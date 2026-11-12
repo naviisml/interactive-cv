@@ -1,4 +1,5 @@
-import { timeline,eventX } from '~/data/timeline'
+import { eventX } from '~/data/timeline'
+import {journeyEvents as timeline} from '~/data/levels'
 import { createWorld } from '~/data/world'
 import {advanceDestination,navigationDuration,type JourneyDestination} from './navigation'
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from './swipeTravel'
@@ -14,7 +15,7 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
   const saved = useState<Motion>('journey-motion', () => ({ x: 170, y: 0, vx: 0, vy: 0, grounded: true, mode: 'walking' }))
   const motion = reactive<Motion>({ ...saved.value, vx: 0, vy: 0 })
   const animationFrame = ref(0)
-  let strideDistance=0, animationTime=0, lastScrollTime=0
+  let strideDistance=0, animationPhase=0, lastScrollTime=0
   const camera = ref(0), viewport = ref(1200), facing = ref(1), paused = ref(false)
   const keys = new Set<string>()
   const touchDirection = ref(0), touchVertical = ref(0)
@@ -80,8 +81,8 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
       if (!manualDirection) scrollDistance=consumeSwipeDistance(scrollDistance,motion.x-oldX)
       if (motion.mode==='climbing') strideDistance+=Math.abs(motion.y-oldY)
       else if (motion.grounded && motion.mode!=='sliding') strideDistance+=Math.abs(motion.x-oldX)
-      animationTime+=dt
-      animationFrame.value = running.value ? Math.floor(animationTime*12)%8 : motion.mode==='climbing' ? Math.floor(strideDistance/12)%4 : motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding' ? Math.floor(strideDistance/16)%8 : 0
+      animationPhase+=dt*(running.value?12:Math.min(10,Math.max(4,Math.abs(motion.vx)/18)))
+      animationFrame.value = running.value ? Math.floor(animationPhase)%8 : motion.mode==='climbing' ? Math.floor(strideDistance/12)%4 : motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding' ? Math.floor(animationPhase)%8 : 0
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, worldWidth.value)
       camera.value += (target - camera.value) * (1 - Math.exp(-7 * dt))

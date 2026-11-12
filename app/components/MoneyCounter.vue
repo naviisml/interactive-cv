@@ -2,7 +2,7 @@
 import data from '~/data/finances.json'
 import { timeline } from '~/data/timeline'
 import { financialSnapshot } from '~/composables/financialSnapshot'
-const props=defineProps<{ index:number }>()
+const props=defineProps<{index:number;contextTitle?:string}>()
 const emit=defineEmits<{ toggle:[open:boolean] }>()
 const dialog=ref<HTMLDialogElement>()
 const selectedCountry=ref('NL')
@@ -36,7 +36,7 @@ onBeforeUnmount(()=>{ if(dialog.value?.open) { dialog.value.close();emit('toggle
         <header><span class="eyebrow">MONEY & WORK</span><button aria-label="Close debt information" @click="close">×</button></header>
         <h2 id="debt-title">Money through the years.</h2>
         <p>{{ data.intro }}</p>
-        <div class="debt-chapter"><span>{{ timeline[index]?.title }}</span><dl><div><dt>Debt</dt><dd>{{ amount(snapshot.debt) }}</dd></div><div><dt>Savings</dt><dd>{{ amount(snapshot.savings) }}</dd></div><div><dt>{{ incomeLabel }}</dt><dd>{{ amount(snapshot.yearlyIncome?.amount ?? null) }}</dd></div></dl></div>
+        <div class="debt-chapter"><span>{{ contextTitle || timeline[index]?.title }}</span><dl><div><dt>Debt</dt><dd>{{ amount(snapshot.debt) }}</dd></div><div><dt>Savings</dt><dd>{{ amount(snapshot.savings) }}</dd></div><div><dt>{{ incomeLabel }}</dt><dd>{{ amount(snapshot.yearlyIncome?.amount ?? null) }}</dd></div></dl></div>
         <h3>Support with debt</h3>
         <p class="debt-support-intro">You don’t have to work it out on your own. These organisations can help you find a starting point.</p>
         <label for="debt-country">Help in</label>
