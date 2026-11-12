@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import {sceneLayout} from '~/data/sceneLayout'
 const props=defineProps<{id:string;active:boolean;paused:boolean;playerX:number;playerY:number;velocity:number}>()
-const emit=defineEmits<{unlockRoute:[]}>()
+const emit=defineEmits<{unlockRoute:[];status:[message:string]}>()
 const portalReady=useState('portal-ready',()=>false)
 const switched=computed(()=>props.id==='gmodstore'?portalReady.value:props.active)
 function unlockPortal(){portalReady.value=true;emit('unlockRoute')}
@@ -8,8 +9,9 @@ const scene=computed(()=>props.id.startsWith('skills-')?props.id:props.id)
 const school=computed(()=>['panta-rhei','roc-hilversum','coding-college'].includes(scene.value))
 </script>
 <template>
- <div class="world-chapter" :class="{'is-powered':switched,'is-near':active,'is-paused':paused}" :data-scene="scene">
- <SchoolWorldScene v-if="school" :id="id" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" :velocity="velocity" />
+ <div class="world-chapter" :class="{'is-powered':switched,'is-near':active,'is-paused':paused}" :data-scene="scene" :style="{left:`${-sceneLayout.originX}px`,width:`${sceneLayout.width}px`,height:`${sceneLayout.height}px`}">
+ <SchoolWorldScene v-if="school" :id="id" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" :velocity="velocity" @status="emit('status',$event)" />
+ <SkillsWorldScene v-else-if="scene.startsWith('skills-')" :id="scene" :active="active"/>
  <svg v-else viewBox="0 0 600 310" shape-rendering="crispEdges" aria-hidden="true">
   <!-- The scene is a place on the trail, with a clear path through its centre. -->
   <g v-if="scene==='first-lines'||scene==='contact'">
@@ -60,22 +62,10 @@ const school=computed(()=>['panta-rhei','roc-hilversum','coding-college'].includ
    <g v-for="(p,i) in [[149,194],[278,148],[406,209]]" :key="i"><path :d="`M${p[0]-13} ${p[1]-28}h32v40h-32Z`" :fill="['#89a69a','#9990a6','#c0a77e'][i]"/><rect :x="p[0]-6" :y="p[1]-21" width="18" height="18" :fill="switched?'#ead4a0':'#536f70'"/></g>
    <path v-if="switched" class="data-pulse" d="m192 222 57-45h75l54 64" stroke="#ecdbac" stroke-width="4" stroke-dasharray="7 18" fill="none"/>
   </g>
-  <g v-else-if="scene==='skills-infrastructure'">
-   <path d="M157 306h271" stroke="#95a38b" stroke-width="6"/><path d="m201 303 41-169 43 169m-65-76h47m-55 38h65m-41-97h15" stroke="#8e9986" stroke-width="6" fill="none"/>
-   <path d="m235 126-26-31q49-23 69 17l-30 22Z" fill="#b3bca6"/><path d="m245 125 19-28" stroke="#5b7f80" stroke-width="4"/>
-   <path d="M356 306v-68h56v68Z" fill="#6b8b85"/><path d="M365 249h38v23h-38Z" :fill="switched?'#d4cf98':'#466b6c'"/>
-   <g class="signal" :opacity="switched?1:.15" fill="none" stroke="#dcc99b" stroke-width="4"><path d="M285 78q39 8 40 46m-31-64q55 10 58 61m-46-80q72 12 77 77"/></g>
-  </g>
-  <g v-else-if="scene==='skills-practice'">
-   <path d="M139 306v-86h302v86m-302-86 22-61h261l19 61" stroke="#8e8b70" stroke-width="6" fill="none"/>
-   <path d="M164 191h252v10H164" fill="#acaa89"/><path d="M187 191v-24h37v24m57 0v-24h37v24m56 0v-24h25v24" :fill="switched?'#e4c78d':'#7a9d92'"/>
-   <path d="M175 262h54v29h-54m28-29v-12h18v12m41 29v-42h44v42m51 0v-30h36v30" fill="#708b7d"/>
-   <path d="m207 232 40 19 43-19 43 19 42-19" :stroke="switched?'#e4c78d':'#809783'" stroke-width="4" fill="none"/>
-  </g>
   <g v-else>
    <!-- Open-air invention gardens: systems become objects rather than office façades. -->
    <path d="M126 306h343" stroke="#8a9f83" stroke-width="5"/>
-   <template v-if="scene==='navel-development'||scene==='skills-frontend'">
+   <template v-if="scene==='navel-development'">
     <path d="M150 258h181v10H150m13 0v40m151-40v40" stroke="#9e8964" stroke-width="6" fill="none"/><path d="M177 258v-61h123v61Z" fill="#415f60"/><path d="M185 205h107v45H185Z" :fill="switched?'#b4c4ac':'#77998e'"/><path :d="switched?'M195 214h24v25h-24m33-25h54v8h-54m0 9h40v8h-40':'M196 216h72m-72 12h46m-46 12h60'" stroke="#e2d2a9" stroke-width="4"/><path d="M353 306v-93h65v93Z" fill="#9ca78c"/><path d="M365 234h41m-41 21h41m-41 21h41" stroke="#677c67" stroke-width="3"/><path d="m367 216 14-21 12 21" stroke="#a28b63" stroke-width="5" fill="none"/>
    </template>
    <template v-else>
@@ -87,13 +77,13 @@ const school=computed(()=>['panta-rhei','roc-hilversum','coding-college'].includ
    </template>
   </g>
  </svg>
- <PortalWorldActivity v-if="scene==='gmodstore'" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" @unlock="unlockPortal"/>
+ <PortalWorldActivity v-if="scene==='gmodstore'" :active="active" :paused="paused" :player-x="playerX" :player-y="playerY" @unlock="unlockPortal" @status="emit('status',$event)"/>
  <a v-if="scene==='contact'" class="mailbox-link" href="mailto:contact@navel.dev" :tabindex="active?0:-1" aria-label="Email Navi at contact@navel.dev">contact@navel.dev ↗</a>
  </div>
 </template>
 <style scoped>
 .mailbox-link{position:absolute;left:323px;bottom:96px;pointer-events:auto;font-size:10px;background:#e5ddc4;padding:5px 8px;white-space:nowrap;opacity:0}.is-near .mailbox-link,.mailbox-link:focus-visible{opacity:1}
-.world-chapter{position:absolute;bottom:0;left:-160px;width:600px;height:310px;pointer-events:none}.world-chapter svg{width:600px;height:310px;overflow:visible}.is-powered .portal-stream{animation:portal 1.8s ease-in-out infinite alternate}.is-powered .aeroplane{animation:takeoff 4s cubic-bezier(.5,0,.4,1) forwards}.is-powered .waterwheel{transform-origin:229px 255px;animation:wheel 7s linear infinite}.is-powered .water-lines,.is-powered .fountain{animation:shimmer 1s ease-in-out infinite alternate}.is-powered .data-pulse{animation:pulse 1.4s linear infinite}.is-powered .network-lights{animation:shimmer 1.2s steps(2) infinite}.is-powered .fire{animation:shimmer .4s steps(2) infinite alternate}.is-powered .signal{animation:shimmer 1.6s ease-in-out infinite}.is-powered .stage-beam{animation:shimmer 1.4s ease-in-out infinite alternate}
+.world-chapter{position:absolute;bottom:0;pointer-events:none}.world-chapter>svg{width:100%;height:100%;overflow:visible}.is-powered .portal-stream{animation:portal 1.8s ease-in-out infinite alternate}.is-powered .aeroplane{animation:takeoff 4s cubic-bezier(.5,0,.4,1) forwards}.is-powered .waterwheel{transform-origin:229px 255px;animation:wheel 7s linear infinite}.is-powered .water-lines,.is-powered .fountain{animation:shimmer 1s ease-in-out infinite alternate}.is-powered .data-pulse{animation:pulse 1.4s linear infinite}.is-powered .network-lights{animation:shimmer 1.2s steps(2) infinite}.is-powered .fire{animation:shimmer .4s steps(2) infinite alternate}.is-powered .signal{animation:shimmer 1.6s ease-in-out infinite}.is-powered .stage-beam{animation:shimmer 1.4s ease-in-out infinite alternate}
 @keyframes takeoff{0%{transform:translate(0,0)}25%{transform:translate(35px,0)}100%{transform:translate(570px,-210px)}}@keyframes portal{to{opacity:.3;transform:translateY(-5px)}}@keyframes wheel{to{transform:rotate(360deg)}}@keyframes shimmer{from{opacity:.45}to{opacity:1}}@keyframes pulse{to{stroke-dashoffset:-64}}
 .world-chapter:not(.is-near) *,.world-chapter.is-paused *{animation-play-state:paused!important}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.is-powered .aeroplane{transform:translate(120px,-50px)}}

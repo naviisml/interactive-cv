@@ -60,3 +60,11 @@ Fonts load from Google Fonts with system fallbacks. Self-host them for a fully o
 The character atlas now has 32 frames: twelve walk, twelve run, four climb and the idle/jump/fall/slide poses. `npm run sprites:generate` regenerates the committed bitmap. Gait phase follows distance travelled, with a grounded stance, lifted recovery foot and running flight poses. Timeline travel has a fixed distance-based pace.
 
 `worldActivities.ts` owns the testable football simulation, circuit tracing, code sequence and platform positions. Activities pause with world dialogs and remain optional. `SchoolWorldScene.vue` supports walking, taps and keyboard focus. `PortalWorldActivity.vue` uses the character’s real bounds for collection. Scene drawings and collisions share world pixels; portal ledges are drawn once by their scene. The vertical camera follows the terrain rather than the character’s jump, keeping elevated scenes in view.
+
+## Scene layout and viewport projection
+
+`app/data/sceneLayout.ts` defines the world-pixel frame, actor clearance, school panels, circuit tile positions, ports and both terminal leads. Circuit tracing and SVG paths use the same port function; there is no separate CSS grid to align. Important panel content sits above the actor's walking silhouette.
+
+`useWorldViewport` observes the actual game area and `worldProjection` computes its scale and viewport in world units. Terrain, props, collisions, avatar and camera share that projection; HUD, touch controls, chapter text and timeline remain outside it. The game shell uses the small viewport height and safe-area padding. `main.css` contains the consolidated application styles instead of successive scene offsets.
+
+Skills scenery has dedicated backend, frontend, infrastructure and Git/CI views. Chapter text is presented in one fixed world caption. Timeline markers use skill names, and climbing controls only appear beside a ladder.

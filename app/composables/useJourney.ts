@@ -5,7 +5,7 @@ import {advanceDestination,navigationDuration,type JourneyDestination} from './n
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from './swipeTravel'
 import { portalPlatforms } from './worldActivities'
 import { stepMotion, cameraTarget, findLadder, terrainHeight, type Motion } from './physics'
-export function useJourney(trackIndices: ComputedRef<number[]>) {
+export function useJourney(trackIndices: ComputedRef<number[]>,view?:ComputedRef<{viewport:number;scale:number}>) {
   const scene=computed(()=>createWorld(trackIndices.value.length))
   const unlockedRoutes=useState<string[]>('journey-unlocked-routes',()=>[])
   const worldGeometry=computed(()=>{
@@ -55,14 +55,15 @@ export function useJourney(trackIndices: ComputedRef<number[]>) {
   function scrollByDistance(distance: number) {
     if (paused.value || !Number.isFinite(distance)) return
     destination.value=null
-    scrollDistance = addSwipeDistance(scrollDistance,distance)
+    scrollDistance = addSwipeDistance(scrollDistance,distance/(view?.value.scale??1))
     lastScrollTime = performance.now()
     keys.clear(); touchDirection.value=0; touchVertical.value=0
   }
   function endScrollTravel() { scrollDistance=0 }
-  function resize() { viewport.value = window.innerWidth }
+  function resize() { viewport.value = view?.value.viewport ?? window.innerWidth }
+  if(view)watch(view,resize)
   function keydown(e: KeyboardEvent) {
-    if (paused.value || (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable]')) return
+    if (paused.value || (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable], [data-world-activity]')) return
     if (e.key === ' ' && (e.target as HTMLElement)?.closest('button, a')) return
     const key = e.key.toLowerCase()
     if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', ' ', 'a', 'd', 'w', 's'].includes(key)) {

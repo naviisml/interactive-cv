@@ -1,3 +1,4 @@
+import {circuitPorts} from '../data/sceneLayout.ts'
 export interface Football {x:number;y:number;vx:number;vy:number;scored:boolean;settled:boolean}
 export const newFootball=():Football=>({x:266,y:299,vx:0,vy:0,scored:false,settled:true})
 export function kickFootball(ball:Football,speed=205):Football {
@@ -19,7 +20,7 @@ export function traceCircuit(turns:number[]):{lit:number[];complete:boolean} {
  const lit:number[]=[],seen=new Set<number>();let cell=0,incoming=3
  for(let count=0;count<8;count++){
   if(cell<0||cell>=6||seen.has(cell))break
-  const rotation=((turns[cell]??0)%4+4)%4,ports=[rotation,(rotation+1)%4]
+  const ports=circuitPorts(turns[cell]??0)
   if(!ports.includes(incoming))break
   seen.add(cell);lit.push(cell)
   const outgoing=ports.find(port=>port!==incoming)!
