@@ -1,10 +1,13 @@
 import { skillGroups } from '../../content/skills.ts'
 import {
   advanceQueue,
+  advancePipeline,
   circuitSeed,
   tickRover,
   type RoverCommand,
   type RoverState,
+  type PipelineStep,
+  type PipelineState,
 } from '../core/learningActivities.ts'
 import {
   basketballScores,
@@ -31,6 +34,12 @@ export class ActivitySystem {
     if (this.rover.status === 'running' || !this.rover.commands.length) return false
     Object.assign(this.rover, { age: 0, status: 'running' })
     return true
+  }
+  pipeline: PipelineState = { completed: 0, errors: 0, status: 'idle' }
+  playPipelineStep(step: PipelineStep) {
+    const correct = advancePipeline(this.pipeline, step)
+    if (this.pipeline.status === 'success') this.completeStation('tooling')
+    return correct
   }
   cloud = { workers: 1, queued: 18, processed: 0 }
   web = { theme: 0, records: 0 }
