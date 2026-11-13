@@ -162,6 +162,14 @@ export class BuildingActivityScene extends Container {
     }
     this.addChild(this.object, this.overlay, this.statusPanel, this.status)
   }
+  /** Visible object position, in building-local world coordinates. */
+  focusPoint(): { x: number; y: number } | undefined {
+    if (this.ball) return { x: this.ball.x, y: this.ball.y }
+    if (this.plane) return { x: this.plane.x, y: this.plane.y - 8 }
+    if (this.car) return { x: this.car.x, y: this.car.y - 35 }
+    if (this.cart) return { x: 182, y: -62 } // The bell stays put while luggage moves.
+    return undefined
+  }
   update(frame: WorldFrame, entryX: number, reduced: boolean, ground = 0) {
     const record = this.state.actions[this.id],
       running = record?.running ?? false,
@@ -317,9 +325,11 @@ export class BuildingActivityScene extends Container {
             : 'Delivered · ring again'
           : captions.luggage[nl ? 0 : 1]
     } else {
-      this.status.visible = false
-      this.statusPanel.clear()
       this.school?.update(frame, reduced)
     }
+    // Feedback now belongs to the actual object via WorldInteractionCue. Never
+    // draw a second huge rectangular panel across the building facade.
+    this.status.visible = false
+    this.statusPanel.visible = false
   }
 }
