@@ -268,27 +268,31 @@ export class BuildingActivityScene extends Container {
     glow.scale.set(1)
     glow.rotation = 0
     if (!active || this.school) return
-    const alpha = reduced ? 0.7 : 0.57 + Math.sin(time / 480) * 0.14
-    const style = { color: 0xffdd99, width: 2.8, alpha }
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 480)) * 0.5
+    const style = { color: 0xffe6aa, width: 3.1, alpha: 0.69 + pulse * 0.28 }
+    const halo = { color: 0xffdd99, width: 10, alpha: 0.11 + pulse * 0.12 }
     if (this.ball) {
-      glow.circle(this.ball.x, this.ball.y, 11).stroke(style)
+      glow.circle(this.ball.x, this.ball.y, 11).stroke(halo)
+        .circle(this.ball.x, this.ball.y, 11).stroke(style)
     } else if (this.plane) {
       glow.position.copyFrom(this.plane.position)
       glow.scale.set(this.plane.scale.x)
       glow.rotation = this.plane.rotation
-      glow.poly([
+      const outline = [
         -103, 0, -87, 0, -93, -31, -79, -31, -58, -4,
         66, -4, 86, 1, 103, 10, 92, 15, -83, 15, -106, 7,
-      ]).stroke(style)
+      ]
+      glow.poly(outline).stroke(halo).poly(outline).stroke(style)
     } else if (this.car) {
       glow.position.copyFrom(this.car.position)
-      glow.poly([-62, -17, -57, -35, -29, -37, -12, -57, 34, -57, 54, -37, 75, -30, 78, -16])
-        .stroke(style)
+      const outline = [-62, -17, -57, -35, -29, -37, -12, -57, 34, -57, 54, -37, 75, -30, 78, -16]
+      glow.poly(outline).stroke(halo).poly(outline).stroke(style)
     } else if (this.cart) {
-      glow.moveTo(170, -59)
+      const bellShape = () => glow.moveTo(170, -59)
         .bezierCurveTo(171, -77, 193, -77, 194, -59)
         .lineTo(170, -59)
-        .stroke(style)
+      bellShape().stroke(halo)
+      bellShape().stroke(style)
         .rect(168, -56, 28, 4)
         .fill({ color: 0xffe3aa, alpha: 0.17 })
     }
