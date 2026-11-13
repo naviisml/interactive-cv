@@ -34,6 +34,10 @@ const sceneHints: Record<string, [string, string]> = {
 </script>
 <template>
   <header class="world-caption">
+    <p v-if="current.id === 'first-lines'" class="identity-banner">
+      <strong>Navarone Ismail</strong>
+      <span>{{ locale === 'nl' ? 'Full-stack developer · Technisch lead' : 'Full-stack developer · Technical lead' }}</span>
+    </p>
     <p class="caption-meta">
       <CategoryBadge :category="current.category" /><span
         v-if="current.label !== 'SKILLS' && current.category !== 'contact'"
@@ -79,6 +83,20 @@ const sceneHints: Record<string, [string, string]> = {
 </template>
 
 <style scoped>
+.identity-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  width: fit-content;
+  margin: 0 0 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #6b8b7580;
+  font: 600 11px 'Space Grotesk', sans-serif;
+  color: #2b5345;
+}
+.identity-banner strong { text-transform: uppercase; letter-spacing: 1.15px; }
+.identity-banner span { font-weight: 500; color: #4c6a59; }
 .sr-only {
   position: absolute;
   height: 1px;
