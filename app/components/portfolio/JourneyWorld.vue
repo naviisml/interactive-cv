@@ -163,14 +163,7 @@ async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
   if (isBuilding(timeline.value[index]!.id)) {
-    buildingOpener =
-      event?.currentTarget instanceof HTMLElement
-        ? event.currentTarget
-        : document.activeElement instanceof HTMLElement && document.activeElement !== document.body
-          ? document.activeElement
-          : worldRoot.value
-    if (listMode.value) listMode.value = false
-    buildingVisit.enter(index)
+    enterBuilding(index, event)
     return
   }
   if (!hasDetails(timeline.value[index]!)) return
@@ -241,10 +234,16 @@ const worldPanelOpen = computed(
   () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value,
 )
 let buildingOpener: HTMLElement | undefined
+function enterBuilding(index: number, event?: MouseEvent) {
+  buildingOpener =
+    event?.currentTarget instanceof HTMLElement ? event.currentTarget : worldRoot.value
+  if (listMode.value) listMode.value = false
+  buildingVisit.enter(index)
+}
 watch(
   () => visit.phase,
   async (phase, previous) => {
-    if (phase !== 'outside' || previous !== 'leaving') return
+    if (phase !== 'outside' || previous !== 'closing') return
     await nextTick()
     if (buildingOpener?.isConnected) buildingOpener.focus({ preventScroll: true })
     else worldRoot.value?.focus({ preventScroll: true })
@@ -558,7 +557,7 @@ onBeforeUnmount(() => {
             :destination-title="destinationTitle"
             :feedback="skillFeedback"
             :enterable="enterable"
-            @enter="buildingVisit.enter(nearestIndex)"
+            @enter="enterBuilding(nearestIndex, $event)"
             @details="openDetail(nearestIndex, $event)"
             @cancel="stop"
           />

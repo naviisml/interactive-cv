@@ -318,6 +318,9 @@ async function scenario(label, width, height, mobile) {
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
       )
+      await page.waitForFunction(
+        () => document.activeElement?.getAttribute('aria-label') === 'Enter building',
+      )
       const doorX = Number(await canvas.getAttribute('data-player-x'))
       await page.keyboard.down('ArrowLeft')
       await page.waitForTimeout(400)

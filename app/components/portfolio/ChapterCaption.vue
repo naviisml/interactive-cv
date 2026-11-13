@@ -8,12 +8,21 @@ defineProps<{
   feedback?: string
   enterable?: boolean
 }>()
-const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }>()
+const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [event: MouseEvent] }>()
 const { t, locale } = useI18n()
 const sceneHints: Record<string, [string, string]> = {
-  'first-lines': ['Open de monitor om HTML en CSS te bewerken.', 'Open the monitor to edit HTML and CSS.'],
-  'navel-development': ['Open het scherm om mijn projecten te bekijken.', 'Select the project screen to explore my work.'],
-  'panta-rhei': ['Houd de bal vast en laat los om te schieten.', 'Hold the ball and release to shoot.'],
+  'first-lines': [
+    'Open de monitor om HTML en CSS te bewerken.',
+    'Open the monitor to edit HTML and CSS.',
+  ],
+  'navel-development': [
+    'Open het scherm om mijn projecten te bekijken.',
+    'Select the project screen to explore my work.',
+  ],
+  'panta-rhei': [
+    'Houd de bal vast en laat los om te schieten.',
+    'Hold the ball and release to shoot.',
+  ],
   'roc-hilversum': [
     'Draai de kabels en breng de campus tot leven.',
     'Rotate the wires to power the campus.',
@@ -26,7 +35,10 @@ const sceneHints: Record<string, [string, string]> = {
     'Tik op de bel bij de ingang voor de bagage.',
     'Ring the bell at the entrance for luggage.',
   ],
-  'get-e': ['Houd het vliegtuig vast om snelheid op te bouwen, laat los om op te stijgen.', 'Hold the aircraft to build speed, release to take off.'],
+  'get-e': [
+    'Houd het vliegtuig vast om snelheid op te bouwen, laat los om op te stijgen.',
+    'Hold the aircraft to build speed, release to take off.',
+  ],
   appjection: [
     'Houd de auto vast om te accelereren en laat los bij de juiste snelheid.',
     'Hold the car to accelerate, release at a safe speed.',
@@ -37,7 +49,11 @@ const sceneHints: Record<string, [string, string]> = {
   <header class="world-caption">
     <p v-if="current.id === 'first-lines'" class="identity-banner">
       <strong>Navarone Ismail</strong>
-      <span>{{ locale === 'nl' ? 'Full-stack developer · Technisch lead' : 'Full-stack developer · Technical lead' }}</span>
+      <span>{{
+        locale === 'nl'
+          ? 'Full-stack developer · Technisch lead'
+          : 'Full-stack developer · Technical lead'
+      }}</span>
     </p>
     <p class="caption-meta">
       <CategoryBadge :category="current.category" /><span
@@ -56,17 +72,21 @@ const sceneHints: Record<string, [string, string]> = {
       >
         <FileText :size="16" aria-hidden="true" />{{ t('common.details') }}
       </button>
-    <button
-      v-if="enterable && !running"
-      class="caption-details caption-enter"
-      :aria-label="t('building.enter')"
-      @click="emit('enter')"
-    >
-      <DoorOpen :size="18" />{{ t('building.enter') }}<kbd aria-hidden="true">E</kbd>
-    </button>
+      <button
+        v-if="enterable && !running"
+        class="caption-details caption-enter"
+        :aria-label="t('building.enter')"
+        @click="emit('enter', $event)"
+      >
+        <DoorOpen :size="18" />{{ t('building.enter') }}<kbd aria-hidden="true">E</kbd>
+      </button>
     </div>
     <p class="caption-summary">{{ current.summary }}</p>
-    <p v-if="sceneHints[current.id] && !running" class="scene-hint" :class="{ 'sr-only': current.id !== 'first-lines' && current.id !== 'navel-development' }">
+    <p
+      v-if="sceneHints[current.id] && !running"
+      class="scene-hint"
+      :class="{ 'sr-only': current.id !== 'first-lines' && current.id !== 'navel-development' }"
+    >
       {{ sceneHints[current.id]?.[locale === 'nl' ? 0 : 1] }}
     </p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
@@ -93,11 +113,19 @@ const sceneHints: Record<string, [string, string]> = {
   margin: 0 0 13px;
   padding-bottom: 8px;
   border-bottom: 1px solid #6b8b7580;
-  font: 600 11px 'Space Grotesk', sans-serif;
+  font:
+    600 11px 'Space Grotesk',
+    sans-serif;
   color: #2b5345;
 }
-.identity-banner strong { text-transform: uppercase; letter-spacing: 1.15px; }
-.identity-banner span { font-weight: 500; color: #4c6a59; }
+.identity-banner strong {
+  text-transform: uppercase;
+  letter-spacing: 1.15px;
+}
+.identity-banner span {
+  font-weight: 500;
+  color: #4c6a59;
+}
 .sr-only {
   position: absolute;
   height: 1px;
