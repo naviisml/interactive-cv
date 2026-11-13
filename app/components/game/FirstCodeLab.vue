@@ -1,17 +1,23 @@
 <script setup lang="ts">
+import { codePreviewDocument } from '~/game/core/codePreview'
 import { Code2, RotateCcw, X } from '@lucide/vue'
 
 const emit = defineEmits<{ close: [] }>()
 const { locale } = useI18n()
 const initialHtml = '<main class="retro"><h1>RetroNet</h1><p>My first website</p><button>Enter the community</button></main>'
 const initialCss = 'body { font-family: Arial, sans-serif; background: #d7e2d3; }\n.retro { max-width: 360px; margin: 35px auto; padding: 24px; background: white; border: 3px solid #43694f; }\nh1 { color: #43694f; }\nbutton { background: #43694f; color: white; padding: 10px 15px; border: 0; }'
-const html = ref(initialHtml)
-const css = ref(initialCss)
+const html = useState('first-code-html', () => initialHtml)
+const css = useState('first-code-css', () => initialCss)
 const tab = ref<'html' | 'css'>('html')
 const dialog = ref<HTMLElement>()
-const preview = computed(
-  () => '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css.value + '</style></head><body>' + html.value + '</body></html>',
-)
+const preview = ref(codePreviewDocument(html.value, css.value))
+let previewTimer: ReturnType<typeof setTimeout> | undefined
+watch([html, css], () => {
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(() => { preview.value = codePreviewDocument(html.value, css.value) }, 180)
+})
+onBeforeUnmount(() => clearTimeout(previewTimer))
+
 function reset() {
   html.value = initialHtml
   css.value = initialCss
@@ -99,7 +105,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
         </div>
       </div>
       <footer>
-        <p>{{ locale === 'nl' ? 'De preview draait in een afgesloten sandbox: scripts worden niet uitgevoerd.' : 'The preview is sandboxed: scripts are not executed.' }}</p>
+        <p>{{ locale === 'nl' ? 'De preview draait in een afgesloten sandbox: scripts en externe requests worden geblokkeerd.' : 'The preview is sandboxed: scripts and external requests are blocked.' }}</p>
         <button @click="emit('close')">{{ locale === 'nl' ? 'Terug naar de reis' : 'Back to the journey' }}</button>
       </footer>
     </div>

@@ -83,6 +83,12 @@ test('holding then releasing a ball or vehicle affects success instead of auto-p
   assert.equal(game.beginCharge('panta-rhei'), true)
   game.tick(0.5, true)
   assert.equal(game.charges['panta-rhei']?.power, 0, 'paused world does not charge')
+  assert.equal(
+    game.releaseCharge('panta-rhei', 'basketball'),
+    false,
+    'a paused hold is cancelled rather than fired on resume',
+  )
+  assert.equal(game.beginCharge('panta-rhei'), true)
   game.tick(1.1, false)
   assert.equal(game.releaseCharge('panta-rhei', 'basketball'), true)
   assert.equal(game.actions['panta-rhei']?.outcome, 'success')

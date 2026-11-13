@@ -97,3 +97,11 @@ Only `FirstLines.vue` still uses authored SVG scenery. Its export is `public/wor
 ## First-code workstation
 
 The opening scene's computer is clickable, with an accessible button as a fallback. It opens a real HTML/CSS editor and immediate preview in a sandboxed iframe (no script execution). This is intentionally a learning interaction, separate from the later Navel Development project slideshow. Editing the sample never changes deployed files.
+
+## Production verification
+
+`npm ci`, `npm test`, `npm run typecheck`, and `npm run generate` validate the locked source. `npm run serve:generated` serves that generated output; `npm run test:browser` exercises it at desktop, mobile and compact widths. CI uses the same lockfile and generated assets instead of installing unpinned browser tooling or testing the Nuxt development server. Its artifacts include scene, editor, workshop and interior screenshots.
+
+Browser regressions cover outside-menu click-through, background inertness, retained GPU frames while a dialog is stationary, sandboxed previews, direct reading-mode URLs without WebGL initialization, and recovery after real WebGL context loss. Optional scenery textures can fail without breaking the game.
+
+Financial metadata is read from the active journey sequence, including authored skills/contact events, so adding a scene does not require a second ID mapping in the financial UI. Omitted values inherit in journey order; `null` deliberately withholds them.

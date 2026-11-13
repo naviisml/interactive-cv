@@ -9,16 +9,37 @@ export class ActivitySystem {
   actions: Record<string, ActionState> = {}
   switches: Record<string, number[]> = {}
   charges: Record<string, { holding: boolean; power: number }> = {}
+  get charging() {
+    return Object.values(this.charges).some((charge) => charge.holding)
+  }
+  cancelCharge(id: string) {
+    const charge = this.charges[id]
+    if (charge) Object.assign(charge, { holding: false, power: 0 })
+  }
+  cancelCharges() {
+    for (const id of Object.keys(this.charges)) this.cancelCharge(id)
+  }
   trigger(id: string, action: SceneAction, power?: number) {
     const previous = this.actions[id]
     if (previous?.running) return false
     const charged = ['basketball', 'departure', 'camera'].includes(action)
     const strength = Math.max(0, Math.min(1, power ?? 0.65))
     const outcome =
-      action === 'basketball' ? (strength >= 0.52 && strength <= 0.78 ? 'success' : 'retry')
-      : action === 'departure' ? (strength >= 0.72 ? 'success' : 'retry')
-      : action === 'camera' ? (strength >= 0.25 && strength <= 0.5 ? 'success' : strength > 0.5 ? 'ticket' : 'retry')
-      : 'success'
+      action === 'basketball'
+        ? strength >= 0.52 && strength <= 0.78
+          ? 'success'
+          : 'retry'
+        : action === 'departure'
+          ? strength >= 0.72
+            ? 'success'
+            : 'retry'
+          : action === 'camera'
+            ? strength >= 0.25 && strength <= 0.5
+              ? 'success'
+              : strength > 0.5
+                ? 'ticket'
+                : 'retry'
+            : 'success'
     this.actions[id] = {
       action,
       age: 0,
@@ -31,7 +52,7 @@ export class ActivitySystem {
     return true
   }
   beginCharge(id: string) {
-    if (this.actions[id]?.running) return false
+    if (this.charging || this.actions[id]?.running) return false
     this.charges[id] = { holding: true, power: 0 }
     return true
   }
@@ -43,7 +64,10 @@ export class ActivitySystem {
   }
 
   tick(dt: number, paused: boolean) {
-    if (paused) return
+    if (paused) {
+      this.cancelCharges()
+      return
+    }
     for (const [id, charge] of Object.entries(this.charges))
       if (charge.holding) charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
     for (const [id, state] of Object.entries(this.actions))

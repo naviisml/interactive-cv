@@ -75,7 +75,7 @@ export class BuildingActivityScene extends Container {
         .lineTo(0, 10)
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
-      holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88))
+      holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88), () => state.cancelCharge(id))
 
 
 
@@ -86,7 +86,7 @@ export class BuildingActivityScene extends Container {
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
       this.plane = new AircraftSprite()
       this.object.addChild(this.plane)
-      holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90))
+      holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90), () => state.cancelCharge(id))
 
 
 
@@ -111,7 +111,7 @@ export class BuildingActivityScene extends Container {
       rect(car, 66, -31, 10, 5, 0xe5d69b)
       this.car = car
       this.object.addChild(car)
-      holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76))
+      holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76), () => state.cancelCharge(id))
 
 
 

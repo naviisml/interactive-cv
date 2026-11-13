@@ -32,7 +32,7 @@ export class TerrainScene extends Container {
       soil.mask = mask
       this.addChildAt(soil, 1)
       this.addChild(mask)
-    })
+    }).catch(() => { /* The solid terrain remains usable if its optional texture fails. */ })
     const detail = new Graphics()
     for (let x = 20; x < model.width; x += 27) {
       const y = -terrainHeight(x, points)

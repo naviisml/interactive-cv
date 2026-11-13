@@ -5,7 +5,7 @@ import { useJourney } from '~/game/engine/useJourney'
 import { useWorldViewport } from '~/game/engine/useWorldViewport'
 import { companySlides } from '~/content/company'
 import { ActivitySystem } from '~/game/engine/ActivitySystem'
-import { timeline as cvTimeline, hasDetails, type TimelineFilter } from '~/content/timeline'
+import { hasDetails, type TimelineFilter } from '~/content/timeline'
 import { journeyEvents, levelForEvent, firstInLevel, type LevelId } from '~/content/journey'
 import { sceneryTransition } from '~/game/core/sceneryTransition'
 import { readingProgress } from '~/game/core/readingProgress'
@@ -24,6 +24,8 @@ const entries = computed(() =>
 )
 const filters = ['all', 'work', 'projects', 'school', 'skills'] as const
 const sceneChanging = ref(false)
+const worldReady = ref(false)
+const rendererUnavailable = ref(false)
 const detailIndex = ref<number | null>(null),
   pendingDetailIndex = ref<number | null>(null)
 const detailEvent = computed(() =>
@@ -165,10 +167,11 @@ const listMode = useState<boolean>('journey-list-mode', () => route.query.view =
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex, rendererUnavailable],
   () => {
     paused.value =
       listMode.value ||
+      rendererUnavailable.value ||
       detailIndex.value !== null ||
       moneyOpen.value ||
       firstCodeOpen.value ||
@@ -181,6 +184,7 @@ async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
   if (isBuilding(timeline.value[index]!.id)) {
+    buildingOpener = event?.currentTarget instanceof HTMLElement ? event.currentTarget : document.activeElement instanceof HTMLElement ? document.activeElement : worldRoot.value
     if (listMode.value) listMode.value = false
     buildingVisit.enter(index)
     return
@@ -253,9 +257,19 @@ const nearbyWorkshop = computed(() => {
   return Math.abs(offset - positions[closest]!) < 220 ? closest : null
 })
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
-const financeIndex = computed(() =>
-  cvTimeline.findIndex((event) => event.id === timeline.value[activeIndex.value]?.id),
-)
+// Financial metadata follows the same ordered scenes as the active list/world,
+// including authored skills/contact scenes that have no separate CV record.
+const financeIndex = computed(() => activeIndex.value)
+const worldPanelOpen = computed(() => !!detailEvent.value || visit.phase === 'inside' || firstCodeOpen.value || workshopIndex.value !== null)
+let buildingOpener: HTMLElement | undefined
+watch(() => visit.phase, async (phase, previous) => {
+  if (phase !== 'outside' || previous !== 'leaving') return
+  await nextTick()
+  if (buildingOpener?.isConnected) buildingOpener.focus({ preventScroll: true })
+  else worldRoot.value?.focus({ preventScroll: true })
+  buildingOpener = undefined
+})
+
 watch(destination, (value) => {
   if (value || pendingDetailIndex.value === null) return
   const index = pendingDetailIndex.value
@@ -276,7 +290,7 @@ let gesture:
   { id: number; startX: number; startY: number; lastX: number; horizontal: boolean } | undefined
 function gestureStart(event: PointerEvent) {
   if (
-    event.pointerType !== 'pen' ||
+    activities.charging || paused.value || event.pointerType !== 'pen' ||
     !event.isPrimary ||
     (event.target as HTMLElement)?.closest(
       'button,a,input,[role="button"],[data-world-activity],[data-world-panel]',
@@ -319,6 +333,7 @@ function gestureEnd(event: PointerEvent) {
 let touchGesture:
   { id: number; startX: number; startY: number; lastX: number; axis: SwipeAxis } | undefined
 function touchStart(event: TouchEvent) {
+  if (activities.charging || paused.value) return
   touchGesture = undefined
   endScrollTravel()
   if (
@@ -336,6 +351,11 @@ function touchStart(event: TouchEvent) {
   }
 }
 function touchMove(event: TouchEvent) {
+  if (activities.charging) {
+    if (event.cancelable) event.preventDefault()
+    touchGesture = undefined
+    return
+  }
   if (!touchGesture) return
   if (event.touches.length !== 1) {
     touchEnd()
@@ -382,7 +402,7 @@ watch(
   { flush: 'post' },
 )
 function wheelTravel(event: WheelEvent) {
-  if (event.ctrlKey || paused.value) return
+  if (event.ctrlKey || paused.value || activities.charging) return
   const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
   event.preventDefault()
   scrollByDistance(delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1), 'wheel')
@@ -437,6 +457,7 @@ function navigateTimeline(index: number) {
   else goTo(index)
 }
 function interact(event: KeyboardEvent) {
+  if (paused.value || event.defaultPrevented || event.repeat) return
   if (
     !listMode.value &&
     detailIndex.value === null &&
@@ -444,11 +465,15 @@ function interact(event: KeyboardEvent) {
     event.key.toLowerCase() === 'e' &&
     nearby.value &&
     isBuilding(nearby.value.id) &&
-    !(event.target as HTMLElement)?.closest('button,a,input')
+    !(event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]')
   )
     openDetail(nearestIndex.value)
 }
 onMounted(async () => {
+  // A static export shares one SSR payload across query strings. Resolve the
+  // reading-mode URL before mounting Pixi, rather than reusing its world payload.
+  if (route.query.view === 'list') listMode.value = true
+  worldReady.value = true
   if (
     !listMode.value &&
     (document.activeElement === document.body ||
@@ -456,7 +481,7 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
+    listMode.value || rendererUnavailable.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -476,6 +501,8 @@ onBeforeUnmount(() => {
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode, 'scene-changing': sceneChanging }">
     <PortfolioHeader
+      :inert="worldPanelOpen"
+      :finance-events="timeline"
       :active="activeLevel.id"
       :finance-index="financeIndex"
       :context-title="timeline[activeIndex]?.title"
@@ -511,9 +538,11 @@ onBeforeUnmount(() => {
       @wheel="wheelTravel"
       :aria-label="t('common.worldLabel')"
     >
-      <div class="world-scene" :inert="!!detailEvent || visit.phase === 'inside' || firstCodeOpen || workshopIndex !== null">
+      <div class="world-scene" :inert="worldPanelOpen">
         <ClientOnly
           ><GameCanvas
+            v-if="worldReady"
+            @availability="rendererUnavailable = !$event"
             :model="rendererModel"
             :active-id="current.id"
             :get-frame="getWorldFrame"
@@ -527,6 +556,7 @@ onBeforeUnmount(() => {
             @open-first-computer="openFirstComputer"
             @open-workshop="openWorkshop"
         /></ClientOnly>
+        <div class="world-chrome" :inert="rendererUnavailable">
         <ChapterCaption
           :current="current"
           :running="running"
@@ -566,6 +596,7 @@ onBeforeUnmount(() => {
           @sprint="touchSprint = $event"
           @jump="jump"
         />
+        </div>
       </div>
       <BuildingInterior
         v-if="visit.phase === 'inside' && visitEvent"
@@ -596,6 +627,7 @@ onBeforeUnmount(() => {
       />
     </section>
     <JourneyTimeline
+      :inert="worldPanelOpen"
       :entries="entries"
       :active="activeIndex"
       :progress="displayProgress"

@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   startComputer: []
   readFallback: []
+  availability: [available: boolean]
   openFirstComputer: []
   openWorkshop: [index: number]
   skill: [name: string, count: number]
@@ -34,6 +35,21 @@ const host = ref<HTMLElement>(),
 let renderer: WorldRenderer | undefined,
   unsubscribe: (() => void) | undefined,
   disposed = false
+let canvas: HTMLCanvasElement | undefined
+function releaseRenderer() {
+  unsubscribe?.()
+  unsubscribe = undefined
+  canvas?.removeEventListener('webglcontextlost', contextLost)
+  renderer?.destroy()
+  renderer = undefined
+  canvas = undefined
+}
+function contextLost(event: Event) {
+  event.preventDefault()
+  error.value = t('common.rendererError')
+  emit('availability', false)
+  releaseRenderer()
+}
 onMounted(async () => {
   try {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
@@ -48,10 +64,16 @@ onMounted(async () => {
     })
     await renderer.init()
     if (disposed) return
+    emit('availability', true)
+    canvas = host.value.querySelector('canvas') ?? undefined
+    canvas?.addEventListener('webglcontextlost', contextLost)
     unsubscribe = props.subscribe(() => renderer?.render(props.getFrame()))
     renderer.render(props.getFrame())
   } catch (cause) {
+    releaseRenderer()
+    if (disposed) return
     error.value = t('common.rendererError')
+    emit('availability', false)
     console.error(cause)
   }
 })
@@ -61,8 +83,7 @@ watch(
 )
 onBeforeUnmount(() => {
   disposed = true
-  unsubscribe?.()
-  renderer?.destroy()
+  releaseRenderer()
 })
 </script>
 <template>

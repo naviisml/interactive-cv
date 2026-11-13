@@ -30,14 +30,14 @@ test('null masks private amounts, rewind restores past values, zero stays zero',
 
 test('yearly income needs a valid year and gross/net basis', () => {
   assert.equal(
-    financialSnapshot([{ finance: { yearlyIncome: { amount: 50000 } as never } }], 0)
-      .yearlyIncome,
+    financialSnapshot([{ finance: { yearlyIncome: { amount: 50000 } as never } }], 0).yearlyIncome,
     null,
   )
   assert.deepEqual(
-    financialSnapshot([
-      { finance: { yearlyIncome: { amount: 50000, year: 2025, basis: 'gross' } } },
-    ], 0).yearlyIncome,
+    financialSnapshot(
+      [{ finance: { yearlyIncome: { amount: 50000, year: 2025, basis: 'gross' } } }],
+      0,
+    ).yearlyIncome,
     { amount: 50000, year: 2025, basis: 'gross' },
   )
 })
@@ -50,4 +50,17 @@ test('business turnover notes never become personal annual salary', () => {
   assert.equal(result.debt, 0)
   assert.equal(result.savings, null)
   assert.equal(result.yearlyIncome, null)
+})
+
+test('authored journey-only scenes use the same metadata and privacy boundaries', () => {
+  const scenes = [
+    { finance: { debt: 1200, savings: 50 } },
+    { finance: { debt: 900 } },
+    {}, // a skills scene inherits values instead of an unmatched ID resetting them
+    { finance: { debt: null, savings: null, yearlyIncome: null } },
+  ]
+  assert.equal(financialSnapshot(scenes, 2).debt, 900)
+  assert.equal(financialSnapshot(scenes, 2).savings, 50)
+  assert.equal(financialSnapshot(scenes, 3).debt, null)
+  assert.equal(financialSnapshot(scenes, 0).debt, 1200)
 })

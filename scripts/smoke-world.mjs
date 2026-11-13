@@ -36,19 +36,58 @@ async function scenario(label, width, height, mobile) {
       'the world must not introduce horizontal document overflow',
     )
     // The opening monitor is a genuine, accessible editable workstation.
-    await page.locator('.journey-footer').getByRole('button', { name: /My first code/ }).click()
+    await page
+      .locator('.journey-footer')
+      .getByRole('button', { name: /My first code/ })
+      .click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     const openFirst = page.getByRole('button', { name: /Open the first computer/i })
     await openFirst.click()
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
     await firstCode.waitFor({ state: 'visible' })
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
+    assert.equal(await page.locator('.portfolio-header').evaluate((element) => element.inert), true)
+    assert.equal(await page.locator('.journey-footer').evaluate((element) => element.inert), true)
     await firstCode.getByRole('button', { name: 'style.css' }).click()
-    await firstCode.getByRole('textbox', { name: 'CSS editor' }).fill('body { background: lavender; }')
-    assert.ok(
-      (await firstCode.locator('iframe').getAttribute('srcdoc')).includes('background: lavender'),
-      'HTML/CSS preview follows editor changes',
+    await firstCode
+      .getByRole('textbox', { name: 'CSS editor' })
+      .fill('body { background: lavender; }')
+    await page.waitForFunction(() =>
+      document.querySelector('.first-code-lab iframe')?.srcdoc.includes('background: lavender'),
     )
+    assert.ok(
+      (await firstCode.locator('iframe').getAttribute('srcdoc')).includes("default-src 'none'"),
+    )
+    await page.waitForTimeout(250)
+    const retainedFrame = await canvas.getAttribute('data-rendered-at')
+    await page.waitForTimeout(200)
+    assert.equal(
+      await canvas.getAttribute('data-rendered-at'),
+      retainedFrame,
+      'stationary dialogs retain the GPU frame',
+    )
+    let remotePreviewRequests = 0
+    await page.route('https://preview-test.invalid/**', (route) => {
+      remotePreviewRequests++
+      return route.abort()
+    })
+    await firstCode.getByRole('button', { name: 'index.html' }).click()
+    await firstCode
+      .getByRole('textbox', { name: 'HTML editor' })
+      .fill(
+        '<h1>Sandbox check</h1><img src="https://preview-test.invalid/asset.png"><script>parent.document.body.dataset.previewEscaped="yes"</script>',
+      )
+    await page
+      .frameLocator('iframe[title="Editable HTML preview"]')
+      .getByRole('heading', { name: 'Sandbox check' })
+      .waitFor()
+    assert.equal(await page.locator('body').getAttribute('data-preview-escaped'), null)
+    assert.equal(remotePreviewRequests, 0, 'preview may not fetch remote resources')
+    await firstCode.getByRole('button', { name: 'Reset', exact: true }).click()
+    await page
+      .frameLocator('iframe[title="Editable HTML preview"]')
+      .getByRole('heading', { name: 'RetroNet', exact: true })
+      .waitFor()
     const editorLayout = await firstCode.evaluate((dialog) => {
       const preview = dialog.querySelector('iframe').getBoundingClientRect()
       const footer = dialog.querySelector('footer').getBoundingClientRect()
@@ -61,22 +100,31 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
-    await page.waitForFunction(
-      () => document.activeElement?.textContent?.includes('Open the first computer'),
+    await page.waitForFunction(() =>
+      document.activeElement?.textContent?.includes('Open the first computer'),
     )
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
 
     if (mobile) {
       await page.locator('.menu-toggle').click()
-      // A click on header whitespace is outside the menu and cannot
-      // accidentally trigger an interactive object in the world.
-      await page.locator('.portfolio-header').click({ position: { x: 7, y: 7 } })
+      await page
+        .locator('.journey-footer')
+        .getByRole('button', { name: /Panta Rhei/ })
+        .click()
+      assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false')
       assert.equal(
-        await page.locator('.menu-toggle').getAttribute('aria-expanded'),
-        'false',
-        'mobile menu closes after tapping outside',
+        await page.locator('.caption-travel').count(),
+        0,
+        'outside dismissal must not also start a journey',
       )
-      assert.equal(await page.getByRole('dialog').count(), 0, 'outside tap opens no scene objects')
+      assert.equal(await page.getByRole('dialog').count(), 0)
+      await page.locator('.menu-toggle').click()
+      await page.getByRole('button', { name: 'Skills', exact: true }).focus()
+      await page.keyboard.press('Escape')
+      assert.ok(
+        await page.locator('.menu-toggle').evaluate((el) => document.activeElement === el),
+        'Escape returns focus to the menu toggle',
+      )
     }
 
     // Skills are now task-driven, not simply collected logos.
@@ -88,6 +136,8 @@ async function scenario(label, width, height, mobile) {
     const workshop = page.getByRole('dialog', { name: 'Build something that works.' })
     await workshop.waitFor({ state: 'visible' })
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
+    assert.equal(await page.locator('.portfolio-header').evaluate((element) => element.inert), true)
+    assert.equal(await page.locator('.journey-footer').evaluate((element) => element.inert), true)
     for (const step of ['commit', 'test', 'build', 'deploy']) {
       await workshop.getByRole('button', { name: '+ ' + step }).click()
     }
@@ -96,8 +146,8 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-skills-workshop.png` })
     await workshop.getByRole('button', { name: 'Continue the journey' }).click()
     await workshop.waitFor({ state: 'hidden' })
-    await page.waitForFunction(
-      () => document.activeElement?.textContent?.includes('Open the workstations'),
+    await page.waitForFunction(() =>
+      document.activeElement?.textContent?.includes('Open the workstations'),
     )
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
 
@@ -257,16 +307,67 @@ async function scenario(label, width, height, mobile) {
 async function readingModeScenario() {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   try {
+    await page.addInitScript(() => {
+      window.__webglContexts = 0
+      const getContext = HTMLCanvasElement.prototype.getContext
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        if (type === 'webgl' || type === 'webgl2') window.__webglContexts++
+        return getContext.call(this, type, ...args)
+      }
+    })
     await page.goto(base + '/?view=list', { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('.timeline-list').waitFor({ state: 'visible' })
-    assert.equal(await page.locator('canvas[data-renderer="pixi"]').count(), 0,
-      'direct reading mode must not initialize the WebGL game')
-    assert.ok(await page.getByRole('button', { name: 'World view' }).isVisible(),
-      'reading mode keeps navigation back to the world')
+    assert.equal(
+      await page.locator('canvas[data-renderer="pixi"]').count(),
+      0,
+      'direct reading mode must not initialize the WebGL game',
+    )
+    assert.equal(
+      await page.evaluate(() => window.__webglContexts),
+      0,
+      'direct reading mode never allocates a WebGL context',
+    )
+    assert.ok(
+      await page.getByRole('button', { name: 'World view' }).isVisible(),
+      'reading mode keeps navigation back to the world',
+    )
     console.log('PASS_reading_mode: direct accessible reading view without a WebGL renderer')
   } catch (error) {
     failures++
     console.error(`FAIL_reading_mode: ${error.stack || error}`)
+  } finally {
+    await page.close()
+  }
+}
+async function graphicsFailureScenario() {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
+  try {
+    await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
+    await page.locator('canvas[data-renderer="pixi"]').waitFor()
+    const supported = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas[data-renderer="pixi"]')
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+      const lose = gl?.getExtension('WEBGL_lose_context')
+      if (!lose) return false
+      lose.loseContext()
+      return true
+    })
+    assert.ok(supported, 'the test browser supports real WebGL context loss')
+    await page
+      .getByRole('button', { name: 'Read my CV', exact: true })
+      .waitFor({ state: 'visible' })
+    assert.equal(
+      await page.locator('.world-chrome').evaluate((el) => el.inert),
+      true,
+      'failed world controls are inert while the reading fallback stays usable',
+    )
+    await page.getByRole('button', { name: 'Read my CV', exact: true }).click()
+    await page.locator('.timeline-list').waitFor()
+    assert.equal(await page.locator('canvas').count(), 0)
+    console.log('PASS_graphics_failure: context loss releases the renderer and offers reading mode')
+  } catch (error) {
+    failures++
+    console.error(`FAIL_graphics_failure: ${error.stack || error}`)
   } finally {
     await page.close()
   }
@@ -276,6 +377,7 @@ try {
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
   await readingModeScenario()
+  await graphicsFailureScenario()
 } finally {
   await browser.close()
 }

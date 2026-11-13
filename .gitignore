@@ -6,3 +6,6 @@ node_modules
 .openai
 .env.*
 !.env.example
+
+/dist
+/test-results

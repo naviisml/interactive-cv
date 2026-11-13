@@ -32,6 +32,17 @@ export class WorldRenderer {
   private observer?: ResizeObserver
   private disposed = false
   private reduced = false
+  private motionQuery?: MediaQueryList
+  private motionPreference = () => {
+    this.reduced = this.motionQuery?.matches ?? false
+    this.dirty = true
+  }
+  private dirty = true
+  private frozen = false
+  private cancelCharges = () => this.activities.cancelCharges()
+  private visibilityChanged = () => {
+    if (document.hidden) this.cancelCharges()
+  }
   private previous = 0
   private lastReadout = -1000
   private zoom = 1
@@ -61,6 +72,8 @@ export class WorldRenderer {
       return
     }
     this.host.appendChild(this.app.canvas)
+    window.addEventListener('blur', this.cancelCharges)
+    document.addEventListener('visibilitychange', this.visibilityChanged)
     this.app.canvas.setAttribute('aria-label', 'Playable portfolio world')
     this.app.canvas.dataset.renderer = 'pixi'
     this.app.renderer.events.autoPreventDefault = false
@@ -78,13 +91,18 @@ export class WorldRenderer {
     this.gates.build(this.model)
     await this.character.load()
     if (this.disposed) return
-    this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-    this.observer = new ResizeObserver(() =>
-      this.app.renderer.resize(this.host.clientWidth, this.host.clientHeight),
-    )
+    this.motionQuery = matchMedia('(prefers-reduced-motion: reduce)')
+    this.motionPreference()
+    this.motionQuery.addEventListener('change', this.motionPreference)
+    this.observer = new ResizeObserver(() => {
+      this.app.renderer.resize(this.host.clientWidth, this.host.clientHeight)
+      this.dirty = true
+    })
     this.observer.observe(this.host)
   }
   setModel(model: WorldModel) {
+    this.activities.cancelCharges()
+    this.dirty = true
     this.model = model
     this.terrain.build(model)
     this.gates.build(model)
@@ -113,6 +131,16 @@ export class WorldRenderer {
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
+    if (frame.paused) this.activities.cancelCharges()
+    // Keep drawing entry/exit animations, but retain the GPU frame behind a
+    // stationary dialog. A resize, locale or motion preference invalidates it.
+    const freeze = frame.paused && ['outside', 'inside'].includes(frame.visit.phase)
+    if (freeze && this.frozen && !this.dirty) {
+      this.previous = frame.time
+      return
+    }
+    this.frozen = freeze
+    this.dirty = false
     this.presentationProgress = frame.presentation.progress
     this.presentationActive = frame.presentation.active
     const width = this.app.screen.width,
@@ -240,8 +268,10 @@ export class WorldRenderer {
       this.model,
     )
     this.app.render()
-    if (frame.time - this.lastReadout >= 100) {
+    if (freeze || frame.time - this.lastReadout >= 100) {
       this.lastReadout = frame.time
+      this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
+      this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
@@ -259,8 +289,13 @@ export class WorldRenderer {
     }
   }
   destroy() {
+    if (this.disposed) return
     this.disposed = true
+    this.activities.cancelCharges()
+    window.removeEventListener('blur', this.cancelCharges)
+    document.removeEventListener('visibilitychange', this.visibilityChanged)
     this.observer?.disconnect()
+    this.motionQuery?.removeEventListener('change', this.motionPreference)
     if (this.app.renderer) this.app.destroy(true, { children: true })
   }
 }
