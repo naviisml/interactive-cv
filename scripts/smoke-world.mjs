@@ -10,6 +10,16 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
 })
 let failures = 0
+async function waitForArrival(page, scene) {
+  await page.waitForFunction(
+    (id) => {
+      const canvas = document.querySelector('canvas[data-renderer="pixi"]')
+      return canvas?.dataset.scene === id && canvas?.dataset.navigating === 'false'
+    },
+    scene,
+    { timeout: 25000 },
+  )
+}
 async function tapWorld(page, canvas, id, x, y, touch) {
   await page.waitForTimeout(120)
   const point = await canvas.evaluate(
@@ -87,7 +97,9 @@ async function scenario(label, width, height, mobile) {
       .locator('.journey-footer')
       .getByRole('button', { name: /My first code/ })
       .click()
-    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await waitForArrival(page, 'first-lines')
+    assert.equal(await page.locator('.world-caption, .first-code-launch').count(), 0,
+      'the world must not be covered by chapter banners or floating CTA buttons')
     const openFirst = page.getByRole('button', { name: /Open the first computer/i })
     await tapWorld(page, canvas, 'first-lines', 150, -140, mobile)
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
@@ -213,11 +225,8 @@ async function scenario(label, width, height, mobile) {
         .getByRole('button', { name: /Panta Rhei/ })
         .click()
       assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false')
-      assert.equal(
-        await page.locator('.caption-travel').count(),
-        0,
-        'outside dismissal must not also start a journey',
-      )
+      assert.equal(await canvas.getAttribute('data-navigating'), 'false',
+        'outside menu dismissal must not start a journey')
       assert.equal(await page.getByRole('dialog').count(), 0)
       await page.locator('.menu-toggle').click()
       await page.getByRole('button', { name: 'Skills', exact: true }).focus()
@@ -231,7 +240,7 @@ async function scenario(label, width, height, mobile) {
     // The machines are part of the road, with no detached skills modal.
     if (mobile) await page.locator('.menu-toggle').click()
     await page.getByRole('button', { name: 'Skills', exact: true }).click()
-    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await waitForArrival(page, 'skills-road')
     for (const name of [
       'Activate Tooling',
       'Activate Web development',
@@ -298,14 +307,10 @@ async function scenario(label, width, height, mobile) {
         'keyboard works without a first click',
       )
       await page.getByRole('button', { name: 'Skills', exact: true }).click()
-      await page.locator('.caption-travel').waitFor({ state: 'visible' })
       await page.keyboard.press('Space')
-      await page.waitForTimeout(100)
-      assert.equal(
-        await page.locator('.caption-travel').count(),
-        0,
-        'Space must not reactivate focused navigation',
-      )
+      await page.waitForTimeout(150)
+      assert.equal(await canvas.getAttribute('data-navigating'), 'false',
+        'Space must not reactivate focused navigation')
     } else {
       assert.ok(await page.getByRole('button', { name: 'Jump', exact: true }).isVisible())
       await page.locator('.menu-toggle').click()
@@ -319,7 +324,7 @@ async function scenario(label, width, height, mobile) {
     }
     if (!mobile) {
       await page.getByRole('button', { name: 'Skills', exact: true }).click()
-      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await waitForArrival(page, 'skills-road')
       await page.keyboard.press('Space')
       await page.waitForFunction(
         () => Number(document.querySelector('canvas')?.dataset.skillCount) > 0,
@@ -330,8 +335,14 @@ async function scenario(label, width, height, mobile) {
         'no duplicate interaction menu',
       )
       await page.getByRole('button', { name: 'Work', exact: true }).click()
-      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
-      await page.getByRole('button', { name: 'Enter building', exact: true }).click()
+      await waitForArrival(page, 'fletcher')
+      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.cue === 'fletcher:door')
+      assert.equal(await page.locator('.world-caption').count(), 0)
+      assert.equal(await page.locator('.canvas-accessibility').getByRole('button', {
+        name: 'Enter building', exact: true,
+      }).count(), 1, 'keyboard alternatives remain available')
+      await page.locator('.world').focus()
+      await page.keyboard.press('e')
       await page.getByRole('dialog').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: 'Skills & tools', exact: true }).click()
       assert.ok(await page.locator('.room-board.is-stack').isVisible())
@@ -341,7 +352,7 @@ async function scenario(label, width, height, mobile) {
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
       )
       await page.waitForFunction(
-        () => document.activeElement?.getAttribute('aria-label') === 'Enter building',
+        () => document.activeElement?.matches('.world'),
       )
       const doorX = Number(await canvas.getAttribute('data-player-x'))
       await page.keyboard.down('ArrowLeft')
@@ -352,7 +363,7 @@ async function scenario(label, width, height, mobile) {
         'exit restores movement',
       )
       await page.getByRole('button', { name: 'Company & projects', exact: true }).click()
-      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await waitForArrival(page, 'navel-development')
       assert.equal(
         await page.locator('.computer-invitation').count(),
         0,
@@ -406,7 +417,7 @@ async function scenario(label, width, height, mobile) {
       .locator('.journey-footer')
       .getByRole('button', { name: /ROC Hilversum/ })
       .click()
-    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await waitForArrival(page, 'roc-hilversum')
     await page.waitForTimeout(500)
     for (const [index, turns] of [
       [0, 3],
@@ -432,7 +443,7 @@ async function scenario(label, width, height, mobile) {
       .locator('.journey-footer')
       .getByRole('button', { name: /Codam Coding College/ })
       .click()
-    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await waitForArrival(page, 'coding-college')
     await page.waitForTimeout(500)
     for (const x of [87, 87, 265])
       await tapWorld(page, canvas, 'coding-college', SCHOOL_LAB_OFFSET + x, -96, mobile)
@@ -471,7 +482,10 @@ async function scenario(label, width, height, mobile) {
       const stop = page.locator('.journey-footer').getByRole('button', { name: title })
       if (!(await stop.count())) continue
       await stop.click()
-      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await waitForArrival(page, ({
+        school: 'panta-rhei', codam: 'coding-college', hotel: 'fletcher',
+        airport: 'get-e', office: 'appjection', computer: 'navel-development', camp: 'contact',
+      })[name])
       if (mobile) await canvas.tap({ position: { x: 180, y: 200 } })
       await page.waitForTimeout(350)
       await page.screenshot({ path: `test-results/world/${label}-${name}.png` })
@@ -524,9 +538,43 @@ async function visualAuditScenario() {
     ]) {
       const button = page.locator('.journey-footer').getByRole('button', { name: title })
       await button.click()
-      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await waitForArrival(page, ({
+        '01-first-code': 'first-lines', '02-basket': 'panta-rhei',
+        '03-circuit': 'roc-hilversum', '04-rover': 'coding-college',
+        '05-skills': 'skills-road', '06-hotel': 'fletcher',
+        '07-airport': 'get-e', '08-office': 'appjection',
+        '09-company': 'navel-development', '10-camp': 'contact',
+      })[name])
       await page.waitForTimeout(500)
       await page.screenshot({ path: `test-results/world/audit-${name}.png` })
+      if (name === '06-hotel') {
+        // A character walking from the entrance towards the luggage bell should
+        // switch which world object is highlighted, without any floating HUD.
+        await page.waitForFunction(() => document.querySelector('canvas')?.dataset.cue === 'fletcher:door')
+        await page.locator('.world').focus()
+        await page.keyboard.down('ArrowRight')
+        try {
+          await page.waitForFunction(
+            () => document.querySelector('canvas')?.dataset.cue === 'fletcher:bell',
+            {},
+            { timeout: 6000 },
+          )
+        } finally {
+          await page.keyboard.up('ArrowRight')
+        }
+        await page.keyboard.press('e')
+        await page.waitForFunction(
+          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.running,
+        )
+        await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
+        await page.waitForFunction(
+          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.completed,
+          {},
+          { timeout: 7000 },
+        )
+        await page.screenshot({ path: 'test-results/world/audit-hotel-luggage-delivered.png' })
+        assert.equal(await page.locator('.world-caption,.caption-activity,.first-code-launch').count(), 0)
+      }
       if (name === '02-basket') {
         await chargeWorld(page, canvas, 'panta-rhei', 65, -10, 1130)
         await page.waitForTimeout(1200)

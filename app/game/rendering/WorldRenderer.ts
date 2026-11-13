@@ -10,7 +10,10 @@ import { SkillsRoadScene } from './scenes/SkillsRoadScene'
 import { BuildingSprite } from './sprites/BuildingSprite'
 import { LevelEntranceScene } from './scenes/LevelEntranceScene'
 import { isBuilding } from '../../content/buildings'
-import { circuitConnected } from '../core/learningActivities'
+import { circuitConnected, pipelineSteps } from '../core/learningActivities'
+import { cuesForScene, selectWorldCue, type WorldCueAction } from '../core/worldCues'
+import { WorldInteractionCue } from './WorldInteractionCue'
+import { skillGroups } from '../../content/skills'
 import { doorOpenness } from '../core/buildingVisit'
 
 import { CharacterSprite } from './sprites/CharacterSprite'
@@ -30,6 +33,18 @@ export class WorldRenderer {
   private terrain = new TerrainScene()
   private character = new CharacterSprite()
   private scenes = new Map<string, Container>()
+  private cues = new Map<string, { node: WorldInteractionCue; entry: SceneEntry }>()
+  private currentCue?: { action: WorldCueAction; entry: SceneEntry }
+  private pointer?: { x: number; y: number }
+  private movePointer = (event: PointerEvent) => {
+    if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
+      this.pointer = undefined
+      return
+    }
+    const bounds = this.host.getBoundingClientRect()
+    this.pointer = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+  }
+  private leavePointer = () => { this.pointer = undefined }
   private observer?: ResizeObserver
   private disposed = false
   private reduced = false
@@ -73,6 +88,8 @@ export class WorldRenderer {
       return
     }
     this.host.appendChild(this.app.canvas)
+    this.host.addEventListener('pointermove', this.movePointer)
+    this.host.addEventListener('pointerleave', this.leavePointer)
     window.addEventListener('blur', this.cancelCharges)
     document.addEventListener('visibilitychange', this.visibilityChanged)
     this.app.canvas.setAttribute('aria-label', 'Playable portfolio world')
@@ -109,6 +126,8 @@ export class WorldRenderer {
     this.gates.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
+    this.cues.clear()
+    this.currentCue = undefined
     this.activitiesByScene.clear()
   }
   private makeScene(entry: SceneEntry) {
@@ -128,6 +147,116 @@ export class WorldRenderer {
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact') return new CampsiteScene(this.model.locale)
     return new FirstLinesScene(() => this.callbacks.openFirstComputer())
+  }
+  /** Keyboard action follows whichever object is highlighted in the scene. */
+  interactNearest() {
+    const target = this.currentCue
+    if (!target) return false
+    const { action, entry } = target
+    const id = entry.event.id
+    if (action === 'enter') this.callbacks.details(entry.index)
+    else if (action === 'first-code') this.callbacks.openFirstComputer()
+    else if (action === 'projects') this.callbacks.startComputer()
+    else if (action === 'luggage') this.activities.trigger(id, 'luggage')
+    else if (action === 'basketball') this.activities.trigger(id, 'basketball', 0.65)
+    else if (action === 'departure') this.activities.trigger(id, 'departure', 0.85)
+    else if (action === 'camera') this.activities.trigger(id, 'camera', 0.36)
+    else if (action === 'circuit') this.activities.circuit[0] = (this.activities.circuit[0]! + 1) % 4
+    else if (action === 'rover') this.activities.rover.commands.length
+      ? this.activities.runRover()
+      : this.activities.editRover('step')
+    else if (action.startsWith('skill-')) {
+      const index = Number(action.slice(6))
+      if (this.activities.activateSkillGroup(index)) {
+        const group = skillGroups[index]
+        if (group) this.callbacks.skill(group.title[this.model.locale === 'nl' ? 'nl' : 'en'], this.activities.exploredSkills.length)
+      }
+    } else {
+      const camp = this.scenes.get('contact')
+      if (camp instanceof CampsiteScene) camp.interact(action)
+    }
+    return true
+  }
+  private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
+    const candidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
+    for (const [id, { node, entry }] of this.cues) {
+      const x = entry.x + node.spec.x
+      const ground = terrainHeight(entry.x, this.model.geometry.terrain)
+      const localSlope =
+        entry.event.id === 'skills-road'
+          ? ground - terrainHeight(x, this.model.geometry.terrain)
+          : 0
+      const actionPoint =
+        this.activitiesByScene.get(entry.event.id)?.focusPoint() 
+      const dynamic = actionPoint && node.spec.key !== 'door' ? actionPoint : undefined
+      node.position.set(dynamic?.x ?? node.spec.x, (dynamic?.y ?? node.spec.y) + localSlope)
+      const projectedX = (entry.x + node.x - this.viewCamera) * this.zoom
+      const projectedY = base + (frame.cameraY - ground + node.y) * this.zoom
+      const visible =
+        projectedX > 28 && projectedX < width - 28 &&
+        projectedY > 24 && projectedY < height - 20
+      const distance = Math.abs(frame.motion.x - (entry.x + node.x))
+      const hovered = !!this.pointer && visible &&
+        Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
+      const near = visible && (hovered || distance < node.spec.radius)
+      positions.set(id, { screenX: projectedX, screenY: projectedY, near })
+      if (near) candidates.push({ id, distance, radius: node.spec.radius, hovered })
+    }
+    const selected = frame.visit.phase === 'outside' && !frame.paused
+      ? selectWorldCue(candidates)
+      : undefined
+    // Highlight the actual door geometry, not merely the tooltip marker.
+    for (const [id, sprite] of this.scenes)
+      if (sprite instanceof BuildingSprite) {
+        const key = id + ':door'
+        sprite.setEntranceHighlight(positions.get(key)?.near ?? false,
+          selected === key, frame.time, this.reduced)
+      }
+    const picked = selected ? this.cues.get(selected) : undefined
+    this.currentCue = picked ? { entry: picked.entry, action: picked.node.spec.action } : undefined
+    const nl = this.model.locale === 'nl'
+    for (const [id, { node, entry }] of this.cues) {
+      const p = positions.get(id)!
+      const selectedThis = selected === id
+      const record = this.activities.actions[entry.event.id]
+      let feedback: string | undefined
+      if (node.spec.key !== 'door' && record && (record.running || record.completed)) {
+        if (record.running) feedback = nl ? 'Bezig…' : 'In progress…'
+        else if (record.outcome === 'retry' || record.outcome === 'ticket')
+          feedback = nl ? 'Probeer opnieuw' : 'Try again'
+        else feedback = entry.event.id === 'fletcher'
+          ? (nl ? 'Bagage bezorgd · bel opnieuw' : 'Delivered · ring again')
+          : (nl ? 'Geslaagd · probeer opnieuw' : 'Completed · try again')
+      }
+      if (entry.event.id === 'skills-road') {
+        if (node.spec.key === 'tooling') {
+          const pipeline = this.activities.pipeline
+          feedback = pipeline.status === 'success'
+            ? (nl ? 'Pipeline geslaagd · deployed' : 'Pipeline passed · deployed')
+            : pipeline.status === 'error'
+              ? (nl ? 'Verkeerde volgorde · opnieuw' : 'Wrong order · retry')
+              : pipeline.completed > 0
+                ? `${pipeline.completed}/4 · ${pipelineSteps[pipeline.completed] ?? 'deploy'}`
+                : undefined
+        } else if (node.spec.key === 'web' && (this.activities.web.records || this.activities.web.theme)) {
+          feedback = nl ? 'Live pagina bijgewerkt' : 'Live page updated'
+        } else if (node.spec.key === 'cloud' && this.activities.actions['skill-systems']) {
+          feedback = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activities.cloud.queued)} · ${this.activities.cloud.workers} workers`
+        }
+      }
+      // Keep the whole 238-world-unit tooltip visible at every camera zoom.
+      const halfBubble = Math.min(width / 2, 119 * this.zoom + 14)
+      const safeX = Math.max(halfBubble, Math.min(width - halfBubble, p.screenX))
+      const popupOffset = node.spec.popupOffset ?? 106
+      const top = p.screenY - (popupOffset + 27) * this.zoom
+      const pushDown = Math.max(0, (16 - top) / this.zoom)
+      node.update(frame.time, p.near && frame.visit.phase === 'outside', selectedThis, this.reduced,
+        feedback, (safeX - p.screenX) / this.zoom, pushDown)
+    }
+    if (frame.paused) this.currentCue = undefined
+    this.app.canvas.dataset.cue = this.currentCue
+      ? `${this.currentCue.entry.event.id}:${picked!.node.spec.key}` : ''
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
@@ -220,6 +349,8 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
+        for (const key of this.cues.keys())
+          if (key.startsWith(id + ':')) this.cues.delete(key)
         this.activitiesByScene.delete(id)
       }
     for (const entry of visible) {
@@ -248,6 +379,11 @@ export class WorldRenderer {
         }
         this.scenes.set(entry.event.id, node)
         this.scenery.addChild(node)
+        for (const spec of cuesForScene(entry.event.id)) {
+          const interaction = new WorldInteractionCue(spec, this.model.locale === 'nl' ? 'nl' : 'en')
+          node.addChild(interaction)
+          this.cues.set(entry.event.id + ':' + spec.key, { node: interaction, entry })
+        }
       }
       node.position.set(entry.x, -terrainHeight(entry.x, this.model.geometry.terrain))
       if (node instanceof SkillsRoadScene)
@@ -296,6 +432,7 @@ export class WorldRenderer {
     for (const scene of this.scenes.values())
       if (scene instanceof CampsiteScene) scene.update(frame, this.reduced)
       else if (scene instanceof FirstLinesScene) scene.update(frame.time, this.reduced)
+    this.drawCues(frame, base, width, height)
     this.terrain.update(frame.time, this.reduced)
     this.dust.update(frame, this.model, this.reduced)
     this.character.update(
@@ -322,6 +459,7 @@ export class WorldRenderer {
       )
       this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
       this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
+      this.app.canvas.dataset.navigating = String(frame.navigating)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
@@ -353,6 +491,9 @@ export class WorldRenderer {
     if (this.disposed) return
     this.disposed = true
     this.activities.cancelCharges()
+    this.host.removeEventListener('pointermove', this.movePointer)
+    this.host.removeEventListener('pointerleave', this.leavePointer)
+    this.cues.clear()
     window.removeEventListener('blur', this.cancelCharges)
     document.removeEventListener('visibilitychange', this.visibilityChanged)
     this.observer?.disconnect()

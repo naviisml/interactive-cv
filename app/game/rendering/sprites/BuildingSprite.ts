@@ -10,6 +10,7 @@ export class BuildingSprite extends Container {
   private left = new Container()
   private right = new Container()
   private lights = new Graphics()
+  private entranceHighlight = new Graphics()
   private panes: { x: number; y: number; w: number; h: number }[] = []
   readonly kind: BuildingKind
   constructor(event: TimelineEvent, enter: () => void, locale: string) {
@@ -23,24 +24,13 @@ export class BuildingSprite extends Container {
     if (this.kind === 'codam') {
       label(this.facade, 'CODAM', -224, -212, 26, 0xf0e3c2, 190)
       label(this.facade, 'CODING COLLEGE', -224, -177, 9, 0xc1cbb4, 190)
-      label(this.facade, event.role ?? 'Software Development', 104, -210, 10, 0xd8dec5, 136)
-      label(this.facade, event.period ?? event.label, 104, -175, 10, 0xc9d0b8, 140)
+
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
-      const title = label(this.facade, event.title, 0, signY, 23, 0xf2e8cb, 490)
+      // The facade is a place, not a miniature CV. Roles and periods remain
+      // available in the building interior and the accessible reading mode.
+      const title = label(this.facade, event.title, 0, signY + 10, 23, 0xf2e8cb, 490)
       title.anchor.x = 0.5
-      const role = label(this.facade, event.role ?? event.chapter, 0, signY + 27, 10, 0xd1d8bb, 470)
-      role.anchor.x = 0.5
-      const period = label(
-        this.facade,
-        event.period ?? event.label,
-        0,
-        signY + 44,
-        10,
-        0xc4cba9,
-        470,
-      )
-      period.anchor.x = 0.5
     }
     const edge =
       this.kind === 'airport'
@@ -76,7 +66,7 @@ export class BuildingSprite extends Container {
     rect(this.right, 6, 7, 19, 57, 0x9fbeb0)
     rect(this.right, 4, 65, 2, 10, 0xe1cc92)
     this.doors.addChild(this.left, this.right)
-    this.facade.addChild(this.doors, this.lights)
+    this.facade.addChild(this.doors, this.lights, this.entranceHighlight)
     rect(this.facade, -48, -4, 96, 4, 0xb8b48d)
     const target = new Container()
     tapTarget(target, enter, new Rectangle(-43, -100, 86, 104))
@@ -261,6 +251,16 @@ export class BuildingSprite extends Container {
     // The traffic story takes place in the lane in front of the office.
 
     for (const x of [-254, 245]) rect(this.facade, x, -242, 9, 230, 0x6e8276)
+  }
+  setEntranceHighlight(near: boolean, focused: boolean, time: number, reduced: boolean) {
+    this.entranceHighlight.clear()
+    if (!near) return
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 380)) * 0.5
+    this.entranceHighlight
+      .roundRect(-43, -103, 86, 107, 5)
+      .stroke({ color: 0xf7d9a0, width: focused ? 3.5 : 2, alpha: focused ? 0.72 + pulse * 0.22 : 0.35 + pulse * 0.1 })
+      .roundRect(-47, -107, 94, 115, 7)
+      .stroke({ color: 0xf6d7a0, width: 6, alpha: focused ? 0.11 + pulse * 0.08 : 0.07 })
   }
   update(time: number, open: number, reduced: boolean, powered = false) {
     // Preserve the artwork and typography aspect ratio on phones too.
