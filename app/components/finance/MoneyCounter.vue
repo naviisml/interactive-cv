@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { countryNames, helpText } from '~/content/locales/finance-nl'
-import data from '~/content/finances.json'
+import data from '~/content/finance-support.json'
 import { timeline } from '~/content/timeline'
 import { financialSnapshot } from '~/game/core/financialSnapshot'
 const { t, locale } = useI18n()
@@ -31,12 +31,12 @@ const displayCountries = computed(() =>
   ),
 )
 const snapshot = computed(() =>
-  financialSnapshot(
-    timeline.map((e) => e.id),
-    props.index,
-    data.chapters,
-  ),
+  financialSnapshot(timeline, props.index),
 )
+const eventContext = computed(() => {
+  const text = timeline[props.index]?.finance?.context
+  return text?.[locale.value === 'nl' ? 'nl' : 'en'] ?? ''
+})
 const featuredLabel = computed(() =>
   t(snapshot.value.featured === 'savings' ? 'finance.savings' : 'finance.debt'),
 )
@@ -143,6 +143,7 @@ onBeforeUnmount(() => {
               </div>
             </dl>
           </div>
+          <p v-if="eventContext" class="debt-context">{{ eventContext }}</p>
           <h3>{{ t('finance.support') }}</h3>
           <p class="debt-support-intro">{{ t('finance.supportIntro') }}</p>
           <label for="debt-country">{{ t('finance.helpIn') }}</label>
@@ -252,6 +253,12 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr;
   gap: 12px;
   margin-top: 22px;
+}
+.debt-context {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #425f4e;
+  margin: 14px 0 0;
 }
 .debt-chapter > span {
   font-size: 12px;
