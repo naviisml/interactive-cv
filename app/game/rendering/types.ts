@@ -37,6 +37,7 @@ export interface WorldModel {
 
 export interface RendererCallbacks {
   startComputer: () => void
+  openFirstComputer: () => void
   skill: (name: string, count: number) => void
   details: (index: number) => void
   seek: (progress: number) => void
