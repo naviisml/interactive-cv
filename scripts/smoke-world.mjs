@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
+import { mkdir } from 'node:fs/promises'
+await mkdir('test-results/world', { recursive: true })
 const base = process.env.SMOKE_URL || 'http://127.0.0.1:3000'
 const browser = await chromium.launch({
   channel: 'chrome',
@@ -135,6 +137,23 @@ async function scenario(label, width, height, mobile) {
         'no duplicate project chapters',
       )
     }
+    // Retain real responsive renders for visual review, not just layout assertions.
+    for (const [name, title] of [
+      ['school', /Panta Rhei/],
+      ['codam', /Codam Coding College/],
+      ['hotel', /Fletcher Holdings/],
+      ['airport', /Get-E/],
+      ['office', /Appjection/],
+      ['computer', /Navel Development/],
+      ['camp', /write the next chapter/i],
+    ]) {
+      const stop = page.locator('.journey-footer').getByRole('button', { name: title })
+      if (!(await stop.count())) continue
+      await stop.click()
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await page.waitForTimeout(350)
+      await page.screenshot({ path: `test-results/world/${label}-${name}.png` })
+    }
     await page.locator('.language-switch select').selectOption('nl')
     await page.waitForFunction(() => document.documentElement.lang === 'nl')
     await page
@@ -149,6 +168,7 @@ async function scenario(label, width, height, mobile) {
     failures++
     console.error(`FAIL_${label}: ${error.stack || error}`)
   } finally {
+    await page.screenshot({ path: `test-results/world/${label}-final.png` }).catch(() => {})
     await page.close()
   }
 }
