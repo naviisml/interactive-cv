@@ -255,7 +255,7 @@ async function scenario(label, width, height, mobile) {
   }
 }
 async function readingModeScenario() {
-  const page = await browser.newPage({ viewport: { width: 900, height: 700 } })
+  const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   try {
     await page.goto(base + '/?view=list', { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('.timeline-list').waitFor({ state: 'visible' })
