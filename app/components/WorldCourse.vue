@@ -33,7 +33,7 @@ const slides=computed(()=>props.geometry.slides.filter(s=>s.x+s.width>=props.win
       <rect v-for="x in [395,515]" :key="x" :x="x" :y="base-groundAt(450)-34" width="5" :height="groundAt(450)+34-groundAt(x)" fill="#7b8462"/>
       <rect x="380" :y="base-groundAt(450)-104" width="150" height="80" fill="#35594c" stroke="#a8b58a" stroke-width="2"/>
       <text x="392" :y="base-groundAt(450)-86" fill="#eddfb1" font-family="monospace" font-size="10" letter-spacing="1">TUTORIAL</text>
-      <g fill="#d5ddbf" font-family="monospace" font-size="9"><text x="392" :y="base-groundAt(450)-66">← → / Swipe : move</text><text x="392" :y="base-groundAt(450)-49">Space / ↥   : jump</text><text x="392" :y="base-groundAt(450)-32">↑ ↓         : climb</text></g>
+      <g fill="#d5ddbf" font-family="monospace" font-size="9"><text x="392" :y="base-groundAt(450)-62">A route above the trail.</text><text x="392" :y="base-groundAt(450)-42">Climb up. Slide down.</text></g>
     </g>
   </svg>
 </template>

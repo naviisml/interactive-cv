@@ -78,7 +78,7 @@ test('walking follows uphill and downhill terrain without hovering or falling th
 })
 
 
-test('reverse input immediately cancels slide velocity and bypasses all obstacles', () => {
+test('reverse input cancels automatic sliding while retaining physical support', () => {
   let s: Motion = {...initial,x:650,y:-65,vx:340,mode:'sliding'}
   const reversed=stepMotion(s,-1,false,1/60,2000,route)
   assert.ok(reversed.x<s.x); assert.ok(reversed.vx<0)
@@ -98,5 +98,33 @@ test('jump shadow stays on its support surface instead of following the characte
   assert.equal(shadowSurface({...initial,x:200,y:-70,grounded:false},route),0)
   assert.equal(shadowSurface({...initial,x:200,y:-150,grounded:false},route),0)
   assert.equal(shadowSurface({...initial,x:400,y:-180,grounded:false},route),-120)
-  assert.equal(shadowSurface({...initial,x:400,y:-180,grounded:false,returning:true},route),0)
+  assert.equal(shadowSurface({...initial,x:400,y:-180,grounded:false,returning:true},route),-120)
+})
+
+test('returning players can climb ladders and stand on platforms',()=>{
+ let state:Motion={...initial,x:330,y:-60,grounded:false,mode:'climbing',returning:true}
+ const climbed=stepMotion(state,0,false,.05,2000,route,-1)
+ assert.ok(climbed.y<state.y);assert.equal(climbed.mode,'climbing')
+ state={...initial,x:450,y:-120,returning:true}
+ for(let i=0;i<10;i++)state=stepMotion(state,-1,false,1/60,2000,route)
+ assert.equal(state.y,-120);assert.equal(state.grounded,true)
+})
+test('jumping from a ladder reaches the deck even while Up remains held',()=>{
+ let state:Motion={...initial,x:330,y:-60,grounded:false,mode:'climbing',returning:true}
+ state=stepMotion(state,0,true,1/60,2000,route,-1)
+ const firstY=state.y
+ state=stepMotion(state,0,false,1/60,2000,route,-1)
+ assert.ok(state.y<firstY);assert.notEqual(state.mode,'climbing')
+ for(let i=0;i<100;i++)state=stepMotion(state,0,false,1/60,2000,route,-1)
+ assert.equal(state.y,-120);assert.equal(state.grounded,true)
+})
+test('reverse movement follows the slide surface instead of falling through it',()=>{
+ let state:Motion={...initial,x:650,y:-65,returning:true}
+ for(let i=0;i<12;i++){state=stepMotion(state,-1,false,1/60,2000,route);assert.equal(state.grounded,true);assert.notEqual(state.mode,'sliding')}
+ assert.ok(state.y<-65)
+})
+test('sprint is faster while preserving elapsed-time acceleration and collisions',()=>{
+ function run(sprint:boolean){let state={...initial};for(let i=0;i<120;i++)state=stepMotion(state,1,false,1/60,5000,undefined,0,sprint);return state}
+ assert.ok(run(true).x>run(false).x+200)
+ assert.ok(run(true).vx<=360)
 })

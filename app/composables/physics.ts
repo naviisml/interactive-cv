@@ -14,16 +14,16 @@ export function terrainHeight(x: number, points: TerrainPoint[] = []): number {
   }
   return points[points.length-1]!.height
 }
-export const motionConfig = { speed: 210, acceleration: 1000, friction: 1550, gravity: 1600, jump: 590, climb: 145, slide: 280 }
+export const motionConfig = { speed: 210, sprint: 360, acceleration: 1000, friction: 1550, gravity: 1600, jump: 590, climb: 145, slide: 280 }
 export const slideSurface = (slide: Slide, x: number) => -(slide.from + (slide.to - slide.from) * Math.max(0, Math.min(1, (x - slide.x) / slide.width)))
 export function findLadder(state: Motion, ladders: Ladder[]) {
   return ladders.find(l => Math.abs(state.x - l.x) <= 30 && state.y >= -l.top - 5 && state.y <= -l.bottom + 5)
 }
-export function stepMotion(state: Motion, direction: number, jump: boolean, dt: number, width: number, world: WorldGeometry = emptyWorld, vertical = 0): Motion {
+export function stepMotion(state: Motion, direction: number, jump: boolean, dt: number, width: number, world: WorldGeometry = emptyWorld, vertical = 0, sprint = false): Motion {
   dt = Math.min(Math.max(dt, 0), 0.05)
   const returning = direction < 0 || (direction === 0 && !!state.returning)
-  const ladder = returning ? undefined : findLadder(state, world.ladders)
-  if (ladder && !jump && !direction && (vertical || state.mode === 'climbing')) {
+  const ladder = findLadder(state, world.ladders)
+  if (ladder && !jump && (!direction || vertical) && (state.grounded || state.mode === 'climbing') && (vertical || state.mode === 'climbing')) {
     const y = Math.max(-ladder.top, Math.min(-ladder.bottom, state.y + vertical * motionConfig.climb * dt)) || 0
     const endpoint = y === -ladder.top || y === -ladder.bottom
     return { x: ladder.x, y, vx: 0, vy: 0, grounded: endpoint, mode: endpoint ? 'walking' : 'climbing', returning }
@@ -34,7 +34,7 @@ export function stepMotion(state: Motion, direction: number, jump: boolean, dt: 
     const y = slideSurface(onSlide, x)
     return { x, y, vx: motionConfig.slide, vy: 0, grounded: true, mode: x < onSlide.x + onSlide.width ? 'sliding' : 'walking', returning: false }
   }
-  const target = direction * motionConfig.speed
+  const target = direction * (sprint ? motionConfig.sprint : motionConfig.speed)
   const amount = (direction ? motionConfig.acceleration : motionConfig.friction) * dt
   const previousVx = direction < 0 && state.vx > 0 ? 0 : state.vx
   let vx = previousVx + Math.sign(target - previousVx) * Math.min(Math.abs(target - previousVx), amount)
@@ -49,10 +49,14 @@ export function stepMotion(state: Motion, direction: number, jump: boolean, dt: 
   if (!jump && state.grounded && Math.abs(state.y-previousGround)<.1) {
     return { x, y: ground, vx, vy: 0, grounded: true, mode: 'walking', returning }
   }
+  // A reverse journey disables automatic slides, never the surface underfoot.
+  if(onSlide&&!jump&&state.grounded&&x>=onSlide.x&&x<=onSlide.x+onSlide.width){
+    return {x,y:slideSurface(onSlide,x),vx,vy:0,grounded:true,mode:'walking',returning}
+  }
   // Sweep the feet across all surface tops; never snap upward from underneath.
   const surfaces = [ground]
-  for (const p of returning ? [] : world.platforms) if (x >= p.x && x <= p.x + p.width) surfaces.push(-p.height)
-  for (const s of returning ? [] : world.slides) if (x >= s.x && x <= s.x + s.width) surfaces.push(slideSurface(s, x))
+  for (const p of world.platforms) if (x >= p.x && x <= p.x + p.width) surfaces.push(-p.height)
+  for (const s of world.slides) if (x >= s.x && x <= s.x + s.width) surfaces.push(slideSurface(s, x))
   if (vy >= 0) {
     const landing = surfaces.filter(surface => state.y <= surface + .01 && y >= surface).sort((a,b) => a-b)[0]
     if (landing !== undefined) { y = landing; vy = 0; grounded = true }
@@ -66,7 +70,7 @@ export const cameraTarget = (x: number, viewport: number, world: number) => Math
 // Project the shadow onto a support surface beneath the feet, never onto the sprite.
 export function shadowSurface(state: Motion, world: WorldGeometry): number {
   const surfaces = [-terrainHeight(state.x, world.terrain) || 0]
-  if (!state.returning) {
+  {
     for (const p of world.platforms) if (state.x >= p.x && state.x <= p.x+p.width) surfaces.push(-p.height)
     for (const slide of world.slides) if (state.x >= slide.x && state.x <= slide.x+slide.width) surfaces.push(slideSurface(slide,state.x))
   }

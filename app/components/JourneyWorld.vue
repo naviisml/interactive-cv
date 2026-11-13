@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {FileText} from '@lucide/vue'
 import {timeline as cvTimeline,isBriefEvent,storyParagraphs,categoryNames,categoryColors,type TimelineFilter} from '~/data/timeline'
 import {journeyEvents as timeline,levels,levelForEvent,firstInLevel,type LevelId} from '~/data/levels'
 import {sceneryTransition} from '~/composables/sceneryTransition'
@@ -21,7 +22,7 @@ const worldRoot = ref<HTMLElement>()
 const view=useWorldViewport(worldRoot)
 const activityHints=reactive<Record<string,string>>({})
 const journey = useJourney(trackIndices,view)
-const { cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
+const { sprinting,touchSprint,cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
 const windowBounds=computed(()=>renderWindow(camera.value,view.value.viewport,WORLD_WIDTH.value))
 const visibleEntries=computed(()=>entries.value.filter(({index})=>eventPosition(index)>=windowBounds.value.start&&eventPosition(index)<=windowBounds.value.end))
 const scenery=computed(()=>sceneryTransition(motion.x,entries.value.map(({event,index})=>({x:eventPosition(index),urban:event.level==='work'||event.level==='company'?1:0,technical:event.level==='skills'?1:0}))))
@@ -120,10 +121,9 @@ watch(worldRoot,(element,previous)=>{
 },{flush:'post'})
 function wheelTravel(event: WheelEvent) {
   if (event.ctrlKey || paused.value) return
-  if (Math.abs(event.deltaX)<=Math.abs(event.deltaY) && !event.shiftKey) return
-  const delta=event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX
+  const delta=Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY
   event.preventDefault()
-  scrollByDistance(delta*(event.deltaMode===1 ? 16 : event.deltaMode===2 ? 400 : 1))
+  scrollByDistance(delta*(event.deltaMode===1 ? 16 : event.deltaMode===2 ? 400 : 1),'wheel')
 }
 watch(activeIndex, async () => {
   await nextTick()
@@ -162,10 +162,9 @@ async function toggleList() {
   }
 }
 function navigateTimeline(index: number) { if (listMode.value) scrollToEvent(index); else goTo(index) }
-function press(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchDirection.value = direction }
-function climb(direction: number, event: PointerEvent) { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); touchVertical.value = direction }
 function interact(event:KeyboardEvent){if(!listMode.value&&detailIndex.value===null&&event.key.toLowerCase()==='e'&&nearby.value&&!isBriefEvent(nearby.value)&&!(event.target as HTMLElement)?.closest('button,a,input'))openDetail(nearestIndex.value)}
 onMounted(async () => {
+  if(!listMode.value&&(document.activeElement===document.body||document.activeElement===document.documentElement))worldRoot.value?.focus({preventScroll:true})
   paused.value = listMode.value || detailIndex.value!==null || moneyOpen.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
@@ -183,7 +182,7 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
       <WorldAtmosphere :camera="camera*view.scale" :viewport-width="view.viewport*view.scale" :urban="scenery.urban" :technical="scenery.technical" />
       <header class="world-caption">
         <p class="caption-meta"><CategoryBadge :category="current.category"/><span v-if="current.label!=='SKILLS'&&current.category!=='contact'">{{current.label}}</span></p>
-        <div class="caption-title"><h1>{{current.title}}</h1><button v-if="!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" aria-haspopup="dialog" :aria-label="`Details about ${current.title}`" @click="openDetail(nearestIndex,$event)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="1" stroke="currentColor"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor"/></svg>Details</button></div>
+        <div class="caption-title"><h1>{{current.title}}</h1><button v-if="!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" aria-haspopup="dialog" :aria-label="`Details about ${current.title}`" @click="openDetail(nearestIndex,$event)"><FileText :size="16" aria-hidden="true"/>Details</button></div>
         <p class="caption-summary">{{current.summary}}</p>
         <p v-if="running" class="caption-travel" role="status"><span>Running to {{destinationTitle}}</span><button @click="stop">Cancel</button></p>
         <p v-else-if="nearby&&activityHints[current.id]" class="caption-activity" role="status">{{activityHints[current.id]}}</p>
@@ -198,19 +197,14 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
 
         </div>
         <div class="player-shadow" :style="{ left: `${motion.x}px`, bottom: `calc(var(--ground-y) - ${shadowY}px)`, transform: `translateX(-50%) scale(${Math.max(.38,1-shadowDistance/330)})`, opacity: Math.max(.12,.4-shadowDistance/650) }" aria-hidden="true" />
-        <div class="player" :style="{ left: `${motion.x}px`,width:`${sceneLayout.actorWidth}px`,height:`${sceneLayout.actorHeight}px`, transform: `translate(-50%, ${motion.y}px)` }"><PixelCharacter :running="running" :falling="motion.vy>=0" :frame="animationFrame" :walking="walking" :facing="facing" :airborne="!motion.grounded" :climbing="motion.mode==='climbing'" :sliding="motion.mode==='sliding'"/></div>
+        <div class="player" :style="{ left: `${motion.x}px`,width:`${sceneLayout.actorWidth}px`,height:`${sceneLayout.actorHeight}px`, transform: `translate(-50%, ${motion.y}px)` }"><PixelCharacter :running="running||sprinting" :falling="motion.vy>=0" :frame="animationFrame" :walking="walking" :facing="facing" :airborne="!motion.grounded" :climbing="motion.mode==='climbing'" :sliding="motion.mode==='sliding'"/></div>
 
       </div>
       <div class="ground" aria-hidden="true" />
 
 
-      <div class="movement-hint"><span class="touch-instruction">{{nearLadder?'Use ↑ ↓ to climb':'Swipe to walk · ↑ to jump'}}</span><span class="desktop-instruction">← → Walk · Space Jump<span v-if="nearLadder"> · ↑ ↓ Climb</span></span></div>
-      <div class="touch-controls" aria-label="Movement controls">
-        <button aria-label="Walk left" @pointerdown.prevent="press(-1,$event)" @pointerup="touchDirection=0" @pointercancel="touchDirection=0" @lostpointercapture="touchDirection=0">←</button>
-        <button aria-label="Walk right" @pointerdown.prevent="press(1,$event)" @pointerup="touchDirection=0" @pointercancel="touchDirection=0" @lostpointercapture="touchDirection=0">→</button>
-        <button aria-label="Jump" @pointerdown.prevent="jump">↑</button>
-        <div v-if="nearLadder" class="climb-controls"><button aria-label="Climb up" @pointerdown.prevent="climb(-1,$event)" @pointerup="touchVertical=0" @pointercancel="touchVertical=0" @lostpointercapture="touchVertical=0">↑</button><button aria-label="Climb down" @pointerdown.prevent="climb(1,$event)" @pointerup="touchVertical=0" @pointercancel="touchVertical=0" @lostpointercapture="touchVertical=0">↓</button></div>
-      </div>
+      <MovementControls :near-ladder="!!nearLadder" :paused="paused" @direction="touchDirection=$event" @vertical="touchVertical=$event" @sprint="touchSprint=$event" @jump="jump"/>
+
       </div>
       <WorldEventPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail"/>
     </section>

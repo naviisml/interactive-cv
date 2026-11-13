@@ -3,10 +3,14 @@ export interface JourneyDestination {index:number;fromX:number;fromY:number;toX:
 export function navigationDuration(distance:number){return Math.max(1,Math.abs(distance)/360)}
 export function advanceDestination(nav:JourneyDestination,dt:number,world:WorldGeometry):{motion:Motion;done:boolean} {
   nav.elapsed=Math.min(nav.duration,nav.elapsed+Math.max(0,Math.min(dt,.05)))
-  const t=nav.elapsed/nav.duration,blend=t*t*(3-2*t)
-  const x=nav.fromX+(nav.toX-nav.fromX)*blend
+  const t=nav.elapsed/nav.duration,ramp=Math.min(.22,nav.duration/3),cruise=nav.duration-ramp
+  let distance:number,velocity:number
+  if(nav.elapsed<ramp){distance=nav.elapsed*nav.elapsed/(2*ramp);velocity=nav.elapsed/ramp}
+  else if(nav.elapsed>nav.duration-ramp){const remaining=nav.duration-nav.elapsed;distance=cruise-remaining*remaining/(2*ramp);velocity=remaining/ramp}
+  else{distance=nav.elapsed-ramp/2;velocity=1}
+  const x=nav.fromX+(nav.toX-nav.fromX)*distance/cruise
   const ground=-terrainHeight(x,world.terrain)||0
   const settle=Math.min(1,nav.elapsed/.25)
   const y=nav.fromY+(ground-nav.fromY)*settle
-  return {motion:{x,y,vx:(nav.toX-nav.fromX)*6*t*(1-t)/nav.duration,vy:0,grounded:Math.abs(y-ground)<.1,mode:'walking',returning:nav.toX<nav.fromX},done:t>=1}
+  return {motion:{x,y,vx:(nav.toX-nav.fromX)*velocity/cruise,vy:0,grounded:Math.abs(y-ground)<.1,mode:'walking',returning:nav.toX<nav.fromX},done:t>=1}
 }

@@ -26,9 +26,9 @@ The level buttons and footer timeline start an animated run to the chosen stop. 
 
 ## Controls and event details
 
-Left/Right or A/D walk. Space jumps. Up/Down or W/S climb nearby ladders; Up/W jumps away from ladders. E opens nearby details. Short milestones and school events show proximity tooltips. Other events open a focused, scrollable panel contained within the world; Escape closes it. Original CV entries also retain direct `/events/[id]` pages.
+Left/Right or A/D walk. Hold Shift to sprint. Space jumps. Up/Down or W/S climb nearby ladders; Up/W jumps away from ladders. E opens nearby details. Short milestones and school events show proximity tooltips. Other events open a focused, scrollable panel contained within the world; Escape closes it. Original CV entries also retain direct `/events/[id]` pages.
 
-Horizontal swipes and trackpad scrolling use buffered distance at the same capped physics speed as keyboard input. Releasing a finger clears pending travel. Safari uses a non-passive native touchmove listener with direction locking; vertical starts and pinch zoom remain native. The world pauses while a detail panel, the money information panel, or the list is open.
+Horizontal swipes, trackpad movement and mouse-wheel scrolling in either direction use buffered distance at the same capped physics speed as keyboard input. Releasing a finger clears pending travel. Safari uses a non-passive native touchmove listener with direction locking; vertical starts and pinch zoom remain native. The world pauses while a detail panel, the money information panel, or the list is open.
 
 ## Rendering and motion
 
@@ -74,3 +74,11 @@ Skills scenery has dedicated backend, frontend, infrastructure and Git/CI views.
 `StoryWorldScene.vue` and `SkillsWorldScene.vue` use closed primitives for painted surfaces; open paths inherit `fill="none"`. Props sit either side of the walking lane. Database bodies, fountain tiers, benches, shelves and transport props are complete connected objects. Q-Lite uses a travel-information shelter and speaker.
 
 `renderWindow` bounds the visible terrain/course SVG and mounted chapters. `parallaxTiles` repeats finite background tiles instead of stretching layers across the entire journey. Terrain keeps its original 360-pixel surface datum while its clipped view extends to 480 pixels, so ground alignment and collisions remain unchanged. `overflow: clip` prevents focused puzzle controls from scrolling the game container. Automatic destination travel cannot kick the football. Detail/list paragraphs omit repeated summaries, and the contact ending is shown once.
+
+## Era transitions and input
+
+Scenery follows continuous distance between event clearings. Trees fall away to stumps before the skyline rises from the ground; buildings remain mounted and reverse travel retraces the transition. The sky, mountains and terrain stay continuous. Reduced motion uses opacity without the tree/building transforms. Static background geometry is memoized during camera movement.
+
+Physics catches up normal slow frames with bounded substeps; it does not slow the world clock below 20 fps. Timeline runs use a short acceleration/deceleration ramp and steady cruising speed. Game Space takes precedence over a focused navigation button while reading mode, forms, puzzles and open dialogs retain native keyboard behavior. The world receives initial focus without scrolling.
+
+Reverse movement disables automatic slide activation, while platform and slide support and explicit ladder climbing remain available. A ladder jump cannot reattach before landing. Desktop hints show keyboard/scroll controls. Touch controls use independent pointer IDs, touch-action:none, and separate direction/jump pads, allowing walking and jumping together. A held touch sprint button complements Shift. Icons come from @lucide/vue.

@@ -12,6 +12,7 @@
     "sprites:generate": "node scripts/build-character.mjs"
   },
   "dependencies": {
+    "@lucide/vue": "^1.72.0",
     "nuxt": "4.6.4",
     "vue": "^3.5.0",
     "vue-router": "5.4.0"
