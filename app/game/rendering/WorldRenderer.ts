@@ -245,7 +245,9 @@ export class WorldRenderer {
           feedback = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activities.cloud.queued)} · ${this.activities.cloud.workers} workers`
         }
       }
-      const safeX = Math.max(127, Math.min(width - 127, p.screenX))
+      // Keep the whole 238-world-unit tooltip visible at every camera zoom.
+      const halfBubble = Math.min(width / 2, 119 * this.zoom + 14)
+      const safeX = Math.max(halfBubble, Math.min(width - halfBubble, p.screenX))
       const popupOffset = node.spec.popupOffset ?? 106
       const top = p.screenY - (popupOffset + 27) * this.zoom
       const pushDown = Math.max(0, (16 - top) / this.zoom)
