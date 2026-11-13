@@ -152,6 +152,7 @@ async function scenario(label, width, height, mobile) {
       await page.getByRole('dialog').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: 'Skills & tools', exact: true }).click()
       assert.ok(await page.locator('.room-board.is-stack').isVisible())
+      await page.screenshot({ path: `test-results/world/${label}-building-interior.png` })
       await page.locator('.room-exit').click()
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
