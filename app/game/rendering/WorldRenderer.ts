@@ -35,6 +35,7 @@ export class WorldRenderer {
   private scenes = new Map<string, Container>()
   private cues = new Map<string, { node: WorldInteractionCue; entry: SceneEntry }>()
   private currentCue?: { action: WorldCueAction; entry: SceneEntry }
+  private showTooltips = true
   private pointer?: { x: number; y: number }
   private movePointer = (event: PointerEvent) => {
     if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
@@ -157,6 +158,11 @@ export class WorldRenderer {
       this.callbacks.openFirstComputer()
     })
   }
+  /** Controls only the introductory tooltip, never the glow or keyboard input. */
+  setTooltipsEnabled(enabled: boolean) {
+    this.showTooltips = enabled
+    this.dirty = true
+  }
   /** Keyboard action follows whichever object is highlighted in the scene. */
   interactNearest() {
     const target = this.currentCue
@@ -189,7 +195,6 @@ export class WorldRenderer {
     return true
   }
   private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
-    const hintCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
     const actionCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
     const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
     for (const [id, { node, entry }] of this.cues) {
@@ -211,19 +216,20 @@ export class WorldRenderer {
       const distance = Math.abs(frame.motion.x - (entry.x + node.x))
       const hovered = !!this.pointer && visible &&
         Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
-      const used = this.activities.wasCueUsed(entry.event.id, node.spec.key)
-      const actionable = visible && (hovered || distance < node.spec.radius)
-      const near = !used && actionable
+      const near = visible && (hovered || distance < node.spec.radius)
       positions.set(id, { screenX: projectedX, screenY: projectedY, near })
-      if (actionable) actionCandidates.push({ id, distance, radius: node.spec.radius, hovered })
-      if (near) hintCandidates.push({ id, distance, radius: node.spec.radius, hovered })
+      if (near) actionCandidates.push({ id, distance, radius: node.spec.radius, hovered })
     }
     const activeWorld = frame.visit.phase === 'outside' && !frame.paused
-    const selected = activeWorld ? selectWorldCue(hintCandidates) : undefined
-    // E keeps activating already-discovered objects even when their hint is gone.
-    // An actual visible hint wins so its keyboard action always matches the label.
-    const actionable = activeWorld ? (selected ?? selectWorldCue(actionCandidates)) : undefined
-    // Only the selected, never-used prop illuminates. No free-standing rings.
+    // Glow and E use the same focus regardless of first use or tooltip settings.
+    const selected = activeWorld ? selectWorldCue(actionCandidates) : undefined
+    const focusedCue = selected ? this.cues.get(selected) : undefined
+    const tooltip = this.showTooltips && focusedCue &&
+      focusedCue.node.spec.key !== 'door' &&
+      !this.activities.wasCueUsed(focusedCue.entry.event.id, focusedCue.node.spec.key)
+        ? selected
+        : undefined
+    // Only the currently focused physical object glows; a tooltip is optional.
     for (const [id, sprite] of this.scenes) {
       if (sprite instanceof BuildingSprite)
         sprite.setEntranceHighlight(selected === id + ':door',
@@ -250,12 +256,12 @@ export class WorldRenderer {
         selected !== id + ':door'
       activity.setInteractionGlow(!!selectedActivity, frame.time, this.reduced)
     }
-    const picked = actionable ? this.cues.get(actionable) : undefined
+    const picked = selected ? this.cues.get(selected) : undefined
     this.currentCue = picked ? { entry: picked.entry, action: picked.node.spec.action } : undefined
     const nl = this.model.locale === 'nl'
     for (const [id, { node, entry }] of this.cues) {
       const p = positions.get(id)!
-      const selectedThis = selected === id
+      const selectedThis = tooltip === id
       const record = this.activities.actions[entry.event.id]
       let feedback: string | undefined
       if (node.spec.key !== 'door' && record && (record.running || record.completed)) {
@@ -292,7 +298,9 @@ export class WorldRenderer {
         feedback, (safeX - p.screenX) / this.zoom, pushDown)
     }
     if (frame.paused) this.currentCue = undefined
-    this.app.canvas.dataset.cue = selected ?? ''
+    this.app.canvas.dataset.cue = tooltip ?? ''
+    this.app.canvas.dataset.focusedObject = selected ?? ''
+    this.app.canvas.dataset.tooltipsEnabled = String(this.showTooltips)
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
