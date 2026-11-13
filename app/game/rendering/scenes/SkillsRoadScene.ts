@@ -13,6 +13,7 @@ export class SkillsRoadScene extends Container {
     node: Container
     x: number
     machine: Graphics
+    statusBackdrop: Graphics
     status: Text
     logos: Container[]
   }[] = []
@@ -44,7 +45,10 @@ export class SkillsRoadScene extends Container {
       for (const px of [-128, 122]) rect(node, px, -59, 7, 59, 0x637b60)
       const machine = new Graphics()
       node.addChild(machine)
-      const status = label(node, '', 0, -238, 12, 0x2c4d3d, 275)
+      // Status is a readable instrument panel, independent of the forest behind it.
+      const statusBackdrop = new Graphics()
+      node.addChild(statusBackdrop)
+      const status = label(node, '', 0, -240, 12, 0x274c3e, 276)
       status.anchor.x = 0.5
       // Original CV logos hang above the machine and feed into it on activation.
       const logos = group.ids.map((id, j) => {
@@ -104,7 +108,7 @@ export class SkillsRoadScene extends Container {
           node.addChild(rack)
         }
       this.addChild(node)
-      this.stations.push({ node, x, machine, status, logos })
+      this.stations.push({ node, x, machine, statusBackdrop, status, logos })
     })
   }
   activate(index: number) {
@@ -120,7 +124,7 @@ export class SkillsRoadScene extends Container {
     const nl = this.locale === 'nl',
       time = reduced ? 0 : frame.time / 1000
     for (const [i, station] of this.stations.entries()) {
-      const { node, x, machine, status } = station,
+      const { node, x, machine, statusBackdrop, status } = station,
         group = skillGroups[i]!
       const floor = ground - terrainHeight(this.x + x, terrain)
       node.y = floor
@@ -132,6 +136,13 @@ export class SkillsRoadScene extends Container {
       const p = action ? Math.min(1, action.age / 2) : 0
       if (p === 1) this.activity.completeStation(group.id)
       machine.clear()
+      statusBackdrop
+        .clear()
+        .roundRect(-143, -253, 286, 33, 4)
+        .fill(active ? 0xe7ecd8 : 0xf3eddc)
+        .stroke({ color: active ? 0x60836d : 0x9daa91, width: 1.5 })
+        .rect(-143, -253, 4, 33)
+        .fill(active ? 0x527e66 : 0xb79c6a)
       status.text = active
         ? i === 0
           ? p < 1
