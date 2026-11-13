@@ -49,10 +49,13 @@ function preference() {
   touch.value = query?.matches ?? false
 }
 function pointer(event: PointerEvent) {
-  touch.value = event.pointerType === 'touch' || event.pointerType === 'pen'
+  // On coarse-pointer devices, an emulated mouse click or hardware keyboard
+  // does not mean the touchscreen controls should disappear.
+  if (event.pointerType === 'touch' || event.pointerType === 'pen') touch.value = true
+  else if (!query?.matches) touch.value = false
 }
 function keyboard() {
-  touch.value = false
+  if (!query?.matches) touch.value = false
 }
 watch(
   () => props.paused,
