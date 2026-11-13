@@ -17,7 +17,7 @@ export class ActivitySystem {
     const outcome =
       action === 'basketball' ? (strength >= 0.52 && strength <= 0.78 ? 'success' : 'retry')
       : action === 'departure' ? (strength >= 0.72 ? 'success' : 'retry')
-      : action === 'camera' ? (strength > 0.3 && strength <= 0.55 ? 'success' : strength > 0.55 ? 'ticket' : 'retry')
+      : action === 'camera' ? (strength >= 0.25 && strength <= 0.5 ? 'success' : strength > 0.5 ? 'ticket' : 'retry')
       : 'success'
     this.actions[id] = {
       action,
