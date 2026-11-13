@@ -26,7 +26,7 @@ function runAccessibleAction(index = 0) {
   if (!action) return
   if (action === 'compile' || action === 'circuit') {
     if (props.activities.toggle(id, index)) props.activities.trigger(id, action)
-  } else props.activities.trigger(id, action)
+  } else props.activities.trigger(id, action, ['basketball', 'camera', 'departure'].includes(action) ? (action === 'departure' ? 0.85 : action === 'camera' ? 0.33 : 0.65) : undefined)
 }
 const host = ref<HTMLElement>(),
   error = ref('')
