@@ -9,6 +9,7 @@ const initialCss = 'body { font-family: Arial, sans-serif; background: #d7e2d3; 
 const html = useState('first-code-html', () => initialHtml)
 const css = useState('first-code-css', () => initialCss)
 const tab = ref<'html' | 'css'>('html')
+const mobilePane = ref<'editor' | 'preview'>('editor')
 const dialog = ref<HTMLElement>()
 const preview = ref(codePreviewDocument(html.value, css.value))
 let previewTimer: ReturnType<typeof setTimeout> | undefined
@@ -68,7 +69,15 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
           ? 'Zo begon het: HTML en CSS aanpassen, zien wat verandert en begrijpen waarom. Bewerk de code en bekijk direct het resultaat.'
           : 'This is how it started: editing HTML and CSS, watching what changed, and finding out why. Change the code and see the result instantly.' }}</p>
       </div>
-      <div class="lab-workbench">
+      <div class="lab-mobile-switch" role="group" :aria-label="locale === 'nl' ? 'Werkruimte' : 'Workspace'">
+        <button :aria-pressed="mobilePane === 'editor'" @click="mobilePane = 'editor'">
+          {{ locale === 'nl' ? 'Code bewerken' : 'Edit code' }}
+        </button>
+        <button :aria-pressed="mobilePane === 'preview'" @click="mobilePane = 'preview'">
+          {{ locale === 'nl' ? 'Live voorbeeld' : 'Live preview' }}
+        </button>
+      </div>
+      <div class="lab-workbench" :class="{ 'mobile-preview': mobilePane === 'preview' }">
         <div class="lab-editor">
           <div class="editor-toolbar">
             <div role="group" :aria-label="locale === 'nl' ? 'Code kiezen' : 'Choose code'">
@@ -155,6 +164,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
 .lab-intro { flex-shrink: 0; padding: 16px 22px; }
 .lab-intro h2 { font: 500 clamp(22px, 3vw, 33px) 'Space Grotesk'; margin: 0 0 6px; }
 .lab-intro p { font-size: 13px; line-height: 1.6; max-width: 750px; color: #bed0be; }
+.lab-mobile-switch { display: none; }
 .lab-workbench { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; border-block: 1px solid #547565; }
 .lab-editor, .lab-preview { display: flex; flex-direction: column; min-width: 0; }
 .lab-editor { border-right: 1px solid #547565; }
@@ -190,15 +200,26 @@ footer button { min-height: 44px; white-space: nowrap; background: #dbe4cb; colo
 button:focus-visible, textarea:focus-visible { outline: 3px solid #e8cc90; outline-offset: -3px; }
 @media(max-width: 680px) {
   .first-code-lab { padding: 8px; }
-  .lab-window { min-height: 0; }
-  .lab-header { position: sticky; top: 0; z-index: 2; }
-  .lab-workbench { grid-template-columns: 1fr; grid-template-rows: auto auto; }
-  .lab-editor, .lab-preview { flex: none; min-height: 0; }
-  .lab-editor { border-right: 0; border-bottom: 1px solid #547565; }
-  textarea { min-height: 130px; max-height: 180px; }
-  iframe { flex: none; display: block; height: 210px; min-height: 210px; }
-  .lab-intro { padding: 12px 16px; }
-  .lab-intro p { font-size: 12px; line-height: 1.5; margin-bottom: 0; }
-  footer { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .lab-window { min-height: 0; height: 100%; }
+  .lab-header { position: relative; top: auto; z-index: 2; }
+  .lab-intro { padding: 11px 16px; }
+  .lab-intro h2 { font-size: 22px; }
+  .lab-intro p { font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
+  .lab-mobile-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex-shrink: 0; border-top: 1px solid #527263; background: #152f29; padding: 5px; gap: 4px; }
+  .lab-mobile-switch button { min-height: 44px; padding: 9px 8px; font: 600 12px 'Space Grotesk', sans-serif; border-radius: 4px; color: #bed1be; }
+  .lab-mobile-switch button[aria-pressed='true'] { background: #dbe5ce; color: #254839; }
+  .lab-workbench { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .lab-workbench .lab-editor, .lab-workbench .lab-preview { flex: 1 1 auto; min-height: 0; border: 0; }
+  .lab-workbench .lab-preview { display: none; }
+  .lab-workbench.mobile-preview .lab-editor { display: none; }
+  .lab-workbench.mobile-preview .lab-preview { display: flex; }
+  textarea { min-height: 0; max-height: none; resize: none; flex: 1 1 auto; overflow: auto; font-size: 13px; }
+  iframe { min-height: 0; height: 100%; flex: 1 1 auto; display: block; }
+  footer { display: flex; align-items: center; flex-direction: row; padding: 9px 12px; gap: 10px; }
+  footer p { font-size: 10px; max-width: 55%; }
+  footer button { min-height: 44px; white-space: normal; text-align: center; }
+}
+@media (max-height: 600px) and (max-width: 680px) {
+  .lab-intro p { display: none; }
 }
 </style>
