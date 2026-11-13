@@ -51,7 +51,6 @@ const sceneHints: Record<string, [string, string]> = {
       >
         <FileText :size="16" aria-hidden="true" />{{ t('common.details') }}
       </button>
-    </div>
     <button
       v-if="enterable && !running"
       class="caption-details caption-enter"
@@ -60,8 +59,9 @@ const sceneHints: Record<string, [string, string]> = {
     >
       <DoorOpen :size="18" />{{ t('building.enter') }}<kbd aria-hidden="true">E</kbd>
     </button>
+    </div>
     <p class="caption-summary">{{ current.summary }}</p>
-    <p v-if="sceneHints[current.id] && !running" class="scene-hint">
+    <p v-if="sceneHints[current.id] && !running" class="scene-hint" :class="{ 'sr-only': current.id !== 'first-lines' }">
       {{ sceneHints[current.id]?.[locale === 'nl' ? 0 : 1] }}
     </p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
@@ -79,14 +79,26 @@ const sceneHints: Record<string, [string, string]> = {
 </template>
 
 <style scoped>
+.sr-only {
+  position: absolute;
+  height: 1px;
+  width: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .scene-hint {
   font-size: 12px;
-  margin-top: 8px;
-  color: #395c50;
+  font-weight: 500;
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 2px solid #66836b;
+  color: #365f4b;
 }
 @media (max-width: 700px) {
   .scene-hint {
-    font-size: 11px;
+    font-size: 12px;
     max-width: 290px;
   }
 }
