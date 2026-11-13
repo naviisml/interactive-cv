@@ -22,3 +22,17 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run generate
+
+      - name: Browser smoke test (desktop and mobile)
+        env:
+          VISUAL_LOG: '1'
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npm run dev -- --host 127.0.0.1 > /tmp/portfolio-nuxt.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
+            sleep 2
+          done
+          node scripts/smoke-world.mjs
