@@ -62,6 +62,15 @@ function activateSkills(index: number) {
       props.activities.exploredSkills.length,
     )
 }
+function adjustWeb(action: 'theme' | 'data') {
+  activateSkills(1)
+  if (action === 'theme') props.activities.web.theme = (props.activities.web.theme + 1) % 3
+  else props.activities.web.records = (props.activities.web.records % 3) + 1
+}
+function scaleWorkers(workers: number) {
+  activateSkills(2)
+  props.activities.cloud.workers = workers
+}
 const learningStatus = ref('')
 let lastLearningReadout = 0
 function readLearningStatus() {
@@ -145,6 +154,7 @@ onBeforeUnmount(() => {
     <div
       v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road'"
       class="canvas-accessibility"
+      @keydown.esc.stop.prevent="host?.closest<HTMLElement>('.world')?.focus()"
     >
       <template v-if="currentAction === 'circuit'">
         <button v-for="i in 6" :key="i" @click="runAccessibleAction(i - 1)">
@@ -173,6 +183,17 @@ onBeforeUnmount(() => {
         >
           {{ locale === 'nl' ? 'Activeer' : 'Activate' }}
           {{ group.title[locale === 'nl' ? 'nl' : 'en'] }}
+        </button>
+      </template>
+      <template v-if="activeId === 'skills-road'">
+        <button @click="adjustWeb('theme')">
+          {{ locale === 'nl' ? 'Wijzig CSS-stijl' : 'Change CSS theme' }}
+        </button>
+        <button @click="adjustWeb('data')">
+          {{ locale === 'nl' ? 'Laad API-data' : 'Load API data' }}
+        </button>
+        <button v-for="workers in 3" :key="workers" @click="scaleWorkers(workers)">
+          {{ workers }} {{ locale === 'nl' ? 'workers' : 'workers' }}
         </button>
       </template>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
@@ -215,8 +236,10 @@ onBeforeUnmount(() => {
 .canvas-accessibility:focus-within {
   clip-path: none;
   width: auto;
+  max-width: min(360px, calc(100% - 32px));
   height: auto;
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
   padding: 9px;
   background: #e7e4ce;

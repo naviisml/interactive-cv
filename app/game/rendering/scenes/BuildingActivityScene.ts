@@ -1,4 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
+import { SCHOOL_LAB_OFFSET } from '../../core/learningActivities'
 import { SchoolActivityScene } from './SchoolActivityScene'
 import { AircraftSprite } from '../sprites/AircraftSprite'
 import { rect, label } from '../drawing'
@@ -152,6 +153,7 @@ export class BuildingActivityScene extends Container {
       this.object.addChild(this.cart)
     } else {
       this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale)
+      this.school.x = SCHOOL_LAB_OFFSET
       this.addChild(this.school)
     }
     this.addChild(this.object, this.overlay, this.statusPanel, this.status)

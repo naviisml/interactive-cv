@@ -1,5 +1,10 @@
 import { skillGroups } from '../../content/skills.ts'
-import { circuitSeed, tickRover, type RoverState } from '../core/learningActivities.ts'
+import {
+  advanceQueue,
+  circuitSeed,
+  tickRover,
+  type RoverState,
+} from '../core/learningActivities.ts'
 import {
   basketballScores,
   advanceAction,
@@ -10,6 +15,8 @@ import {
 export class ActivitySystem {
   circuit = [...circuitSeed]
   rover: RoverState = { commands: [], age: 0, status: 'idle' }
+  cloud = { workers: 1, queued: 18, processed: 0 }
+  web = { theme: 0, records: 0 }
   exploredSkills: string[] = []
   activatedStations: string[] = []
   completeStation(id: string) {
@@ -84,6 +91,7 @@ export class ActivitySystem {
       return
     }
     tickRover(this.rover, dt)
+    if (this.actions['skill-systems']) advanceQueue(this.cloud, dt)
     for (const [id, charge] of Object.entries(this.charges))
       if (charge.holding) charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
     for (const [id, state] of Object.entries(this.actions))

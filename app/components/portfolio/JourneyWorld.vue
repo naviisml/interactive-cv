@@ -34,19 +34,16 @@ const detailEvent = computed(() =>
 const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
 let interactionOpener: HTMLElement | undefined
-function rememberInteractionFocus() {
-  const active = document.activeElement
-  interactionOpener = active instanceof HTMLElement && active !== document.body ? active : undefined
-}
 async function restoreInteractionFocus() {
   await nextTick()
   if (interactionOpener?.isConnected) interactionOpener.focus({ preventScroll: true })
   else worldRoot.value?.focus({ preventScroll: true })
   interactionOpener = undefined
 }
-function openFirstComputer() {
+function openFirstComputer(event?: MouseEvent) {
   if (listMode.value || firstCodeOpen.value) return
-  rememberInteractionFocus()
+  interactionOpener =
+    event?.currentTarget instanceof HTMLElement ? event.currentTarget : worldRoot.value
   stop()
   firstCodeOpen.value = true
 }
@@ -63,8 +60,8 @@ const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
-  current.value.category === 'skills'
-    ? t(exploredSkill.value.name ? 'activity.skillFound' : 'activity.skillsHint', {
+  current.value.category === 'skills' && exploredSkill.value.name
+    ? t('activity.skillFound', {
         name: exploredSkill.value.name,
         count: exploredSkill.value.count,
         total: 18,

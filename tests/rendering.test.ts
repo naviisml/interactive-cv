@@ -54,10 +54,10 @@ test('every exported scene decodes as a real image texture', async () => {
   }
 })
 
-test('portrait camera fits a complete landmark and its forecourt inside the phone width', () => {
+test('portrait projection keeps a stable viewport without stretching artwork', () => {
   for (const width of [320, 375, 390, 430]) {
     const { scale, viewport } = worldProjection(width, 570)
-    assert.ok(634 * 0.72 * scale <= width - 16)
+    assert.equal(viewport * scale, width)
     assert.ok(viewport >= 460)
     assert.ok(scale >= 0.42)
   }

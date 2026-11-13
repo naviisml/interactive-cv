@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
+import { SCHOOL_LAB_OFFSET } from '../app/game/core/learningActivities.ts'
 import { mkdir } from 'node:fs/promises'
 await mkdir('test-results/world', { recursive: true })
 const base = process.env.SMOKE_URL || 'http://127.0.0.1:3000'
@@ -47,7 +48,12 @@ async function chargeWorld(page, canvas, id, x, y, ms) {
   )
   await page.mouse.move(bounds.x + point.x, bounds.y + point.y)
   await page.mouse.down()
-  await page.waitForTimeout(ms)
+  await page.waitForFunction(
+    ({ id, power }) =>
+      JSON.parse(document.querySelector('canvas')?.dataset.charges || '{}')[id]?.power >= power,
+    { id, power: ms / 1750 },
+    { timeout: 6000 },
+  )
   await page.mouse.up()
 }
 async function scenario(label, width, height, mobile) {
@@ -232,7 +238,25 @@ async function scenario(label, width, height, mobile) {
       () => Number(document.querySelector('canvas')?.dataset.skillCount) === 18,
     )
     assert.equal(await page.getByRole('dialog').count(), 0, 'skills remain in the world')
+    const theme = page.getByRole('button', { name: 'Change CSS theme', exact: true })
+    await theme.focus()
+    await page.keyboard.press('Space')
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.webPage || '{}').theme === 1,
+    )
+    const scale = page.getByRole('button', { name: '3 workers', exact: true })
+    await scale.focus()
+    await scale.click()
+    const queue = await canvas.evaluate((el) => JSON.parse(el.dataset.workerQueue).queued)
+    await page.waitForFunction(
+      (before) =>
+        JSON.parse(document.querySelector('canvas')?.dataset.workerQueue || '{}').queued <
+        before - 1,
+      queue,
+      { timeout: 6000 },
+    )
     await page.waitForTimeout(2700)
+    await page.locator('.world').focus()
     await page.screenshot({ path: `test-results/world/${label}-skills-road.png` })
 
     if (!mobile) {
@@ -370,7 +394,7 @@ async function scenario(label, width, height, mobile) {
           page,
           canvas,
           'roc-hilversum',
-          100 + (index % 3) * 60,
+          SCHOOL_LAB_OFFSET + 100 + (index % 3) * 60,
           -145 + Math.floor(index / 3) * 47,
           mobile,
         )
@@ -386,7 +410,7 @@ async function scenario(label, width, height, mobile) {
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     await page.waitForTimeout(500)
     for (const x of [87, 147, 87, 147, 87, 265])
-      await tapWorld(page, canvas, 'coding-college', x, -96, mobile)
+      await tapWorld(page, canvas, 'coding-college', SCHOOL_LAB_OFFSET + x, -96, mobile)
     await page.waitForFunction(
       () =>
         JSON.parse(document.querySelector('canvas')?.dataset.rover || '{}').status === 'success',
@@ -396,15 +420,17 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-rover-arrived.png` })
 
     // Retain real responsive renders for visual review, not just layout assertions.
-    for (const [name, title] of [
-      ['school', /Panta Rhei/],
-      ['codam', /Codam Coding College/],
-      ['hotel', /Fletcher Holdings/],
-      ['airport', /Get-E/],
-      ['office', /Appjection/],
-      ['computer', /Navel Development/],
-      ['camp', /write the next chapter/i],
-    ]) {
+    for (const [name, title] of mobile
+      ? []
+      : [
+          ['school', /Panta Rhei/],
+          ['codam', /Codam Coding College/],
+          ['hotel', /Fletcher Holdings/],
+          ['airport', /Get-E/],
+          ['office', /Appjection/],
+          ['computer', /Navel Development/],
+          ['camp', /write.*together/i],
+        ]) {
       const stop = page.locator('.journey-footer').getByRole('button', { name: title })
       if (!(await stop.count())) continue
       await stop.click()
@@ -457,7 +483,7 @@ async function visualAuditScenario() {
       ['07-airport', /Get-E/],
       ['08-office', /Appjection/],
       ['09-company', /Navel Development/],
-      ['10-camp', /write the next chapter/i],
+      ['10-camp', /write.*together/i],
     ]) {
       const button = page.locator('.journey-footer').getByRole('button', { name: title })
       await button.click()

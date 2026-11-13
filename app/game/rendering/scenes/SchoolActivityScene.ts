@@ -237,7 +237,7 @@ export class SchoolActivityScene extends Container {
       this.dynamic
         .rect(338, -67, 3, 48)
         .fill(0xa9b28a)
-        .poly([341, -67, 367, -58, 341, -48])
+        .poly([341, -67, 352, -58, 341, -48])
         .fill(rover.status === 'success' ? 0xecc77b : 0x6f947c)
       if (rover.status === 'success' && !reduced)
         for (let i = 0; i < 10; i++)

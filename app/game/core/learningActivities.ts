@@ -1,4 +1,5 @@
 /** Persistent learning simulations. Coordinates are cells; presentation belongs to Pixi. */
+export const SCHOOL_LAB_OFFSET = 280
 export const circuitSeed = [1, 0, 3, 1, 0, 2]
 // Bits clockwise: north, east, south, west. The two corners turn the current back.
 export function wireMask(index: number, rotation: number) {
@@ -59,4 +60,16 @@ export function tickRover(state: RoverState, dt: number) {
   const trace = roverTrace(state.commands)
   state.age = Math.min(trace.cells.length - 1, state.age + Math.max(0, dt))
   if (state.age >= trace.cells.length - 1) state.status = trace.success ? 'success' : 'error'
+}
+
+export interface WorkerQueue {
+  workers: number
+  queued: number
+  processed: number
+}
+export function advanceQueue(queue: WorkerQueue, dt: number) {
+  const incoming = Math.max(0, dt) * 1.8
+  const handled = Math.min(queue.queued + incoming, queue.workers * 1.2 * Math.max(0, dt))
+  queue.queued = Math.min(80, Math.max(0, queue.queued + incoming - handled))
+  queue.processed += handled
 }

@@ -160,28 +160,41 @@ export class WorldRenderer {
       (isBuilding(frame.activeId) ||
         frame.activeId === 'skills-road' ||
         frame.activeId === 'first-lines')
-    const targetZoom = closeView
-      ? Math.max(
-          0.78,
-          Math.min(
-            isBuilding(frame.activeId) ? 0.9 : 1.1,
-            (height - frame.groundInset - 148) / 300,
-          ),
-        )
-      : computerView
-        ? Math.min(frame.scale, (width - 24) / 820)
-        : campView
-          ? Math.min(frame.scale, (width - 24) / 800)
-          : isBuilding(frame.activeId)
-            ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
-            : frame.scale
+    const firstEntry = this.model.entries.find((entry) => entry.event.id === 'first-lines')
+    const introView =
+      frame.activeId === 'first-lines' && frame.motion.x < (firstEntry?.x ?? 780) - 250
+    const portraitAnchor = introView
+      ? 0.22
+      : frame.activeId === 'skills-road'
+        ? 0.5
+        : ['roc-hilversum', 'coding-college'].includes(frame.activeId)
+          ? 0.18
+          : 0.32
+    const targetZoom = introView
+      ? 0.82
+      : closeView
+        ? Math.max(
+            0.78,
+            Math.min(
+              isBuilding(frame.activeId) ? 0.9 : 1.1,
+              (height - frame.groundInset - 148) / 300,
+            ),
+          )
+        : computerView
+          ? Math.min(frame.scale, (width - 24) / 675)
+          : campView
+            ? Math.min(frame.scale, (width - 24) / 800)
+            : isBuilding(frame.activeId)
+              ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
+              : frame.scale
     const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : Math.max(
           0,
           Math.min(
             this.model.width - width / targetZoom,
-            frame.motion.x - (width / targetZoom) * (campView ? 0.65 : closeView ? 0.12 : 0.38),
+            frame.motion.x -
+              (width / targetZoom) * (campView ? 0.65 : closeView ? portraitAnchor : 0.38),
           ),
         )
     if (!this.initialized) {
@@ -320,6 +333,8 @@ export class WorldRenderer {
           ]),
         ),
       )
+      this.app.canvas.dataset.workerQueue = JSON.stringify(this.activities.cloud)
+      this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
       this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
       this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)

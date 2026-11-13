@@ -65,7 +65,18 @@ export class SkillsRoadScene extends Container {
             badge.addChild(sprite)
           })
           .catch(() => {})
-        tapTarget(badge, () => this.activate(i), new Rectangle(-29, -26, 58, 55))
+        tapTarget(
+          badge,
+          () => {
+            this.activate(i)
+            if (i === 1) {
+              if (id === 'html') this.activity.web.records = 0
+              else if (id === 'css') this.activity.web.theme = (this.activity.web.theme + 1) % 3
+              else this.activity.web.records = (this.activity.web.records % 3) + 1
+            }
+          },
+          new Rectangle(-29, -26, 58, 55),
+        )
         node.addChild(badge)
         return badge
       })
@@ -77,6 +88,20 @@ export class SkillsRoadScene extends Container {
         .fill(0xdfd4a0)
       node.addChild(plate)
       tapTarget(plate, () => this.activate(i), new Rectangle(-55, -42, 110, 44))
+      if (i === 2)
+        for (let worker = 0; worker < 3; worker++) {
+          const rack = new Container()
+          rack.x = -120 + worker * 86
+          tapTarget(
+            rack,
+            () => {
+              this.activate(i)
+              this.activity.cloud.workers = worker + 1
+            },
+            new Rectangle(0, -106, 68, 65),
+          )
+          node.addChild(rack)
+        }
       this.addChild(node)
       this.stations.push({ node, x, machine, status, logos })
     })
@@ -121,14 +146,16 @@ export class SkillsRoadScene extends Container {
                 ? 'HTML + CSS + API → live pagina'
                 : 'HTML + CSS + API → live page'
               : nl
-                ? 'Je pagina is live.'
-                : 'Your page is live.'
+                ? 'CSS: kies een stijl. PHP: laad data.'
+                : 'CSS: change theme. PHP: load data.'
             : nl
               ? 'Workers verwerken de wachtrij.'
               : 'Workers are draining the queue.'
         : nl
           ? 'Loop over de lichtplaat om te starten.'
           : 'Walk over the light plate to start.'
+      if (i === 2 && active)
+        status.text = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activity.cloud.queued)} · ${this.activity.cloud.workers}/3 workers · ${nl ? 'tik op rack' : 'tap rack'}`
       // Conveyor and package: the commit really travels through build/test/deploy.
       if (i === 0) {
         machine.roundRect(-130, -59, 260, 18, 5).fill(0x35594b)
@@ -152,10 +179,16 @@ export class SkillsRoadScene extends Container {
           .fill(0x234b40)
           .rect(-111, -96, 222, 49)
           .fill(0xdce1c8)
-        machine.rect(-111, -96, 222, 8).fill(0x8aaa91)
+        machine
+          .rect(-111, -96, 222, 8)
+          .fill([0x8aaa91, 0xb1846c, 0x6e859f][this.activity.web.theme]!)
         if (p > 0.15) machine.rect(-101, -81, 62, 27).fill(0xa7b185)
         if (p > 0.4)
           machine.rect(-29, -81, 128, 6).fill(0x456e59).rect(-29, -70, 96, 4).fill(0x90a482)
+        for (let card = 0; card < this.activity.web.records; card++)
+          machine
+            .rect(30 + card * 24, -59, 18, 10)
+            .fill([0x8fa488, 0xb39768, 0x7d9b9e][this.activity.web.theme]!)
         if (p > 0.7) machine.roundRect(-29, -60, 48, 9, 2).fill(0xb39362)
         machine.rect(-5, -39, 10, 9).rect(-29, -31, 58, 4).fill(0x6f886a)
       } else {
@@ -167,11 +200,15 @@ export class SkillsRoadScene extends Container {
             .stroke({ width: 1, color: 0x9cad88 })
           for (let r = 0; r < 3; r++)
             machine.rect(-111 + n * 86, -94 + r * 13, 49, 7).fill(0x163e34)
-          machine.circle(-64 + n * 86, -90, 2).fill(active ? 0xccdc9a : 0x668775)
+          machine
+            .circle(-64 + n * 86, -90, 2)
+            .fill(active && n < this.activity.cloud.workers ? 0xccdc9a : 0x668775)
         }
         if (active)
           for (let n = 0; n < 7; n++) {
-            const phase = reduced ? 0.5 : (time * 0.35 + n / 7) % 1,
+            const phase = reduced
+                ? 0.5
+                : (time * (0.15 + this.activity.cloud.workers * 0.12) + n / 7) % 1,
               px = -136 + phase * 270
             machine.rect(px, -35, 6, 4).fill(phase > 0.65 ? 0xc6db9c : 0xe0c782)
           }

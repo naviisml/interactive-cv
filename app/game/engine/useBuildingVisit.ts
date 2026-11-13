@@ -4,7 +4,7 @@ export function useBuildingVisit(journey: ReturnType<typeof import('./useJourney
   const blocking = computed(() => !['outside', 'approaching'].includes(visit.phase))
   let previous = 0
   function enter(index: number) {
-    journey.goTo(index)
+    journey.goTo(index, journey.eventPosition(index))
     Object.assign(visit, { index, phase: 'approaching', progress: 0 })
   }
   function leave() {

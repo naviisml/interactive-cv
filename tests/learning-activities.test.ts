@@ -65,3 +65,17 @@ test('skills activation powers a whole category and remains stable after revisit
   assert.equal(state.activateSkillGroup(0), true)
   assert.equal(state.exploredSkills.length, 5)
 })
+
+test('adding workers reverses queue growth instead of only changing an animation', () => {
+  const game = new ActivitySystem()
+  game.activateSkillGroup(2)
+  for (let i = 0; i < 60; i++) game.tick(1 / 60, false)
+  assert.ok(game.cloud.queued > 18, 'one worker cannot keep up with incoming jobs')
+  const backlog = game.cloud.queued
+  game.cloud.workers = 3
+  for (let i = 0; i < 120; i++) game.tick(1 / 60, false)
+  assert.ok(game.cloud.queued < backlog - 3, 'three workers genuinely drain the queue')
+  const frozen = game.cloud.queued
+  game.tick(10, true)
+  assert.equal(game.cloud.queued, frozen)
+})
