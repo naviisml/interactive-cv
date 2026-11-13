@@ -536,7 +536,7 @@ onBeforeUnmount(() => {
         />
         <button
           v-if="nearFirstComputer && !running && !firstCodeOpen"
-          class="first-code-launch"
+          class="first-code-launch is-first-code"
           @click="openFirstComputer"
         >
           {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
@@ -630,5 +630,6 @@ onBeforeUnmount(() => {
 .first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
 @media (max-width: 700px) {
   .first-code-launch { top: 138px; right: 16px; max-width: 185px; }
+  .first-code-launch.is-first-code { top: 233px; }
 }
 </style>
