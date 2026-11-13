@@ -469,13 +469,15 @@ export class WorldRenderer {
     }
     for (const [id, activity] of this.activitiesByScene) {
       const entry = this.model.entries.find((e) => e.event.id === id)
-      if (entry)
+      if (entry) {
         activity.update(
           frame,
           entry.x,
           this.reduced,
           terrainHeight(entry.x, this.model.geometry.terrain),
         )
+        activity.constrainTelemetry(entry.x, this.viewCamera, this.zoom, width)
+      }
     }
     for (const scene of this.scenes.values())
       if (scene instanceof CampsiteScene) scene.update(frame, this.reduced)
@@ -534,6 +536,18 @@ export class WorldRenderer {
       this.app.canvas.dataset.telemetry = JSON.stringify(
         Object.fromEntries(
           [...this.activitiesByScene].map(([id, activity]) => [id, activity.getTelemetry()]),
+        ),
+      )
+      this.app.canvas.dataset.telemetryBounds = JSON.stringify(
+        Object.fromEntries(
+          [...this.activitiesByScene].map(([id, activity]) => [
+            id,
+            activity.getTelemetryScreenBounds(
+              this.model.entries.find((entry) => entry.event.id === id)?.x ?? 0,
+              this.viewCamera,
+              this.zoom,
+            ),
+          ]),
         ),
       )
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
