@@ -526,7 +526,7 @@ onBeforeUnmount(() => {
       @wheel="wheelTravel"
       :aria-label="t('common.worldLabel')"
     >
-      <div class="world-scene" :inert="worldPanelOpen">
+      <div class="world-scene" :inert="worldPanelOpen && !presentation.active">
         <ClientOnly
           ><GameCanvas
             v-if="worldReady"
