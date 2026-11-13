@@ -1,0 +1,75 @@
+{
+  "currency": "EUR",
+  "countries": {
+    "NL": {
+      "name": "Netherlands",
+      "resources": [
+        {
+          "name": "Your local government",
+          "description": "Your municipality can advise you about money worries and debt support.",
+          "url": "https://www.rijksoverheid.nl/themas/recht-veiligheid-en-defensie/schulden/vraag-en-antwoord/schulden/schuldhulpverlening-aanvragen"
+        },
+        {
+          "name": "Geldfit",
+          "description": "Free, anonymous support with money worries and finding help nearby.",
+          "url": "https://geldfit.nl/contact/bellen/"
+        },
+        {
+          "name": "Het Juridisch Loket",
+          "description": "Legal information on debt and collection. Eligibility applies to personal advice.",
+          "url": "https://juridischloket.nl/"
+        }
+      ]
+    },
+    "BE": {
+      "name": "Belgium · Flanders",
+      "resources": [
+        {
+          "name": "Your local OCMW or CAW",
+          "description": "Information on recognised debt-mediation support in Flanders.",
+          "url": "https://www.vlaanderen.be/schuldbemiddeling"
+        },
+        {
+          "name": "Find a debt-support service",
+          "description": "The Flemish government’s directory of debt-mediation services.",
+          "url": "https://www.departementzorg.be/nl/adressen-schuldbemiddeling"
+        }
+      ]
+    },
+    "DE": {
+      "name": "Germany",
+      "resources": [
+        {
+          "name": "Find a Schuldnerberatung",
+          "description": "Find debt-advice centres. Check with the centre whether its advice is free.",
+          "url": "https://www.meine-schulden.de/hilfe-finden/stellensuche"
+        }
+      ]
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "resources": [
+        {
+          "name": "MoneyHelper",
+          "description": "Find free, confidential debt advice online, by phone, or nearby.",
+          "url": "https://www.moneyhelper.org.uk/en/money-troubles/dealing-with-debt/debt-advice-locator"
+        },
+        {
+          "name": "StepChange",
+          "description": "Free, impartial debt advice from a debt charity.",
+          "url": "https://www.stepchange.org/how-we-help/debt-advice.aspx"
+        }
+      ]
+    },
+    "US": {
+      "name": "United States",
+      "resources": [
+        {
+          "name": "Consumer Financial Protection Bureau",
+          "description": "Guidance on finding a reputable credit counsellor and understanding debt-management plans and fees.",
+          "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-credit-counseling-en-1451/"
+        }
+      ]
+    }
+  }
+}
