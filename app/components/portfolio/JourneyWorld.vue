@@ -32,10 +32,27 @@ const detailEvent = computed(() =>
 const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
 const workshopIndex = ref<number | null>(null)
+let interactionOpener: HTMLElement | undefined
+function rememberInteractionFocus() {
+  const active = document.activeElement
+  interactionOpener = active instanceof HTMLElement && active !== document.body
+    ? active : undefined
+}
+async function restoreInteractionFocus() {
+  await nextTick()
+  if (interactionOpener?.isConnected) interactionOpener.focus({ preventScroll: true })
+  else worldRoot.value?.focus({ preventScroll: true })
+  interactionOpener = undefined
+}
 function openFirstComputer() {
   if (listMode.value || firstCodeOpen.value) return
+  rememberInteractionFocus()
   stop()
   firstCodeOpen.value = true
+}
+async function closeFirstComputer() {
+  firstCodeOpen.value = false
+  await restoreInteractionFocus()
 }
 let detailOpener: HTMLElement | undefined
 const worldRoot = ref<HTMLElement>()
@@ -47,8 +64,13 @@ const activities = markRaw(new ActivitySystem())
 const completedWorkshops = ref<string[]>([])
 function openWorkshop(index: number) {
   if (listMode.value || workshopIndex.value !== null) return
+  rememberInteractionFocus()
   stop()
   workshopIndex.value = index
+}
+async function closeWorkshop() {
+  workshopIndex.value = null
+  await restoreInteractionFocus()
 }
 function finishWorkshop(id: string) {
   activities.completeWorkshop(id)
@@ -487,7 +509,7 @@ onBeforeUnmount(() => {
       @wheel="wheelTravel"
       :aria-label="t('common.worldLabel')"
     >
-      <div class="world-scene" :inert="!!detailEvent || visit.phase === 'inside'">
+      <div class="world-scene" :inert="!!detailEvent || visit.phase === 'inside' || firstCodeOpen || workshopIndex !== null">
         <ClientOnly
           ><GameCanvas
             :model="rendererModel"
@@ -557,13 +579,13 @@ onBeforeUnmount(() => {
         @leave="buildingVisit.leave"
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
-      <FirstCodeLab v-if="firstCodeOpen" @close="firstCodeOpen = false" />
+      <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
       <SkillWorkshop
         v-if="workshopIndex !== null"
         :initial-group="workshopIndex"
         :completed="completedWorkshops"
         @complete="finishWorkshop"
-        @close="workshopIndex = null"
+        @close="closeWorkshop"
       />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
@@ -592,20 +614,21 @@ onBeforeUnmount(() => {
 <style scoped>
 .first-code-launch {
   position: absolute;
-  top: 145px;
-  right: 24px;
+  top: 168px;
+  right: clamp(18px, 3vw, 48px);
   z-index: 7;
   min-height: 44px;
   padding: 11px 15px;
   color: #e9e7cc;
   background: #365f4c;
   border: 1px solid #c6cea6;
-  border-radius: 3px;
-  box-shadow: 4px 4px 0 #25473a44;
-  font: 500 12px 'Space Grotesk', sans-serif;
+  border-radius: 6px;
+  box-shadow: 0 5px 20px #25473a26, 0 3px 0 #25473a44;
+  font: 600 12px 'Space Grotesk', sans-serif;
 }
+.first-code-launch:hover { background: #284c3f; }
 .first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
 @media (max-width: 700px) {
-  .first-code-launch { top: 116px; right: 12px; max-width: 180px; }
+  .first-code-launch { top: 138px; right: 16px; max-width: 185px; }
 }
 </style>
