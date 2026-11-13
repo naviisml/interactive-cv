@@ -1,6 +1,5 @@
 import { SCHOOL_LAB_OFFSET } from '../core/learningActivities'
-import { COMPUTER_WATCH_OFFSET, COMPANY_STORY_DISTANCE } from '~/content/company'
-import { stepPresentation } from '../core/presentation'
+import { COMPUTER_WATCH_OFFSET } from '~/content/company'
 import { journeyLayout, currentSlot } from '../core/journeyLayout'
 import { frameSteps } from '../core/frameTiming'
 import { eventX } from '~/content/timeline'
@@ -205,6 +204,7 @@ export function useJourney(
   function keydown(e: KeyboardEvent) {
     if (
       paused.value ||
+      presentation.active ||
       (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable]')
     )
       return
@@ -248,7 +248,6 @@ export function useJourney(
           Number(keys.has('arrowup') || keys.has('w'))
       const oldX = motion.x,
         oldY = motion.y
-      let presentedDistance = 0
       const company = slots.value.find((slot) => timeline[slot.index]?.id === 'navel-development')
       const watchX = (company?.x ?? 0) + COMPUTER_WATCH_OFFSET
       const atComputer =
@@ -270,17 +269,9 @@ export function useJourney(
           destination.value = null
           motion.vx = 0
         }
-      } else if (
-        atComputer &&
-        ((direction > 0 && presentation.progress < 1) ||
-          (direction < 0 && presentation.progress > 0) ||
-          !direction)
-      ) {
-        const previousProgress = presentation.progress
-        const speed =
-          sprintHeld.value || touchSprint.value ? motionConfig.sprint : motionConfig.speed
-        presentation.progress = stepPresentation(presentation.progress, direction, speed * dt)
-        presentedDistance = (presentation.progress - previousProgress) * COMPANY_STORY_DISTANCE
+      } else if (atComputer) {
+        // The character stays at the workstation. Projects are selected in the
+        // actual archive UI instead of being cycled by walking or swiping.
         Object.assign(motion, {
           x: watchX,
           y: -terrainHeight(watchX, worldGeometry.value.terrain),
@@ -307,7 +298,7 @@ export function useJourney(
         )
       }
       if (!manualDirection)
-        scrollDistance = consumeSwipeDistance(scrollDistance, presentedDistance || motion.x - oldX)
+        scrollDistance = consumeSwipeDistance(scrollDistance, motion.x - oldX)
       if (motion.mode === 'climbing') strideDistance += Math.abs(motion.y - oldY)
       else if (motion.grounded && motion.mode !== 'sliding')
         strideDistance += Math.min(Math.abs(motion.x - oldX), motionConfig.sprint * dt)

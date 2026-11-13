@@ -1,7 +1,6 @@
 import { Container, Graphics } from 'pixi.js'
 import type { companySlides } from '../../../content/company'
 import { label, rect } from '../drawing'
-import { presentationSlide } from '../../core/presentation'
 /** A workstation with an explicit idle/start state; not an unexplained text rectangle. */
 export class ComputerSprite extends Container {
   private screen = new Container()
@@ -58,121 +57,55 @@ export class ComputerSprite extends Container {
       .roundRect(-313, -369, 675, 247, 9)
       .stroke({ color: 0xf7d99a, width: 4, alpha })
   }
-  update(progress: number, scale = 1, active = false, time = 0, reduced = false) {
-    const compact = scale < 0.65,
-      index = presentationSlide(progress, this.slides.length),
-      slide = this.slides[index],
-      nl = this.locale === 'nl'
-    const key = `${active}:${compact}:${index}`
+  update(_progress: number, _scale = 1, active = false, time = 0, reduced = false) {
+    const nl = this.locale === 'nl'
+    const key = `${active}:${this.locale}`
     if (key !== this.last) {
       this.last = key
       this.screen.removeChildren().forEach((c) => c.destroy({ children: true }))
-      rect(this.screen, -296, -350, 640, 24, 0x466e5b)
-      label(this.screen, 'navel / development', -278, -344, 11, 0xe9e6ca, 380)
-      label(
-        this.screen,
-        active
-          ? `${String(index + 1).padStart(2, '0')} / ${this.slides.length}`
-          : 'PROJECT COMPUTER',
-        208,
-        -344,
-        10,
-        0xc3d5b5,
-        130,
-      )
-      if (!active) {
-        label(this.screen, nl ? 'Mijn projecten' : 'My projects', -264, -307, 35, 0x2a5140, 580)
-        label(
-          this.screen,
-          nl
-            ? 'Van game-plug-ins tot mijn eigen cloudplatform.'
-            : 'From game plug-ins to my own cloud platform.',
-          -264,
-          -256,
-          compact ? 24 : 17,
-          0x4b6c55,
-          580,
-        )
-        rect(this.screen, -120, -207, 281, 43, 0x3e7056)
-        const start = label(
-          this.screen,
-          nl ? '▶  Bekijk mijn projecten' : '▶  Explore my projects',
-          20,
-          -194,
-          compact ? 23 : 18,
-          0xf0e7c7,
-          265,
-        )
-        start.anchor.x = 0.5
-        const hint = label(
-          this.screen,
-          nl ? 'Tik op het scherm om te beginnen.' : 'Tap the screen to begin.',
-          20,
-          -156,
-          compact ? 18 : 12,
-          0x638067,
-          590,
-        )
-        hint.anchor.x = 0.5
-      } else if (slide) {
-        label(this.screen, slide.period, -268, -314, compact ? 17 : 11, 0x687d5e, 565)
-        label(this.screen, slide.title, -268, -286, compact ? 32 : 28, 0x294f3f, 570)
-        label(
-          this.screen,
-          slide.summary,
-          -268,
-          -236,
-          compact ? 24 : 18,
-          0x42634e,
-          compact ? 570 : 415,
-        )
-        if (!compact) {
-          const icon = new Graphics()
-          icon.position.set(247, -207)
-          if (slide.id === 'navel-cloud')
-            for (const x of [-48, 9]) {
-              icon.rect(x, -25, 40, 71).fill(0x537866)
-              for (let y = -15; y < 42; y += 13) icon.rect(x + 5, y, 25, 4).fill(0xbacb9e)
-            }
-          else if (slide.id === 'gmodstore')
-            icon
-              .roundRect(-50, -14, 100, 51, 12)
-              .fill(0x62768a)
-              .rect(-34, -3, 29, 8)
-              .rect(-24, -13, 8, 30)
-              .fill(0xd6d9b9)
-              .circle(27, 0, 5)
-              .circle(36, 13, 5)
-              .fill(0xc5aa8b)
-          else if (slide.id === 'q-lite')
-            icon
-              .rect(-51, -23, 102, 58)
-              .fill(0x4d6c62)
-              .rect(-44, -15, 88, 26)
-              .fill(0xb3c89b)
-              .moveTo(-34, 23)
-              .lineTo(36, 23)
-              .stroke({ width: 4, color: 0xc6c99d })
-          else {
-            icon
-              .rect(-44, -23, 88, 68)
-              .fill(0x6d8c74)
-              .rect(-31, -12, 22, 22)
-              .rect(8, -12, 22, 22)
-              .fill(0xd7cd9e)
-              .rect(-8, 15, 18, 30)
-              .fill(0x3d6554)
-          }
-          this.screen.addChild(icon)
-          label(this.screen, slide.tags.slice(0, 5).join(' · '), -268, -159, 10, 0x6d805d, 590)
+      rect(this.screen, -296, -350, 640, 211, 0xe8ecdf)
+      rect(this.screen, -296, -350, 640, 29, 0x2b5445)
+      label(this.screen, 'N / DEV', -279, -343, 13, 0xf3ebd2, 140)
+      label(this.screen, 'PROJECT ARCHIVE', -118, -343, 11, 0xbad0b4, 260)
+      label(this.screen, '07 FILES', 259, -343, 10, 0xe6d5ac, 100)
+      if (active) {
+        label(this.screen, nl ? 'ARCHIEF GEOPEND' : 'ARCHIVE OPEN', 25, -268, 32, 0x2d5543, 560).anchor.x = 0.5
+        label(this.screen, 'NAVEL DEVELOPMENT', 25, -219, 15, 0x6f8a70, 360).anchor.x = 0.5
+      } else {
+        // A readable desktop metaphor rather than the previous text-only slideshow.
+        rect(this.screen, -296, -321, 180, 182, 0x355e4d)
+        label(this.screen, nl ? 'PROJECTEN' : 'PROJECT FILES', -278, -309, 11, 0xdfe6c8, 166)
+        for (const [i, slide] of this.slides.entries()) {
+          const y = -286 + i * 20
+          if (i === 0) rect(this.screen, -290, y - 3, 167, 20, 0x547664)
+          label(this.screen, `${String(i + 1).padStart(2, '0')}  ${slide.title}`, -279, y, 11,
+            i === 0 ? 0xffefc6 : 0xd3e1ce, 164)
+        }
+        label(this.screen, 'NAVEL DEVELOPMENT', -90, -306, 12, 0x729078, 360)
+        label(this.screen, nl ? 'Mijn werk.' : 'Selected work.', -90, -273, 30, 0x284a3c, 400)
+        label(this.screen,
+          nl ? 'Projecten, techniek en het verhaal erachter.'
+             : 'Projects, systems and the work behind them.',
+          -90, -220, 15, 0x55725c, 395)
+        rect(this.screen, -90, -178, 218, 27, 0x345e4b)
+        label(this.screen, nl ? 'OPEN PROJECTARCHIEF  ↗' : 'OPEN PROJECT ARCHIVE  ↗',
+          -78, -171, 11, 0xf3e9c9, 200)
+        // Small stacked folders suggest exploring, rather than scrolling slides.
+        for (let i = 2; i >= 0; i--) {
+          const x = 240 + i * 15
+          const y = -272 + i * 19
+          const card = new Graphics()
+            .roundRect(x - 33, y - 12, 54, 62, 3)
+            .fill([0xb6c9aa, 0x8dab9e, 0xcdb997][i]!)
+            .stroke({ color: 0xf6f0db, width: 2 })
+          this.screen.addChild(card)
         }
       }
     }
     this.track.clear()
-    if (active) this.track.rect(-296, -142, 640 * progress, 3).fill(0x70996f)
-    this.lamp
-      .clear()
-      .circle(337, -129, 2)
-      .fill({ color: 0xc6dc99, alpha: reduced ? 0.7 : 0.6 + Math.sin(time / 750) * 0.25 })
+    this.lamp.clear().circle(337, -129, 2).fill({
+      color: 0xc6dc99, alpha: reduced ? 0.7 : 0.6 + Math.sin(time / 750) * 0.25,
+    })
   }
+
 }

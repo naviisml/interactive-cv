@@ -392,9 +392,9 @@ async function scenario(label, width, height, mobile) {
         'a second floating project CTA must not cover the interactive computer',
       )
       assert.equal(
-        await page.locator('.company-controls').count(),
+        await page.locator('.archive-shell').count(),
         0,
-        'arriving does not silently start or capture walking',
+        'arriving does not silently open the project archive',
       )
       // The in-world screen remains clickable, and keyboard users get an
       // unobtrusive focus-revealed action with the same behavior.
@@ -404,27 +404,35 @@ async function scenario(label, width, height, mobile) {
       })
       await computerAction.focus()
       await computerAction.click()
-      await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
-      assert.equal(
-        await page.locator('.company-controls button[aria-pressed]').count(),
-        7,
-        'all original projects remain inside the computer',
-      )
-      await page.getByRole('button', { name: 'Next slide', exact: true }).click()
-      await page.waitForTimeout(150)
-      const p = Number(await canvas.getAttribute('data-presentation')),
-        x = Number(await canvas.getAttribute('data-player-x'))
-      await page.keyboard.down('ArrowRight')
-      await page.waitForTimeout(600)
-      await page.keyboard.up('ArrowRight')
-      assert.ok(
-        Number(await canvas.getAttribute('data-presentation')) > p,
-        'walking after a button click advances the slideshow',
-      )
+      const archive = page.locator('.archive-shell')
+      await archive.waitFor({ state: 'visible', timeout: 20000 })
+      assert.equal(await archive.locator('.archive-file').count(), 7, 'all project dossiers are available')
+      assert.equal(await page.locator('.company-controls').count(), 0, 'old slideshow controls are removed')
+      await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
+      const first = archive.locator('.archive-document h1')
+      await first.getByText('Navel Development').waitFor()
+      await archive.getByRole('button', { name: 'Next project', exact: true }).click()
+      await first.getByText('GmodStore').waitFor()
+      await archive.locator('.artifact-node').first().click()
+      assert.equal(await archive.locator('.artifact-node[aria-pressed="true"]').count(), 1)
+      await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
+      await first.getByText('Navel Cloud').waitFor()
+      const diagram = archive.locator('.artifact')
+      assert.equal(await diagram.locator('.artifact-node').count(), 5)
+      await diagram.getByRole('button', { name: /Docker Swarm/ }).click()
+      assert.match(await diagram.locator('.artifact-info').innerText(), /Each website runs as its own service/)
+      const x = Number(await canvas.getAttribute('data-player-x'))
+      await archive.focus()
+      await page.keyboard.press('ArrowLeft')
+      await first.getByText('Aquablu').waitFor()
       assert.ok(
         Math.abs(Number(await canvas.getAttribute('data-player-x')) - x) < 1,
-        'watch point holds the actor',
+        'keyboard navigation changes dossiers, not the character position',
       )
+      await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
+      await page.keyboard.press('Escape')
+      await archive.waitFor({ state: 'hidden' })
+      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.presentation === '1.000')
       assert.equal(
         await page
           .locator('.journey-footer')
@@ -632,6 +640,64 @@ async function visualAuditScenario() {
     await page.close()
   }
 }
+async function mobileArchiveScenario(label, width, height) {
+  const page = await browser.newPage({
+    viewport: { width, height },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+  })
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  try {
+    await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
+    await page.locator('canvas[data-renderer="pixi"]').waitFor({ state: 'visible' })
+    await page.locator('.journey-footer')
+      .getByRole('button', { name: /Navel Development/ }).click()
+    await waitForArrival(page, 'navel-development')
+    await page.locator('.canvas-accessibility')
+      .getByRole('button', { name: 'Explore my projects', exact: true }).click()
+    const archive = page.locator('.archive-shell')
+    await archive.waitFor({ state: 'visible', timeout: 20000 })
+    const bounds = await archive.boundingBox()
+    const world = await page.locator('.world').boundingBox()
+    assert.ok(bounds && world, 'project archive fits within the world')
+    assert.ok(Math.abs(bounds.width - world.width) < 2)
+    assert.ok(Math.abs(bounds.height - world.height) < 2)
+    assert.equal(await archive.locator('.archive-file').count(), 7)
+    await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
+    await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
+    await archive.locator('.archive-document h1').getByText('Navel Cloud').waitFor()
+    const list = archive.locator('.archive-projects')
+    const active = archive.locator('.archive-file.is-active')
+    const listBox = await list.boundingBox()
+    const activeBox = await active.boundingBox()
+    assert.ok(listBox && activeBox && activeBox.x >= listBox.x - 3 &&
+      activeBox.x + activeBox.width <= listBox.x + listBox.width + 3,
+      'mobile file index keeps the selected project in view')
+    await archive.locator('.artifact').getByRole('button', { name: /Traefik/ }).click()
+    await archive.locator('.artifact-info').getByText(/Routing traffic/).waitFor()
+    await archive.locator('.archive-main-scroll').evaluate((el) => {
+      el.scrollTop = el.scrollHeight
+    })
+    await archive.locator('.archive-story h2').waitFor({ state: 'visible' })
+    await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      'project archive does not create horizontal document overflow')
+    await archive.getByRole('button', { name: 'Return to world', exact: true }).click()
+    await archive.waitFor({ state: 'hidden' })
+    assert.ok(await page.locator('.movement-controls').count() || await page.locator('.world').isVisible())
+    assert.deepEqual(errors, [])
+    console.log(`PASS_${label}: interactive project archive, mobile scroll and return`)
+  } catch (error) {
+    failures++
+    console.error(`FAIL_${label}: ${error.stack || error}`)
+    await page.screenshot({ path: `test-results/world/${label}-archive-failure.png` }).catch(() => {})
+  } finally {
+    await page.close()
+  }
+}
+
 async function readingModeScenario() {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   const errors = []
@@ -733,6 +799,8 @@ try {
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
+  await mobileArchiveScenario('mobile', 390, 844)
+  await mobileArchiveScenario('compact', 375, 667)
   await visualAuditScenario()
   await graphicsFailureScenario()
 } finally {
