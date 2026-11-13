@@ -79,16 +79,16 @@ export function basketballPose(age: number, power = 0.65, origin = { x: 14, y: -
   return { x: end + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
 }
 export const skillDecks = [
-  { id: 'tooling-bench', offset: -530, width: 190, height: 35 },
-  { id: 'web-bridge', offset: -80, width: 210, height: 66 },
-  { id: 'cloud-deck', offset: 365, width: 190, height: 43 },
-] as const
+  { id: 'tooling-bench', center: -440, height: 35 },
+  { id: 'web-bridge', center: 0, height: 66 },
+  { id: 'cloud-deck', center: 440, height: 43 },
+].map((deck) => ({ ...deck, offset: deck.center - 155, width: 310 }))
 export function skillTerrain(
   terrain: { x: number; height: number }[],
   center: number,
   ground: number,
 ) {
-  const inside = [{ x: center - 650, height: ground }]
+  const inside = [{ x: center - 710, height: ground }]
   for (const deck of skillDecks)
     inside.push(
       { x: center + deck.offset - 65, height: ground },
@@ -96,11 +96,11 @@ export function skillTerrain(
       { x: center + deck.offset + deck.width, height: ground + deck.height },
       { x: center + deck.offset + deck.width + 55, height: ground },
     )
-  inside.push({ x: center + 650, height: ground })
+  inside.push({ x: center + 710, height: ground })
   return [
-    ...terrain.filter((p) => p.x < center - 650),
+    ...terrain.filter((p) => p.x < center - 710),
     ...inside,
-    ...terrain.filter((p) => p.x > center + 650),
+    ...terrain.filter((p) => p.x > center + 710),
   ].sort((a, b) => a.x - b.x)
 }
 

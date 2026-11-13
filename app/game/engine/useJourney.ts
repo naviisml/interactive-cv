@@ -8,7 +8,7 @@ import { journeyEvents as timeline } from '~/content/journey'
 import { createWorld } from '~/game/core/world'
 import { advanceDestination, navigationDuration, type JourneyDestination } from '../core/navigation'
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from '../core/swipeTravel'
-import { skillTerrain } from '../core/sceneActivities'
+import { skillTerrain, skillDecks } from '../core/sceneActivities'
 import {
   stepMotion,
   cameraTarget,
@@ -157,7 +157,7 @@ export function useJourney(
             : ['roc-hilversum', 'coding-college'].includes(timeline[index]?.id ?? '')
               ? SCHOOL_LAB_OFFSET
               : timeline[index]?.id === 'skills-road'
-                ? -(timeline[index]?.span ?? 3000) / 2 + 350
+                ? skillDecks[0]!.center
                 : 0)
     if (Math.abs(toX - motion.x) < 2) return
     destination.value = {

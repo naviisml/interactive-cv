@@ -1,5 +1,6 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture, Text } from 'pixi.js'
 import { skillLogos, skillGroups } from '../../../content/skills'
+import { skillDecks } from '../../core/sceneActivities'
 import { tapTarget } from '../interactions'
 import { terrainHeight, type TerrainPoint } from '../../core/physics'
 import { label, rect } from '../drawing'
@@ -23,7 +24,7 @@ export class SkillsRoadScene extends Container {
     super()
     skillGroups.forEach((group, i) => {
       const node = new Container(),
-        x = (i - 1) * 440
+        x = skillDecks[i]!.center
       node.x = x
       // Grounded workshop roofs and bench, with machines instead of floating menus.
       rect(node, -160, -265, 320, 8, 0x81977a)

@@ -6,6 +6,7 @@ import {
   basketballPose,
   cameraCarPose,
   skillTerrain,
+  skillDecks,
 } from '../app/game/core/sceneActivities.ts'
 import { ActivitySystem } from '../app/game/engine/ActivitySystem.ts'
 import { terrainHeight, stepMotion, type Motion } from '../app/game/core/physics.ts'
@@ -111,4 +112,23 @@ test('holding then releasing a ball or vehicle affects success instead of auto-p
   assert.equal(cameraCarPose(0.7, 100).flash, true)
   assert.equal(cameraCarPose(2.8, 100).flash, false)
   assert.ok(cameraCarPose(2, 100).x > cameraCarPose(2, 40).x)
+})
+
+test('every workbench post stands on its flat physics deck, including the outer feet', () => {
+  const terrain = skillTerrain(
+    [
+      { x: 0, height: 0 },
+      { x: 3000, height: 0 },
+    ],
+    1500,
+    0,
+  )
+  for (const deck of skillDecks)
+    for (const foot of [-147, 150]) {
+      assert.equal(
+        terrainHeight(1500 + deck.center + foot, terrain),
+        deck.height,
+        `${deck.id}: foot ${foot} must not float above a ramp`,
+      )
+    }
 })
