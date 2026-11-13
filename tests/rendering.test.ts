@@ -1,41 +1,37 @@
-import {test} from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import {renderWindow,parallaxTiles,parallaxOffset} from '../app/composables/worldProjection.ts'
-import {storyParagraphs,type TimelineEvent} from '../app/data/timeline.ts'
+import { renderWindow, parallaxTiles, parallaxOffset } from '../app/game/core/worldProjection.ts'
+import { storyParagraphs, type TimelineEvent } from '../app/content/timeline.ts'
 
-test('render bounds remain local even at the far end of a long journey',()=>{
- for(const viewport of [400,1000,1600])for(const camera of [0,7000,17000]){
-  const window=renderWindow(camera,viewport,19000)
-  assert.ok(window.width<=viewport+720)
-  assert.ok(window.start>=0&&window.end<=19000)
-  assert.ok(window.start<=camera&&window.end>=Math.min(19000,camera+viewport))
-  const tiles=parallaxTiles(viewport)
-  assert.ok(tiles.width<=viewport+2400)
-  for(const speed of [.06,.13,.28,.5]){const offset=parallaxOffset(camera,speed);assert.ok(offset<=0&&offset>-1200);assert.ok(tiles.width+offset>=viewport)}
- }
+test('render bounds remain local even at the far end of a long journey', () => {
+  for (const viewport of [400, 1000, 1600])
+    for (const camera of [0, 7000, 17000]) {
+      const window = renderWindow(camera, viewport, 19000)
+      assert.ok(window.width <= viewport + 720)
+      assert.ok(window.start >= 0 && window.end <= 19000)
+      assert.ok(window.start <= camera && window.end >= Math.min(19000, camera + viewport))
+      const tiles = parallaxTiles(viewport)
+      assert.ok(tiles.width <= viewport + 2400)
+      for (const speed of [0.06, 0.13, 0.28, 0.5]) {
+        const offset = parallaxOffset(camera, speed)
+        assert.ok(offset <= 0 && offset > -1200)
+        assert.ok(tiles.width + offset >= viewport)
+      }
+    }
 })
-test('artwork defaults to unfilled outlines so an open path cannot create accidental surfaces',()=>{
- for(const file of ['SkillsWorldScene.vue','StoryWorldScene.vue']){
-  const source=fs.readFileSync(new URL(`../app/components/${file}`,import.meta.url),'utf8')
-  assert.match(source,/<svg[^>]+fill="none"/)
-  for(const path of source.matchAll(/<path\b[^>]*>/g))assert.ok(!/\bfill="(?!none)[^"]+"/.test(path[0]))
- }
+test('exported scene sprites have explicit bounds and no external resources', () => {
+  const directory = new URL('../public/world/scenes/', import.meta.url)
+  for (const file of fs.readdirSync(directory)) {
+    const source = fs.readFileSync(new URL(file, directory), 'utf8')
+    assert.match(source, /<svg[^>]+width="600"[^>]+height="310"/)
+    assert.ok(!source.includes('figma.com'))
+  }
 })
-test('detail copy omits repeated summary paragraphs',()=>{
- const event={summary:'Laravel and Vue.',body:['Laravel and Vue.','Additional detail.','Additional detail.']} as TimelineEvent
- assert.deepEqual(storyParagraphs(event),['Additional detail.'])
-})
-
-test('three-part game shell gives the world the flexible row after the unified header',()=>{
- const css=fs.readFileSync(new URL('../app/assets/css/main.css',import.meta.url),'utf8')
- const shell=css.match(/\.journey-shell:not\(\.is-list\)\{([^}]+)\}/)?.[1]
- assert.ok(shell,'game shell rule exists')
- assert.match(shell,/grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)\s+auto\s*;/)
- assert.ok(!/min-height:\s*660px/.test(shell),'short mobile viewports must not force a taller page')
-})
-test('responsive header keeps money counters on their own grid row',()=>{
- const header=fs.readFileSync(new URL('../app/components/PortfolioHeader.vue',import.meta.url),'utf8')
- assert.match(header,/grid-template-columns:minmax\(0,1fr\) auto;grid-template-rows:44px 36px/)
- assert.match(header,/grid-column:1\/-1;grid-row:2/)
+test('detail copy omits repeated summary paragraphs', () => {
+  const event = {
+    summary: 'Laravel and Vue.',
+    body: ['Laravel and Vue.', 'Additional detail.', 'Additional detail.'],
+  } as TimelineEvent
+  assert.deepEqual(storyParagraphs(event), ['Additional detail.'])
 })

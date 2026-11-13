@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "about": "Over mij",
+    "skills": "Vaardigheden",
+    "work": "Werkervaring",
+    "company": "Bedrijf & projecten",
+    "contact": "Contact",
+    "menu": "Menu",
+    "close": "Sluiten",
+    "list": "Lijstweergave",
+    "world": "Wereldweergave",
+    "language": "Taal"
+  },
+  "category": {
+    "all": "Alles",
+    "work": "Werk",
+    "projects": "Projecten",
+    "school": "Opleiding",
+    "skills": "Vaardigheden",
+    "contact": "Contact"
+  },
+  "common": {
+    "details": "Meer informatie",
+    "detailsAbout": "Meer over {title}",
+    "cancel": "Annuleren",
+    "running": "Op weg naar {title}",
+    "back": "Terug naar de route",
+    "fullPage": "Volledige pagina",
+    "via": "Opdracht via {name}",
+    "continue": "Verder ontdekken",
+    "closeDetails": "Hoofdstuk sluiten",
+    "rendererError": "De spelweergave kon niet starten. Je kunt de lijst wel bekijken.",
+    "worldLabel": "Interactieve levenslijn. Loop met de pijltjes, spring met Spatie, sprint met Shift en klim met omhoog/omlaag."
+  },
+  "list": {
+    "eyebrow": "HET VERHAAL TOT NU TOE",
+    "title": "Momenten die mij hebben gevormd.",
+    "intro": "Dezelfde reis, op je eigen tempo. Scroll om het verhaal te volgen.",
+    "project": "Bekijk project",
+    "experience": "Lees werkervaring",
+    "journey": "Jouw route",
+    "explored": "ontdekt",
+    "read": "gelezen",
+    "back": "Terug naar de wereld",
+    "categories": "Categorieën",
+    "timeline": "Ga naar een moment"
+  },
+  "controls": {
+    "keyboard": "Toetsenbordbediening",
+    "walk": "Lopen",
+    "jump": "Springen",
+    "sprint": "Sprinten",
+    "scroll": "Scroll om te lopen",
+    "climb": "Klimmen",
+    "swipe": "Veeg of houd ingedrukt om te lopen",
+    "left": "Loop naar links",
+    "right": "Loop naar rechts",
+    "up": "Klim omhoog",
+    "down": "Klim omlaag",
+    "holdSprint": "Houd vast om te sprinten"
+  },
+  "activity": {
+    "kick": "Schiet de bal",
+    "reset": "Nieuwe bal",
+    "wires": "Verbind de draden",
+    "wire": "Draai draad {n}",
+    "schoolyard": "SCHOOLPLEIN"
+  },
+  "company": {
+    "slideshow": "Presentatie van Navel Development",
+    "walk": "Blijf lopen of scrollen om te kijken. Met de knoppen kies je zelf een dia.",
+    "previous": "Vorige dia",
+    "next": "Volgende dia",
+    "continue": "Verder"
+  },
+  "world": {
+    "tutorial": "UITLEG",
+    "route": "Klim omhoog. Glijd omlaag."
+  },
+  "finance": {
+    "debt": "Schuld",
+    "savings": "Spaargeld",
+    "income": "Jaarinkomen",
+    "notShared": "Niet gedeeld",
+    "about": "Over schulden, spaargeld, inkomen en hulp",
+    "title": "Geld door de jaren heen.",
+    "eyebrow": "GELD & WERK",
+    "intro": "Ik wil open zijn over geld én werk. Schulden, spaargeld en inkomen horen allemaal bij dit verhaal. Je hoeft je niet te schamen voor schulden. Praten over inkomen en spaargeld zou ook geen taboe moeten zijn.",
+    "support": "Hulp bij schulden",
+    "supportIntro": "Je hoeft het niet alleen op te lossen. Deze organisaties kunnen je helpen een eerste stap te zetten.",
+    "helpIn": "Hulp in",
+    "other": "Een ander land",
+    "fallback": "Begin bij je gemeente of sociale dienst en vraag naar erkende schuldhulpverlening in jouw omgeving.",
+    "footnote": "Voorwaarden, kosten en mogelijkheden verschillen. Controleer dit bij de organisatie voordat je begint.",
+    "close": "Geldinformatie sluiten",
+    "gross": "bruto",
+    "net": "netto"
+  },
+  "page": {
+    "life": "EEN LEVEN IN ONTWIKKELING",
+    "missing": "Dit hoofdstuk is nog niet geschreven."
+  }
+}

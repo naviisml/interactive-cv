@@ -9,15 +9,22 @@
     "preview": "nuxt preview",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "nuxt typecheck",
-    "sprites:generate": "node scripts/build-character.mjs"
+    "sprites:generate": "node scripts/build-character.mjs",
+    "format": "prettier --write app art scripts tests i18n nuxt.config.ts",
+    "format:check": "prettier --check app art scripts tests i18n nuxt.config.ts",
+    "art:export": "node scripts/art/export-scenes.mjs",
+    "art:skills": "node scripts/art/prepare-skills.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.72.0",
+    "@nuxtjs/i18n": "^10.6.0",
     "nuxt": "4.6.4",
+    "pixi.js": "^8.23.0",
     "vue": "^3.5.0",
     "vue-router": "5.4.0"
   },
   "devDependencies": {
+    "prettier": "^3.10.1",
     "sharp": "^0.34.5",
     "typescript": "^5.9.0",
     "vue-tsc": "^3.1.0"

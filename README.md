@@ -1,84 +1,75 @@
-# Navi · A life in progress
+# Navi — interactive CV
 
-A Nuxt 4 playable portfolio with five connected levels: About me, Skills, Work experience, My company & projects, and Contact me. Layered pixel scenery, terrain, optional ladders and slides, keyboard and touch controls, an accessible reading list, and details that open inside the world.
+A Nuxt portfolio with one PixiJS 2D world. Walk, jump, climb, sprint, scroll or use touch controls to explore the timeline. English and Dutch share the same content IDs, game state and routes.
 
-## Run
+## Development
 
-Use Node 22.12+ or Node 24.
+Requires Node 22.12+ or Node 24.
 
 ```sh
-npm install
+npm ci
 npm run dev
-npm test
 npm run typecheck
+npm test
 npm run generate
+npm run format:check
 ```
 
-Static output is `.output/public`. `npm run build` produces a server build.
+`npm run generate` produces `.output/public`, including static language messages and direct event pages. The PixiJS bundle loads only in world mode on the client. Header, reading list and dialogs remain normal accessible Vue components.
 
-## Content and levels
+## Project structure
 
-`app/data/timeline.ts` holds the real CV events. Content comes from the four-page Figma CV, CV 2026 — Navarone Ismail (`fRNmeTPW9BxYg11rzeDezV`). Each event has a unique ID, category, title, summary, body, label and landmark, with optional role, period, location, tags and attribution.
+| Directory | Responsibility |
+| --- | --- |
+| `app/components/layout` | Navigation, finance placement and language selection |
+| `app/components/portfolio` | Journey shell and chapter dialog |
+| `app/components/game` | Canvas lifecycle, touch/keyboard hints, accessible puzzle and slideshow controls |
+| `app/components/finance` | Money counters and support information |
+| `app/components/ui` | Shared UI components |
+| `app/content` | CV events, journey sections, logo manifest, company slides and finances |
+| `app/content/locales` | Dutch CV and support-resource copy |
+| `i18n/locales` | English and Dutch interface messages |
+| `app/game/engine` | Movement loop, viewport and persistent activity state |
+| `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
+| `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
+| `app/game/rendering/sprites` | Character atlas, scenery textures, logos, computer and company signs |
+| `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and interactive school/portal scenes |
+| `art/scenes` | Editable source artwork; never mounted in the runtime DOM |
+| `public/world/scenes` | Exported scenery textures |
+| `public/sprites` | Character atlas |
+| `public/skills` | Runtime textures generated from the original Figma CV assets |
+| `tests` | Movement, presentation, layout, content and asset checks |
 
-`app/data/levels.ts` groups those events into the five levels and defines the skill stations. Add a real event to the timeline, then its ID to the appropriate level. Work and company client assignments have separate sections; school stays in About. The full journey is arranged by subject; dates stay visible within each section. Skills list tools from the CV without numerical ratings. Navel Cloud has no date in the source CV and stays labelled Own Product.
+## Renderer lifecycle
 
-The level buttons and footer timeline start an animated run to the chosen stop. Manual input cancels it. Reverse movement bypasses obstacle triggers. Each level has a gateway and its own backdrop treatment. The list tracks reading progress from actual row positions, supports category filtering, and retains a route back into the world.
+`useJourney` owns the single animation loop and physics. `GameCanvas.client.vue` loads PixiJS, subscribes to that loop and disposes its subscription, observer and GPU resources on unmount. PixiJS's own ticker is disabled. `WorldRenderer` reads one plain frame snapshot; Vue does not create a component per scenery object or receive per-frame character positions.
 
-## Controls and event details
+Terrain, scenery, shadows, props and sprites share one world coordinate system. Company signs sample the ground at their post. Wide scenes declare a `span` so they stay current over their entire route. Only nearby chapter sprites are mounted. Scenery textures and logo textures use the shared asset cache. The continuous forest-to-city transition follows travelled distance and reverses with the player.
 
-Left/Right or A/D walk. Hold Shift to sprint. Space jumps. Up/Down or W/S climb nearby ladders; Up/W jumps away from ladders. E opens nearby details. Short milestones and school events show proximity tooltips. Other events open a focused, scrollable panel contained within the world; Escape closes it. Original CV entries also retain direct `/events/[id]` pages.
+## Editing content
 
-Horizontal swipes, trackpad movement and mouse-wheel scrolling in either direction use buffered distance at the same capped physics speed as keyboard input. Releasing a finger clears pending travel. Safari uses a non-passive native touchmove listener with direction locking; vertical starts and pinch zoom remain native. The world pauses while a detail panel, the money information panel, or the list is open.
+Add CV entries in `app/content/timeline.ts`, their IDs to a section in `app/content/journey.ts`, and Dutch copy with the same ID in `app/content/locales/nl.ts`. Set `span` for a longer scene. `presentation: 'world'` removes its modal; short milestones are tooltips. `hasDetails` is the single modal eligibility rule.
 
-## Rendering and motion
+Skills are one continuous road, not Backend/Frontend/Infrastructure/Approach modals. `app/content/skills.ts` lists all 18 original Figma logos and their asset paths. `SkillLogoSprite` owns their proximity animation. Do not replace brand assets with text approximations.
 
-- `app/composables/physics.ts`: elapsed-time movement, terrain, collisions, climbing and sliding.
-- `app/composables/navigation.ts`: continuous destination travel in either direction, with a distance-based duration and terrain sampling.
-- `app/data/world.ts`: generates the terrain and optional courses for the current number of events.
-- `WorldTerrain.vue` / `WorldCourse.vue`: scenery uses the same geometry as movement; rocks and plants sample the local slope.
-- `WorldAtmosphere.vue`: parallax clouds, mountains, forests, city silhouettes and skill circuits. Foreground trunks no longer cover events.
-- `PixelCharacter.vue`: one fixed bitmap frame at a time from `public/sprites/navi.png`; walking, running, climbing, jumping, falling, sliding and idle poses. No independently transformed limbs. Reduced motion freezes the frame cycle.
+Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the slides from actual CV entries. At the viewing position, held walking or scrolling advances the slides while the character stays on the spot. Release to pause, reverse to rewind, or use the accessible previous/next/slide controls. At the end, walking continues along the route. Small screens show the larger title and summary rather than tiny body text.
 
-The avatar has dark hair, short facial hair, a black jacket and longer proportions, based on the supplied references. Reference photos are not bundled. Its shadow is a separate world object projected onto the support below the character.
+`art/skills` retains the untouched Figma PNG originals. `npm run art:skills` makes small, aspect-preserving runtime textures so the road does not decode eighteen large source images on a phone. SVG logo files remain unchanged.
 
-Regenerate the 32-frame atlas with `npm run sprites:generate`. Set `CHARACTER_REVIEW_DIR` to an absolute temporary directory to also generate a contact sheet and walk frames for review. `public/sprites/walk-preview.gif` is a visual animation sample, not a runtime dependency.
+`npm run art:export` regenerates static scenery textures from `art/scenes/StoryScene.vue`. `npm run sprites:generate` rebuilds the character atlas. The source reference photos are not bundled.
 
-The CSS ground datum `--ground-y` anchors the terrain, character and event scenery on all viewport sizes. Camera and position survive client-side navigation through Nuxt state. No persistent database, CMS, analytics or external game engine is included.
+## Languages and money
 
-## Money through the years
+`@nuxtjs/i18n` loads English and Dutch messages lazily. The header language selector persists the choice in the locale cookie. UI messages live in `i18n/locales`; event translations are separate content objects so paragraphs stay readable and editable. Locale changes update signs and the computer without rebuilding physical layout or restarting the journey.
 
-Edit `app/data/finances.json`. Each original CV event ID has debt, savings, a featured balance choice, and yearly income. Amounts use the root currency (EUR). `null` is undisclosed; an omitted field carries the preceding chronological value forward. Income requires amount, year, and gross/net basis. No actual balances have been invented.
+`app/content/finances.json` contains chronological financial snapshots by original event ID. `null` means undisclosed; omission carries a previous value forward. No financial amounts are invented. English and Dutch use the same figures, translated labels and locale-aware currency formatting. Support links retain the original official URLs.
 
-The header maps each stop to its original CV snapshot even though the levels reorganize the journey. Skills and contact show no financial snapshot. The information panel explains the counters and links to support resources for the Netherlands, Flanders, Germany, the UK and the US, with a manual country selector and browser-locale suggestion.
+## Controls and checks
 
-Fonts load from Google Fonts with system fallbacks. Self-host them for a fully offline build.
+- Desktop: arrows or A/D to walk, Space to jump, Shift to sprint, up/down or W/S to climb, wheel/trackpad to move forward or backward.
+- Touch: swipe or hold independent direction buttons; jump and sprint have separate buttons and pointer capture, so multiple touches can remain active.
+- Returning disables automatic slide triggers, not physical support or explicit ladders. Ladder jumps cannot reattach in mid-air.
+- Navigation is continuous and symmetric, with a brief start/stop ramp and a ten-second cap for long trips. Manual movement keeps its physical speed.
+- Game Space overrides a focused navigation button. Forms, puzzles, reading mode and dialogs keep native keyboard behavior.
 
-## Interactive world scenes
-
-`WorldChapterScene.vue` replaces the repeated landmark buildings in the walking world. The CV content stays in the existing timeline. The three schools have distinct activities: a physical football and goal at Panta Rhei, a six-wire circuit puzzle at ROC Hilversum, and a stepping-stone code sequence at Coding College. The portal collects three runes through jumping and unlocks three physical side-route platforms. Other scene objects react to proximity. All scene props fit inside the level clearing; background trees stay behind the route.
-
-The character atlas now has 32 frames: twelve walk, twelve run, four climb and the idle/jump/fall/slide poses. `npm run sprites:generate` regenerates the committed bitmap. Gait phase follows distance travelled, with a grounded stance, lifted recovery foot and running flight poses. Timeline travel has a fixed distance-based pace.
-
-`worldActivities.ts` owns the testable football simulation, circuit tracing, code sequence and platform positions. Activities pause with world dialogs and remain optional. `SchoolWorldScene.vue` supports walking, taps and keyboard focus. `PortalWorldActivity.vue` uses the character’s real bounds for collection. Scene drawings and collisions share world pixels; portal ledges are drawn once by their scene. The vertical camera follows the terrain rather than the character’s jump, keeping elevated scenes in view.
-
-## Scene layout and viewport projection
-
-`app/data/sceneLayout.ts` defines the world-pixel frame, actor clearance, school panels, circuit tile positions, ports and both terminal leads. Circuit tracing and SVG paths use the same port function; there is no separate CSS grid to align. Important panel content sits above the actor's walking silhouette.
-
-`useWorldViewport` observes the actual game area and `worldProjection` computes its scale and viewport in world units. Terrain, props, collisions, avatar and camera share that projection; HUD, touch controls, chapter text and timeline remain outside it. The game shell uses the small viewport height and safe-area padding. `main.css` contains the consolidated application styles instead of successive scene offsets.
-
-Skills scenery has dedicated backend, frontend, infrastructure and Git/CI views. Chapter text is presented in one fixed world caption. Timeline markers use skill names, and climbing controls only appear beside a ladder.
-
-## Artwork and bounded rendering
-
-`StoryWorldScene.vue` and `SkillsWorldScene.vue` use closed primitives for painted surfaces; open paths inherit `fill="none"`. Props sit either side of the walking lane. Database bodies, fountain tiers, benches, shelves and transport props are complete connected objects. Q-Lite uses a travel-information shelter and speaker.
-
-`renderWindow` bounds the visible terrain/course SVG and mounted chapters. `parallaxTiles` repeats finite background tiles instead of stretching layers across the entire journey. Terrain keeps its original 360-pixel surface datum while its clipped view extends to 480 pixels, so ground alignment and collisions remain unchanged. `overflow: clip` prevents focused puzzle controls from scrolling the game container. Automatic destination travel cannot kick the football. Detail/list paragraphs omit repeated summaries, and the contact ending is shown once.
-
-## Era transitions and input
-
-Scenery follows continuous distance between event clearings. Trees fall away to stumps before the skyline rises from the ground; buildings remain mounted and reverse travel retraces the transition. The sky, mountains and terrain stay continuous. Reduced motion uses opacity without the tree/building transforms. Static background geometry is memoized during camera movement.
-
-Physics catches up normal slow frames with bounded substeps; it does not slow the world clock below 20 fps. Timeline runs use a short acceleration/deceleration ramp and steady cruising speed. Game Space takes precedence over a focused navigation button while reading mode, forms, puzzles and open dialogs retain native keyboard behavior. The world receives initial focus without scrolling.
-
-Reverse movement disables automatic slide activation, while platform and slide support and explicit ladder climbing remain available. A ladder jump cannot reattach before landing. Desktop hints show keyboard/scroll controls. Touch controls use independent pointer IDs, touch-action:none, and separate direction/jump pads, allowing walking and jumping together. A held touch sprint button complements Shift. Icons come from @lucide/vue.
+Tests cover movement at different frame rates, reverse supports, ladders, jumps, sprint, multi-pointer state, scene spans, presentation bounds, translation coverage and all logo assets. The GitHub browser smoke test checks desktop/mobile layout, canvas startup, keyboard input, menu/list navigation and language switching. Real iPhone Safari multi-touch and GPU performance require an on-device check; a headless browser does not establish them.

@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "about": "About",
+    "skills": "Skills",
+    "work": "Work",
+    "company": "Company & projects",
+    "contact": "Contact",
+    "menu": "Menu",
+    "close": "Close",
+    "list": "List view",
+    "world": "World view",
+    "language": "Language"
+  },
+  "category": {
+    "all": "All",
+    "work": "Work",
+    "projects": "Projects",
+    "school": "School",
+    "skills": "Skills",
+    "contact": "Contact"
+  },
+  "common": {
+    "details": "Details",
+    "detailsAbout": "Details about {title}",
+    "cancel": "Cancel",
+    "running": "Running to {title}",
+    "back": "Back to the journey",
+    "fullPage": "Open full page",
+    "via": "Project through {name}",
+    "continue": "Continue exploring",
+    "closeDetails": "Close chapter details",
+    "rendererError": "The game renderer could not start. You can still explore the list.",
+    "worldLabel": "Interactive life timeline. Use arrows to walk, Space to jump, Shift to sprint, and up/down to climb."
+  },
+  "list": {
+    "eyebrow": "THE STORY SO FAR",
+    "title": "A few moments that made me.",
+    "intro": "Same journey. At your own pace. Scroll to follow the story.",
+    "project": "View project",
+    "experience": "Read experience",
+    "journey": "Your journey",
+    "explored": "explored",
+    "read": "read",
+    "back": "Back to the world",
+    "categories": "Timeline categories",
+    "timeline": "Jump to a timeline event"
+  },
+  "controls": {
+    "keyboard": "Keyboard controls",
+    "walk": "Walk",
+    "jump": "Jump",
+    "sprint": "Sprint",
+    "scroll": "Scroll to walk",
+    "climb": "Climb",
+    "swipe": "Swipe or hold to walk",
+    "left": "Walk left",
+    "right": "Walk right",
+    "up": "Climb up",
+    "down": "Climb down",
+    "holdSprint": "Hold to sprint"
+  },
+  "activity": {
+    "kick": "Kick the ball",
+    "reset": "New ball",
+    "wires": "Connect the wires",
+    "wire": "Rotate wire {n}",
+    "schoolyard": "SCHOOLYARD"
+  },
+  "company": {
+    "slideshow": "Navel Development presentation",
+    "walk": "Keep walking or scrolling to explore. Use the buttons to choose a slide.",
+    "previous": "Previous slide",
+    "next": "Next slide",
+    "continue": "Continue"
+  },
+  "world": {
+    "tutorial": "TUTORIAL",
+    "route": "Climb up. Slide down."
+  },
+  "finance": {
+    "debt": "Debt",
+    "savings": "Savings",
+    "income": "Yearly income",
+    "notShared": "Not shared",
+    "about": "About debt, savings, income and support",
+    "title": "Money through the years.",
+    "eyebrow": "MONEY & WORK",
+    "intro": "I want to be open about money as well as work. Debt, savings and income all have a place in this story. There’s no shame in having debt, and talking about income or savings shouldn’t be taboo.",
+    "support": "Support with debt",
+    "supportIntro": "You don’t have to work it out on your own. These organisations can help you find a starting point.",
+    "helpIn": "Help in",
+    "other": "Another country",
+    "fallback": "Start with your local government or social services and ask about recognised debt-advice services in your area.",
+    "footnote": "Services, fees and eligibility vary. Check with the organisation before starting.",
+    "close": "Close money information",
+    "gross": "gross",
+    "net": "net"
+  },
+  "page": {
+    "life": "A LIFE IN PROGRESS",
+    "missing": "This chapter has not been written yet."
+  }
+}
