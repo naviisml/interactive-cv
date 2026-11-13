@@ -31,6 +31,7 @@ const detailEvent = computed(() =>
 )
 const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
+const workshopIndex = ref<number | null>(null)
 function openFirstComputer() {
   if (listMode.value || firstCodeOpen.value) return
   stop()
@@ -43,6 +44,16 @@ const journey = useJourney(trackIndices, view)
 const buildingVisit = useBuildingVisit(journey)
 const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
+const completedWorkshops = ref<string[]>([])
+function openWorkshop(index: number) {
+  if (listMode.value || workshopIndex.value !== null) return
+  stop()
+  workshopIndex.value = index
+}
+function finishWorkshop(id: string) {
+  activities.completeWorkshop(id)
+  completedWorkshops.value = [...activities.completedWorkshops]
+}
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
   current.value.category === 'skills'
@@ -130,13 +141,14 @@ const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex],
   () => {
     paused.value =
       listMode.value ||
       detailIndex.value !== null ||
       moneyOpen.value ||
       firstCodeOpen.value ||
+      workshopIndex.value !== null ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -408,7 +420,7 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || buildingVisit.blocking.value
+    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -476,6 +488,7 @@ onBeforeUnmount(() => {
             @seek="seekPresentation"
             @start-computer="startPresentation"
             @open-first-computer="openFirstComputer"
+            @open-workshop="openWorkshop"
         /></ClientOnly>
         <ChapterCaption
           :current="current"
@@ -493,6 +506,13 @@ onBeforeUnmount(() => {
           @click="openFirstComputer"
         >
           {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+        </button>
+        <button
+          v-if="current.id === 'skills-road' && !running && workshopIndex === null"
+          class="first-code-launch"
+          @click="openWorkshop(0)"
+        >
+          {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
         </button>
         <ComputerInvitation
           v-if="
@@ -526,6 +546,13 @@ onBeforeUnmount(() => {
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
       <FirstCodeLab v-if="firstCodeOpen" @close="firstCodeOpen = false" />
+      <SkillWorkshop
+        v-if="workshopIndex !== null"
+        :initial-group="workshopIndex"
+        :completed="completedWorkshops"
+        @complete="finishWorkshop"
+        @close="workshopIndex = null"
+      />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
