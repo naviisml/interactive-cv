@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Menu, X, List, Map, MessageSquareText, MessageSquareOff, ChevronDown } from '@lucide/vue'
 import { levels, type LevelId } from '~/content/journey'
-const props = defineProps<{
+defineProps<{
   active: LevelId
   listMode: boolean
   tooltipsEnabled: boolean

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TimelineEvent } from '~/content/timeline'
-import { timeline, storyParagraphs, categoryNames } from '~/content/timeline'
+import { timeline, storyParagraphs } from '~/content/timeline'
 defineProps<{ event: TimelineEvent }>()
 const { t } = useI18n()
 const emit = defineEmits<{ close: [] }>()

@@ -86,12 +86,15 @@ export class ActivitySystem {
   actions: Record<string, ActionState> = {}
   readonly autoPlayed = new Set<string>()
   autoPlayOnce(id: string, action: SceneAction) {
-    if (this.autoPlayed.has(id) || this.actions[id]?.running || this.charges[id]?.holding) return false
+    if (this.autoPlayed.has(id) || this.actions[id]?.running || this.charges[id]?.holding)
+      return false
     this.autoPlayed.add(id)
-    return this.actions[id] ? false : this.trigger(id, action, .85)
+    return this.actions[id] ? false : this.trigger(id, action, 0.85)
   }
-  charges: Record<string, { holding: boolean; power: number; mode: 'power' | 'arc'; origin?: { x: number; y: number } }> =
-    {}
+  charges: Record<
+    string,
+    { holding: boolean; power: number; mode: 'power' | 'arc'; origin?: { x: number; y: number } }
+  > = {}
   get charging() {
     return Object.values(this.charges).some((charge) => charge.holding)
   }

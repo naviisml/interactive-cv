@@ -187,21 +187,16 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
         currentAction ||
         activeId === 'navel-development' ||
         activeId === 'skills-road' ||
-        activeId === 'first-lines'
+        activeId === 'first-lines' ||
+        activeId === 'contact'
       "
       class="canvas-accessibility"
       @keydown.esc.stop.prevent="host?.closest<HTMLElement>('.world')?.focus()"
     >
-      <button
-        v-if="activeId === 'first-lines'"
-        @click="openFirstComputer"
-      >
+      <button v-if="activeId === 'first-lines'" @click="openFirstComputer">
         {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
       </button>
-      <button
-        v-if="currentAction && currentIndex !== undefined"
-        @click="enterCurrentBuilding"
-      >
+      <button v-if="currentAction && currentIndex !== undefined" @click="enterCurrentBuilding">
         {{ t('building.enter') }}
       </button>
       <template v-if="currentAction === 'circuit'">
@@ -254,11 +249,11 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
           {{ workers }} {{ locale === 'nl' ? 'workers' : 'workers' }}
         </button>
       </template>
+      <a v-if="activeId === 'contact'" href="mailto:contact@navel.dev">
+        {{ locale === 'nl' ? 'Stuur me een e-mail' : 'Send me an email' }}
+      </a>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
-      <button
-        v-if="activeId === 'navel-development'"
-        @click="openProjects"
-      >
+      <button v-if="activeId === 'navel-development'" @click="openProjects">
         {{ t('company.start') }}
       </button>
     </div>
@@ -306,7 +301,8 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
   background: #e7e4ce;
   color: #315443;
 }
-.canvas-accessibility button {
+.canvas-accessibility button,
+.canvas-accessibility a {
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid #809875;

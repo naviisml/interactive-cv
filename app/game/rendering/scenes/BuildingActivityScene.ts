@@ -265,7 +265,7 @@ export class BuildingActivityScene extends Container {
           ? 'Reiziger opgehaald · tik om te herhalen'
           : 'Passenger collected · tap to replay'
       x = this.taxi?.x ?? 100
-      y = -125
+      y = -220
     } else if (this.action === 'basketball') {
       const power = charge?.holding ? charge.power : (record?.power ?? 0)
       message = charge?.holding
@@ -282,7 +282,7 @@ export class BuildingActivityScene extends Container {
               ? 'Mis · probeer opnieuw'
               : 'Missed · try again'
       x = this.ball?.x ?? 65
-      y = Math.min(-87, (this.ball?.y ?? -10) - 82)
+      y = Math.min(-260, (this.ball?.y ?? -10) - 82)
     } else if (this.action === 'luggage') {
       message = record?.running
         ? nl

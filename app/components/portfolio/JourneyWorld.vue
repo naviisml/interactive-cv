@@ -461,13 +461,16 @@ function navigateTimeline(index: number) {
   if (listMode.value) scrollToEvent(index)
   else goTo(index)
 }
-function interact(event: KeyboardEvent) {
+function aimKeyboard(event: KeyboardEvent) {
   const ball = activities.charges['panta-rhei']
   if (ball?.holding && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
     event.preventDefault()
+    event.stopImmediatePropagation()
     ball.power = Math.max(0, Math.min(1, ball.power + (event.key === 'ArrowUp' ? 0.06 : -0.06)))
     return
   }
+}
+function interact(event: KeyboardEvent) {
   if (
     paused.value ||
     presentation.active ||
@@ -512,6 +515,7 @@ onNuxtReady(async () => {
     detailIndex.value !== null ||
     firstCodeOpen.value ||
     buildingVisit.blocking.value
+  window.addEventListener('keydown', aimKeyboard, true)
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -523,6 +527,7 @@ onNuxtReady(async () => {
 onBeforeUnmount(() => {
   worldDisposed = true
   detachTouch(worldRoot.value)
+  window.removeEventListener('keydown', aimKeyboard, true)
   window.removeEventListener('keydown', interact)
   window.removeEventListener('scroll', queueListUpdate)
   window.removeEventListener('resize', queueListUpdate)
@@ -577,10 +582,7 @@ onBeforeUnmount(() => {
                 : 'Swipe through the world or use the arrows. Tap objects to discover what they do.'
             }}
           </p>
-          <button
-            class="intro-start"
-            @click="dismissIntro"
-          >
+          <button class="intro-start" @click="dismissIntro">
             {{ locale === 'nl' ? 'Begin met ontdekken' : 'Start exploring' }} →
           </button>
         </div>
@@ -686,13 +688,15 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .intro-hero {
+  min-height: 0;
   flex: 0 0 50%;
   min-width: 0;
   display: grid;
   align-items: center;
   overflow: hidden;
   z-index: 2;
-  background: linear-gradient(100deg, #f8f5ed 55%, #ded5be);
+  background:
+    linear-gradient(90deg, #f8f5ed 50%, #f8f5ed00), linear-gradient(#ded5be, #bbc7bc 48%, #77978b);
   transition:
     flex-basis 0.75s ease,
     opacity 0.35s ease;
@@ -812,5 +816,22 @@ onBeforeUnmount(() => {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+@media (max-height: 500px) {
+  .intro-copy {
+    padding: 12px 22px;
+  }
+  .intro-copy h1 {
+    font-size: 27px;
+    margin: 8px 0;
+  }
+  .intro-copy > p:nth-of-type(2) {
+    display: none;
+  }
+  .intro-copy > p:not(.eyebrow) {
+    font-size: 11px !important;
+    margin: 6px 0;
+  }
 }
 </style>

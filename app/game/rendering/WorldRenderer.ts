@@ -406,7 +406,7 @@ export class WorldRenderer {
         : computerView
           ? Math.min(frame.scale, (width - 24) / 675)
           : campView
-            ? Math.min(frame.scale, (width - 24) / 800)
+            ? Math.min(frame.scale, (width - 24) / 900)
             : isBuilding(frame.activeId)
               ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
               : frame.scale
@@ -417,7 +417,7 @@ export class WorldRenderer {
           Math.min(
             this.model.width - width / targetZoom,
             frame.motion.x -
-              (width / targetZoom) * (campView ? 0.65 : closeView ? portraitAnchor : 0.38),
+              (width / targetZoom) * (campView ? 0.58 : closeView ? portraitAnchor : 0.38),
           ),
         )
     if (!this.initialized) {

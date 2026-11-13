@@ -132,7 +132,10 @@ test('every workbench post stands on its flat physics deck, including the outer 
 })
 
 test('automatic pickup and ticket sequences run once, then allow manual replay', () => {
-  for (const [id, action] of [['get-e', 'departure'], ['appjection', 'camera']] as const) {
+  for (const [id, action] of [
+    ['get-e', 'departure'],
+    ['appjection', 'camera'],
+  ] as const) {
     const game = new ActivitySystem()
     assert.equal(game.autoPlayOnce(id, action), true)
     assert.equal(game.autoPlayOnce(id, action), false)
@@ -142,17 +145,18 @@ test('automatic pickup and ticket sequences run once, then allow manual replay',
     assert.equal(game.actions[id]?.completed, 1)
     assert.equal(game.actions[id]?.outcome, id === 'appjection' ? 'ticket' : 'success')
     assert.equal(game.autoPlayOnce(id, action), false)
-    assert.equal(game.trigger(id, action, .7), true)
+    assert.equal(game.trigger(id, action, 0.7), true)
   }
 })
 test('aiming changes the shot arc without charging over time', () => {
   const game = new ActivitySystem()
   game.beginCharge('court', 'arc')
   game.tick(1.5, false)
-  assert.equal(game.charges.court?.power, .65)
-  const low = basketballPose(.55, .2), high = basketballPose(.55, .9)
+  assert.equal(game.charges.court?.power, 0.65)
+  const low = basketballPose(0.55, 0.2),
+    high = basketballPose(0.55, 0.9)
   assert.ok(high.y < low.y - 40)
-  game.charges.court!.power = .7
+  game.charges.court!.power = 0.7
   game.releaseCharge('court', 'basketball')
-  assert.equal(game.actions.court?.power, .7)
+  assert.equal(game.actions.court?.power, 0.7)
 })

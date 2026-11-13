@@ -31,7 +31,7 @@ npm run format:check
 | `app/game/engine` | Movement loop, viewport and persistent activity state |
 | `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
 | `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
-| `app/game/rendering/sprites` | Character atlas, scenery textures, aircraft, computer, character and building exteriors |
+| `app/game/rendering/sprites` | Character atlas, scenery textures, taxi, computer, character and building exteriors |
 | `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and building activities, campsite and layered level entrances |
 | `art/scenes` | Editable source artwork; never mounted in the runtime DOM |
 | `public/world/scenes` | Exported scenery textures |
@@ -86,15 +86,15 @@ Run `npm run sprites:generate` after editing `scripts/build-character.mjs`. This
 
 ### Scene actions and ending
 
-`sceneActivities.ts` defines replayable action timing, aircraft/car/basketball paths and Skills terrain. Basketball scoring is calculated from the same rim clearance as the visible trajectory; misses rebound, and the ball is picked up before release. The camera car starts where it is parked, rather than teleporting to the opposite end of the road. The player must press and hold the ball, aircraft or car and release at the right moment; the charge determines shot accuracy, takeoff outcome and speed-camera result. `ActivitySystem` persists their state across culling and locale switches, and freezes time when the world is paused; a pending hold is cancelled on pause, focus loss or pointer cancellation. `BuildingActivityScene` provides a basketball court, hotel luggage bell, departing aircraft and camera test drive. `SchoolActivityScene` provides two distinct simulations backed by `learningActivities.ts`: six rotatable wires with reciprocal connectivity and visible campus lighting, and a programmable rover that executes step/jump commands across real gaps, fails on invalid landings and can be corrected. The old three-toggle boards and detached `SkillWorkshop` are removed. These are world objects; equivalent keyboard/screen-reader controls appear only when focused. A finished action can be triggered again. Scores, cable orientations, rover commands, page settings and queue state survive scene culling and language changes.
+`sceneActivities.ts` defines replayable taxi/car/basketball paths and Skills terrain. Hold the basketball and drag vertically to set a higher or lower arc, then release. The same trajectory drives its preview and score; the front rim and net occlude the descending ball. Get-e automatically boards a passenger and drives a fading taxi away. Appjection automatically captures a speeding car and delivers its ticket as an envelope to the company mailbox; hold/release still controls a manual test drive. `ActivitySystem` retains one-time automatic triggers across culling and locale changes and freezes animations while paused. School activities use reciprocal connected cables and a programmable rover. Keyboard and screen-reader controls provide equivalent actions.
 
-The contact stop is `CampsiteScene`: tent zip, lantern and fire are interactive. Its clearing stays level and bounds the world near the campsite. It never opens a finish overlay or locks movement.
+The contact stop is `CampsiteScene`: tent zip, lantern, fire and an email mailbox are interactive. Its clearing stays level and bounds the world near the campsite. It never opens a finish overlay or locks movement.
 
 Only `FirstLines.vue` still uses authored SVG scenery. Its export is `public/world/scenes/first-lines.svg`; the superseded project/building textures and old football/portal/wire-grid simulation have been removed. The other scenes are reusable Pixi objects.
 
 ## First-code workstation
 
-The opening scene's computer is clickable, with an accessible button as a fallback. It opens a real HTML/CSS editor and immediate preview in a sandboxed iframe (no script execution). This is intentionally a learning interaction, separate from the later Navel Development project slideshow. Editing the sample never changes deployed files.
+The opening scene's computer is clickable, with an accessible button as a fallback. It opens a real HTML/CSS editor and immediate preview in a sandboxed iframe (no script execution). This is intentionally a learning interaction, separate from the later Navel Development desktop workspace. Editing the sample never changes deployed files.
 
 ## Production verification
 
@@ -102,4 +102,7 @@ The opening scene's computer is clickable, with an accessible button as a fallba
 
 Browser regressions cover outside-menu click-through, background inertness, retained GPU frames while a dialog is stationary, sandboxed previews, direct reading-mode URLs without WebGL initialization, and recovery after real WebGL context loss. Optional scenery textures can fail without breaking the game.
 
-Financial metadata is read from the active journey sequence, including authored skills/contact events, so adding a scene does not require a second ID mapping in the financial UI. Omitted values inherit in journey order; `null` deliberately withholds them.
+
+## Intro and desktop
+
+The opening is split evenly on desktop and stacked compactly on phones. Actual movement dismisses it once per client visit. The scene expands in place, with reduced-motion support. Computer apps occupy a desktop workspace rather than a dimmed modal.

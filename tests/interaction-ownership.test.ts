@@ -77,7 +77,16 @@ test('tap ownership ignores a second finger and a world swipe does not activate 
 test('only the holding finger can adjust the shot arc by dragging vertically', () => {
   const node = new Container()
   let delta = 0
-  holdTarget(node, () => true, () => {}, undefined, () => {}, (y) => { delta += y })
+  holdTarget(
+    node,
+    () => true,
+    () => {},
+    undefined,
+    () => {},
+    (y) => {
+      delta += y
+    },
+  )
   node.emit('pointerdown', pointer(1, 10, 100))
   node.emit('globalpointermove', pointer(2, 10, 0))
   assert.equal(delta, 0)

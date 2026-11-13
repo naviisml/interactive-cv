@@ -215,7 +215,7 @@ export class BuildingSprite extends Container {
     }
     rect(this.facade, -296, -184, 592, 9, 0xc5c5a0)
     rect(this.facade, -246, -171, 492, 64, 0x355c53)
-    // Control tower and a separate aircraft, rather than another office facade.
+    // Control tower and a passenger pickup lane, rather than another office facade.
     rect(this.facade, -267, -258, 39, 78, 0x7e9787)
     rect(this.facade, -286, -275, 78, 28, 0x4b736d)
     rect(this.facade, -281, -270, 68, 12, 0xb7cbbb)

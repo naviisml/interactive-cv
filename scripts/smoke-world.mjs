@@ -14,11 +14,29 @@ const browser = await chromium.launch({
 let failures = 0
 async function waitForArrival(page, scene) {
   await page.waitForFunction(
-    (id) => {
+    ({ id, offset }) => {
       const canvas = document.querySelector('canvas[data-renderer="pixi"]')
-      return canvas?.dataset.scene === id && canvas?.dataset.navigating === 'false'
+      const entry = JSON.parse(canvas?.dataset.entryPositions || '{}')[id]
+      return (
+        canvas?.dataset.scene === id &&
+        canvas?.dataset.navigating === 'false' &&
+        entry &&
+        Math.abs(Number(canvas.dataset.playerX) - entry.x - offset) < 4
+      )
     },
-    scene,
+    {
+      id: scene,
+      offset:
+        scene === 'navel-development'
+          ? -360
+          : scene === 'contact'
+            ? 65
+            : ['roc-hilversum', 'coding-college'].includes(scene)
+              ? SCHOOL_LAB_OFFSET
+              : scene === 'skills-road'
+                ? -440
+                : 0,
+    },
     { timeout: 25000 },
   )
 }
@@ -94,6 +112,19 @@ async function scenario(label, width, height, mobile) {
         .locator('.explore-stage')
         .evaluate((el) => el.classList.contains('intro-dismissed')),
       true,
+    )
+    await page.keyboard.down('ArrowLeft')
+    await page.waitForTimeout(250)
+    await page.keyboard.up('ArrowLeft')
+    assert.equal(
+      await page.locator('.intro-hero').getAttribute('aria-hidden'),
+      'true',
+      'walking back never restores the intro',
+    )
+    const intro = await page.locator('.intro-hero').boundingBox()
+    assert.ok(
+      mobile ? intro.height < 1 : intro.width < 1,
+      'the dismissed intro occupies no layout space',
     )
     const header = await page.locator('.portfolio-header').boundingBox(),
       stage = await page.locator('.world').boundingBox(),
@@ -727,6 +758,18 @@ async function visualAuditScenario() {
         await page.screenshot({ path: 'test-results/world/audit-taxi-transfer.png' })
       }
       if (name === '08-office') {
+        await page.waitForFunction(() => {
+          const action = JSON.parse(
+            document.querySelector('canvas')?.dataset.actions || '{}',
+          ).appjection
+          return action?.outcome === 'ticket' && action.age >= 2
+        })
+        await page.screenshot({ path: 'test-results/world/audit-automatic-ticket-envelope.png' })
+        await page.waitForFunction(
+          () =>
+            !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').appjection
+              ?.completed,
+        )
         await chargeWorld(page, canvas, 'appjection', 70, -30, 650)
         await page.waitForFunction(
           () =>
@@ -776,10 +819,11 @@ async function mobileArchiveScenario(label, width, height) {
       .getByRole('button', { name: /Navel Development/ })
       .click()
     await waitForArrival(page, 'navel-development')
-    await page
+    const computerAction = page
       .locator('.canvas-accessibility')
       .getByRole('button', { name: 'Explore my projects', exact: true })
-      .click()
+    await computerAction.focus()
+    await computerAction.press('Enter')
     const archive = page.locator('.archive-shell')
     await archive.waitFor({ state: 'visible', timeout: 20000 })
     const bounds = await archive.boundingBox()
