@@ -7,6 +7,7 @@ import type { WorldModel, WorldFrame } from '~/game/rendering/types'
 import type { WorldRenderer } from '~/game/rendering/WorldRenderer'
 const props = defineProps<{
   activeId: string
+  showTooltips: boolean
   activities: ActivitySystem
   model: WorldModel
   getFrame: () => WorldFrame
@@ -132,6 +133,7 @@ onMounted(async () => {
     })
     await renderer.init()
     if (disposed) return
+    renderer.setTooltipsEnabled(props.showTooltips)
     emit('availability', true)
     canvas = host.value.querySelector('canvas') ?? undefined
     canvas?.addEventListener('webglcontextlost', contextLost)
@@ -151,6 +153,10 @@ onMounted(async () => {
 watch(
   () => props.model,
   (model) => renderer?.setModel(model),
+)
+watch(
+  () => props.showTooltips,
+  (enabled) => renderer?.setTooltipsEnabled(enabled),
 )
 onBeforeUnmount(() => {
   disposed = true
