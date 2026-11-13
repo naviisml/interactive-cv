@@ -653,7 +653,7 @@ async function mobileArchiveScenario(label, width, height) {
     await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('canvas[data-renderer="pixi"]').waitFor({ state: 'visible' })
     await page.locator('.journey-footer')
-      .getByRole('button', { name: 'Company & projects', exact: true }).click()
+      .getByRole('button', { name: /Navel Development/ }).click()
     await waitForArrival(page, 'navel-development')
     await page.locator('.canvas-accessibility')
       .getByRole('button', { name: 'Explore my projects', exact: true }).click()
