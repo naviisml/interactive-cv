@@ -89,7 +89,7 @@ export class WorldInteractionCue extends Container {
       this.lastCopy = copy
     }
     this.bubble.x = shiftX
-    this.bubble.y = -106 - (reduced ? 0 : pulse * 3)
+    this.bubble.y = -(this.spec.popupOffset ?? 106) - (reduced ? 0 : pulse * 3)
     this.bubble.alpha = this.reveal
     this.bubble.scale.set(0.94 + this.reveal * 0.06)
   }
