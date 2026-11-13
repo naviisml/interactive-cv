@@ -67,7 +67,7 @@ export class SkillsRoadScene extends Container {
               this.activate(0)
               this.activity.playPipelineStep(step)
             },
-            new Rectangle(-32, -5, 64, 29),
+            new Rectangle(-32, -5, 64, 48),
           )
           node.addChild(control)
           pipelineControls.push(background)
