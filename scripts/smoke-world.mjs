@@ -254,10 +254,34 @@ async function scenario(label, width, height, mobile) {
     await page.close()
   }
 }
+async function fallbackScenario() {
+  const page = await browser.newPage({ viewport: { width: 900, height: 700 } })
+  try {
+    await page.addInitScript(() => {
+      const getContext = HTMLCanvasElement.prototype.getContext
+      HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+        if (['webgl', 'webgl2', 'experimental-webgl'].includes(kind)) return null
+        return getContext.call(this, kind, ...args)
+      }
+    })
+    await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const fallback = page.locator('.renderer-fallback')
+    await fallback.waitFor({ state: 'visible', timeout: 30000 })
+    await fallback.getByRole('button', { name: 'Read my CV' }).click()
+    await page.locator('.timeline-list').waitFor({ state: 'visible' })
+    console.log('PASS_fallback: reading mode is available when WebGL fails')
+  } catch (error) {
+    failures++
+    console.error(`FAIL_fallback: ${error.stack || error}`)
+  } finally {
+    await page.close()
+  }
+}
 try {
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
+  await fallbackScenario()
 } finally {
   await browser.close()
 }
