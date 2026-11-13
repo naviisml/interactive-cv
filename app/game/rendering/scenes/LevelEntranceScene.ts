@@ -67,14 +67,16 @@ export class LevelEntranceScene extends Container {
           .roundRect(-73, -218, 153, 45, 3)
           .stroke({ width: 1, color: accent }),
       )
-      const number = label(back, `0${index + 1}  /  ${index === 0 ? 'START' : 'CHAPTER'}`, 3, -216, 9, 0x66816e, 147)
+      const chapter = model.locale === 'nl' ? 'HOOFDSTUK' : 'CHAPTER'
+      const number = label(back, `0${index + 1}  /  ${index === 0 ? 'START' : chapter}`, 3, -216, 9, 0x66816e, 147)
       number.anchor.x = 0.5
+      const displayTitle = model.levelTitles[level.id] ?? level.title
       const title = label(
         back,
-        model.levelTitles[level.id] ?? level.title,
+        displayTitle,
         3,
         -198,
-        17,
+        displayTitle.length > 15 ? 12 : 17,
         0x24483d,
         150,
       )
