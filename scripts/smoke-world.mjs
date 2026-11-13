@@ -567,6 +567,12 @@ async function visualAuditScenario() {
           () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.running,
         )
         await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
+        await page.waitForFunction(
+          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.completed,
+          {},
+          { timeout: 7000 },
+        )
+        await page.screenshot({ path: 'test-results/world/audit-hotel-luggage-delivered.png' })
         assert.equal(await page.locator('.world-caption,.caption-activity,.first-code-launch').count(), 0)
       }
       if (name === '02-basket') {
