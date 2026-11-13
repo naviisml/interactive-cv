@@ -392,9 +392,9 @@ async function scenario(label, width, height, mobile) {
         'a second floating project CTA must not cover the interactive computer',
       )
       assert.equal(
-        await page.locator('.company-controls').count(),
+        await page.locator('.archive-shell').count(),
         0,
-        'arriving does not silently start or capture walking',
+        'arriving does not silently open the project archive',
       )
       // The in-world screen remains clickable, and keyboard users get an
       // unobtrusive focus-revealed action with the same behavior.
@@ -404,27 +404,35 @@ async function scenario(label, width, height, mobile) {
       })
       await computerAction.focus()
       await computerAction.click()
-      await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
-      assert.equal(
-        await page.locator('.company-controls button[aria-pressed]').count(),
-        7,
-        'all original projects remain inside the computer',
-      )
-      await page.getByRole('button', { name: 'Next slide', exact: true }).click()
-      await page.waitForTimeout(150)
-      const p = Number(await canvas.getAttribute('data-presentation')),
-        x = Number(await canvas.getAttribute('data-player-x'))
-      await page.keyboard.down('ArrowRight')
-      await page.waitForTimeout(600)
-      await page.keyboard.up('ArrowRight')
-      assert.ok(
-        Number(await canvas.getAttribute('data-presentation')) > p,
-        'walking after a button click advances the slideshow',
-      )
+      const archive = page.locator('.archive-shell')
+      await archive.waitFor({ state: 'visible', timeout: 20000 })
+      assert.equal(await archive.locator('.archive-file').count(), 7, 'all project dossiers are available')
+      assert.equal(await page.locator('.company-controls').count(), 0, 'old slideshow controls are removed')
+      await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
+      const first = archive.locator('.archive-document h1')
+      await first.getByText('Navel Development').waitFor()
+      await archive.getByRole('button', { name: 'Next project', exact: true }).click()
+      await first.getByText('GmodStore').waitFor()
+      await archive.locator('.artifact-node').first().click()
+      assert.equal(await archive.locator('.artifact-node[aria-pressed="true"]').count(), 1)
+      await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
+      await first.getByText('Navel Cloud').waitFor()
+      const diagram = archive.locator('.artifact')
+      assert.equal(await diagram.locator('.artifact-node').count(), 5)
+      await diagram.getByRole('button', { name: /Docker Swarm/ }).click()
+      assert.match(await diagram.locator('.artifact-info').innerText(), /Each website runs as its own service/)
+      const x = Number(await canvas.getAttribute('data-player-x'))
+      await archive.focus()
+      await page.keyboard.press('ArrowLeft')
+      await first.getByText('Aquablu').waitFor()
       assert.ok(
         Math.abs(Number(await canvas.getAttribute('data-player-x')) - x) < 1,
-        'watch point holds the actor',
+        'keyboard navigation changes dossiers, not the character position',
       )
+      await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
+      await page.keyboard.press('Escape')
+      await archive.waitFor({ state: 'hidden' })
+      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.presentation === '1.000')
       assert.equal(
         await page
           .locator('.journey-footer')
