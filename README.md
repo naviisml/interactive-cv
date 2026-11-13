@@ -26,11 +26,11 @@ npm run format:check
 | `app/components/game` | Canvas lifecycle, touch/keyboard hints, computer invitation, slideshow controls and building interiors |
 | `app/components/finance` | Money counters and support information |
 | `app/components/ui` | Shared UI components |
-| `app/content` | CV events, journey sections, logo manifest, company slides and finances |
+| `app/content` | CV events with finance metadata, journey sections, logo manifest, company slides and support resources |
 | `app/content/locales` | Dutch CV and support-resource copy |
 | `i18n/locales` | English and Dutch interface messages |
 | `app/game/engine` | Movement loop, viewport and persistent activity state |
-| `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
+| `app/game/core` | Framework-independent movement, terrain, navigation, finance history and presentation rules |
 | `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
 | `app/game/rendering/sprites` | Character atlas, scenery textures, aircraft, computer, character and building exteriors |
 | `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and building activities, campsite and layered level entrances |
@@ -50,7 +50,7 @@ Terrain, scenery, shadows, props and sprites share one world coordinate system. 
 
 Add CV entries in `app/content/timeline.ts`, their IDs to a section in `app/content/journey.ts`, and Dutch copy with the same ID in `app/content/locales/nl.ts`. Set `span` for a longer scene. `presentation: 'world'` removes its modal; short milestones are tooltips. `hasDetails` is the single modal eligibility rule.
 
-Skills are one continuous road, not Backend/Frontend/Infrastructure/Approach modals. `app/content/skills.ts` lists all 18 original Figma logos and their asset paths. `SkillsRoadScene` owns their grouped proximity animation and floor switches. The three raised stations use actual terrain from `skillTerrain`, not decorative fake platforms. Do not replace brand assets with text approximations.
+Skills are one continuous road, not Backend/Frontend/Infrastructure/Approach modals. `app/content/skills.ts` lists all 18 original Figma logos and their asset paths. `SkillsRoadScene` owns the grouped logos and three interactive workstations. Visitors can assemble a CI pipeline, match web technologies to tasks, and tune worker capacity against a queue. Finished workshops have persistent check marks for the lifetime of the visit. The three raised stations use actual terrain from `skillTerrain`, not decorative fake platforms. Do not replace brand assets with text approximations.
 
 Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the slides from actual CV entries. Arriving at the viewing position shows a start screen and an invitation explaining the projects. The player must explicitly start, either on the screen or with the accessible button. Only after starting does held walking or scrolling advance the slides while the character stays on the spot. Release to pause, reverse to rewind, or use the accessible previous/next/slide controls. At the end, walking continues along the route. Small screens show the larger title and summary rather than tiny body text.
 
@@ -62,7 +62,7 @@ Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the sl
 
 `@nuxtjs/i18n` loads English and Dutch messages lazily. The header language selector persists the choice in the locale cookie. UI messages live in `i18n/locales`; event translations are separate content objects so paragraphs stay readable and editable. Locale changes update signs and the computer without rebuilding physical layout or restarting the journey.
 
-`app/content/finances.json` contains chronological financial snapshots by original event ID. `null` means undisclosed; omission carries a previous value forward. No financial amounts are invented. English and Dutch use the same figures, translated labels and locale-aware currency formatting. Support links retain the original official URLs.
+Financial snapshots now live in the `finance` metadata on the original event in `app/content/timeline.ts`. Omitted values carry forward, while explicit `null` withholds information at and after an event. Current/private balances and salary are not published. Historic business turnover in a context note is not confused with personal gross/net annual income. The country-specific support links live in `app/content/finance-support.json` and retain their original URLs.
 
 ## Controls and checks
 
@@ -88,8 +88,12 @@ Run `npm run sprites:generate` after editing `scripts/build-character.mjs`. This
 
 ### Scene actions and ending
 
-`sceneActivities.ts` defines replayable action timing, the aircraft/car/basketball paths, and the collision terrain of the Skills stations. `ActivitySystem` persists their state across culling and locale switches, and freezes time when the world is paused. `BuildingActivityScene` provides a basketball court, electrical board, code board, hotel luggage bell, departing aircraft and camera test drive. These are world objects; equivalent keyboard/screen-reader controls appear only when focused. A finished action can be triggered again. Scores and switch values are not reset by the renderer.
+`sceneActivities.ts` defines replayable action timing, the aircraft/car/basketball paths, and the collision terrain of the Skills stations. The player must press and hold the ball, aircraft or car and release at the right moment; the charge determines shot accuracy, takeoff outcome and speed-camera result. `ActivitySystem` persists their state across culling and locale switches, and freezes time when the world is paused. `BuildingActivityScene` provides a basketball court, electrical board, code board, hotel luggage bell, departing aircraft and camera test drive. These are world objects; equivalent keyboard/screen-reader controls appear only when focused. A finished action can be triggered again. Scores and switch values are not reset by the renderer.
 
 The contact stop is `CampsiteScene`: tent zip, lantern and fire are interactive. Its clearing stays level and bounds the world near the campsite. It never opens a finish overlay or locks movement.
 
 Only `FirstLines.vue` still uses authored SVG scenery. Its export is `public/world/scenes/first-lines.svg`; the superseded project/building textures and old football/portal/wire-grid simulation have been removed. The other scenes are reusable Pixi objects.
+
+## First-code workstation
+
+The opening scene's computer is clickable, with an accessible button as a fallback. It opens a real HTML/CSS editor and immediate preview in a sandboxed iframe (no script execution). This is intentionally a learning interaction, separate from the later Navel Development project slideshow. Editing the sample never changes deployed files.

@@ -1,9 +1,12 @@
-import { Graphics } from 'pixi.js'
+import { Graphics, Rectangle } from 'pixi.js'
+import { tapTarget } from '../interactions'
 import { ScenerySprite } from '../sprites/ScenerySprite'
 export class FirstLinesScene extends ScenerySprite {
   private code = new Graphics()
-  constructor() {
+  constructor(open: () => void) {
     super()
+    // The monitor in the first-scene SVG occupies x -127..-53, y -131..-75.
+    tapTarget(this, open, new Rectangle(-136, -145, 112, 96))
     void this.load('first-lines')
     this.addChild(this.code)
   }

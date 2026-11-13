@@ -11,7 +11,8 @@ defineProps<{
 const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }>()
 const { t, locale } = useI18n()
 const sceneHints: Record<string, [string, string]> = {
-  'panta-rhei': ['Tik op de bal om te schieten.', 'Tap the ball to shoot.'],
+  'first-lines': ['Open de monitor om HTML en CSS te bewerken.', 'Open the monitor to edit HTML and CSS.'],
+  'panta-rhei': ['Houd de bal vast en laat los om te schieten.', 'Hold the ball and release to shoot.'],
   'roc-hilversum': [
     'Tik op de werkbank om de verbinding te maken.',
     'Tap the workstation to connect the circuit.',
@@ -24,10 +25,10 @@ const sceneHints: Record<string, [string, string]> = {
     'Tik op de bel bij de ingang voor de bagage.',
     'Ring the bell at the entrance for luggage.',
   ],
-  'get-e': ['Tik op het vliegtuig om te vertrekken.', 'Tap the aircraft for take-off.'],
+  'get-e': ['Houd het vliegtuig vast om snelheid op te bouwen, laat los om op te stijgen.', 'Hold the aircraft to build speed, release to take off.'],
   appjection: [
-    'Tik op de auto voor een rit langs de flitspaal.',
-    'Tap the car to drive past the speed camera.',
+    'Houd de auto vast om te accelereren en laat los bij de juiste snelheid.',
+    'Hold the car to accelerate, release at a safe speed.',
   ],
 }
 </script>

@@ -12,6 +12,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   startComputer: []
+  openFirstComputer: []
+  openWorkshop: [index: number]
   skill: [name: string, count: number]
   details: [index: number]
   seek: [progress: number]
@@ -24,7 +26,7 @@ function runAccessibleAction(index = 0) {
   if (!action) return
   if (action === 'compile' || action === 'circuit') {
     if (props.activities.toggle(id, index)) props.activities.trigger(id, action)
-  } else props.activities.trigger(id, action)
+  } else props.activities.trigger(id, action, ['basketball', 'camera', 'departure'].includes(action) ? (action === 'departure' ? 0.85 : action === 'camera' ? 0.33 : 0.65) : undefined)
 }
 const host = ref<HTMLElement>(),
   error = ref('')
@@ -37,6 +39,8 @@ onMounted(async () => {
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
       startComputer: () => emit('startComputer'),
+      openFirstComputer: () => emit('openFirstComputer'),
+      openWorkshop: (index) => emit('openWorkshop', index),
       skill: (name, count) => emit('skill', name, count),
       details: (index) => emit('details', index),
       seek: (progress) => emit('seek', progress),

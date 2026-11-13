@@ -1,6 +1,5 @@
 {
   "currency": "EUR",
-  "intro": "I want to be open about money as well as work. Debt, savings and income all have a place in this story. There’s no shame in having debt, and talking about income or savings shouldn’t be taboo.",
   "countries": {
     "NL": {
       "name": "Netherlands",
@@ -71,92 +70,6 @@
           "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-credit-counseling-en-1451/"
         }
       ]
-    }
-  },
-  "chapters": {
-    "first-lines": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "panta-rhei": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "navel-development": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "roc-hilversum": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "gmodstore": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "coding-college": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "q-lite": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "shopify": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "fletcher": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "fifty-five": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "aquablu": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "get-e": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "appjection": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
-    },
-    "navel-cloud": {
-      "featured": "debt",
-      "debt": null,
-      "savings": null,
-      "yearlyIncome": null
     }
   }
 }

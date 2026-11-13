@@ -105,10 +105,11 @@ export class WorldRenderer {
         this.activities,
         (name, count) => this.callbacks.skill(name, count),
         this.model.locale,
+        (index) => this.callbacks.openWorkshop(index),
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact') return new CampsiteScene(this.model.locale)
-    return new FirstLinesScene()
+    return new FirstLinesScene(() => this.callbacks.openFirstComputer())
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return

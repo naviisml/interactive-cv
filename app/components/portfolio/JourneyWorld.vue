@@ -30,6 +30,13 @@ const detailEvent = computed(() =>
   detailIndex.value === null ? undefined : timeline.value[detailIndex.value],
 )
 const moneyOpen = ref(false)
+const firstCodeOpen = ref(false)
+const workshopIndex = ref<number | null>(null)
+function openFirstComputer() {
+  if (listMode.value || firstCodeOpen.value) return
+  stop()
+  firstCodeOpen.value = true
+}
 let detailOpener: HTMLElement | undefined
 const worldRoot = ref<HTMLElement>()
 const view = useWorldViewport(worldRoot)
@@ -37,6 +44,16 @@ const journey = useJourney(trackIndices, view)
 const buildingVisit = useBuildingVisit(journey)
 const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
+const completedWorkshops = ref<string[]>([])
+function openWorkshop(index: number) {
+  if (listMode.value || workshopIndex.value !== null) return
+  stop()
+  workshopIndex.value = index
+}
+function finishWorkshop(id: string) {
+  activities.completeWorkshop(id)
+  completedWorkshops.value = [...activities.completedWorkshops]
+}
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
   current.value.category === 'skills'
@@ -124,12 +141,14 @@ const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex],
   () => {
     paused.value =
       listMode.value ||
       detailIndex.value !== null ||
       moneyOpen.value ||
+      firstCodeOpen.value ||
+      workshopIndex.value !== null ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -197,6 +216,18 @@ const enterable = computed(
     isBuilding(current.value.id) && Math.abs(motion.x - eventPosition(nearestIndex.value)) < 200,
 )
 const current = computed(() => timeline.value[nearestIndex.value]!)
+const nearFirstComputer = computed(
+  () => current.value.id === 'first-lines' &&
+    Math.abs(motion.x - (eventPosition(nearestIndex.value) - 90)) < 210,
+)
+const nearbyWorkshop = computed(() => {
+  if (current.value.id !== 'skills-road') return null
+  const offset = motion.x - eventPosition(nearestIndex.value)
+  const positions = [-440, 0, 440]
+  const closest = positions.reduce((best, x, index) =>
+    Math.abs(offset - x) < Math.abs(offset - positions[best]!) ? index : best, 0)
+  return Math.abs(offset - positions[closest]!) < 220 ? closest : null
+})
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 const financeIndex = computed(() =>
   cvTimeline.findIndex((event) => event.id === timeline.value[activeIndex.value]?.id),
@@ -401,7 +432,7 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || detailIndex.value !== null || moneyOpen.value || buildingVisit.blocking.value
+    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -468,6 +499,8 @@ onBeforeUnmount(() => {
             @details="handleSceneDetails"
             @seek="seekPresentation"
             @start-computer="startPresentation"
+            @open-first-computer="openFirstComputer"
+            @open-workshop="openWorkshop"
         /></ClientOnly>
         <ChapterCaption
           :current="current"
@@ -479,6 +512,20 @@ onBeforeUnmount(() => {
           @details="openDetail(nearestIndex, $event)"
           @cancel="stop"
         />
+        <button
+          v-if="nearFirstComputer && !running && !firstCodeOpen"
+          class="first-code-launch"
+          @click="openFirstComputer"
+        >
+          {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+        </button>
+        <button
+          v-if="nearbyWorkshop !== null && !running && workshopIndex === null"
+          class="first-code-launch"
+          @click="openWorkshop(nearbyWorkshop!)"
+        >
+          {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
+        </button>
         <ComputerInvitation
           v-if="
             current.id === 'navel-development' &&
@@ -510,6 +557,14 @@ onBeforeUnmount(() => {
         @leave="buildingVisit.leave"
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
+      <FirstCodeLab v-if="firstCodeOpen" @close="firstCodeOpen = false" />
+      <SkillWorkshop
+        v-if="workshopIndex !== null"
+        :initial-group="workshopIndex"
+        :completed="completedWorkshops"
+        @complete="finishWorkshop"
+        @close="workshopIndex = null"
+      />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
@@ -533,3 +588,24 @@ onBeforeUnmount(() => {
     />
   </main>
 </template>
+
+<style scoped>
+.first-code-launch {
+  position: absolute;
+  top: 145px;
+  right: 24px;
+  z-index: 7;
+  min-height: 44px;
+  padding: 11px 15px;
+  color: #e9e7cc;
+  background: #365f4c;
+  border: 1px solid #c6cea6;
+  border-radius: 3px;
+  box-shadow: 4px 4px 0 #25473a44;
+  font: 500 12px 'Space Grotesk', sans-serif;
+}
+.first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
+@media (max-width: 700px) {
+  .first-code-launch { top: 116px; right: 12px; max-width: 180px; }
+}
+</style>

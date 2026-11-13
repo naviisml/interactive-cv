@@ -3,9 +3,11 @@ export const dutchEvents: Record<string, Partial<TimelineEvent>> = {
   'first-lines': {
     title: 'Mijn eerste code',
     chapter: 'Waar het begon',
-    summary: 'Mezelf leren programmeren, met onder andere een forum voor school.',
+    summary: 'Van Habbo-retroservers en HTML aanpassen naar PHP begrijpen en mijn eerste CMS bouwen.',
     body: [
-      'Ik begon met programmeren toen ik elf was. Een van mijn eerste projecten was een schoolforum. Vanaf mijn zestiende bouwde ik webapplicaties voor kleinere bedrijven.',
+      'Het begon met Habbo. Mijn vrienden en ik wilden begrijpen hoe retroservers werkten. Eerst paste ik dingen aan via Element inspecteren en daarna rechtstreeks in HTML- en CSS-bestanden, maar PHP begreep ik nog niet.',
+      'Ik volgde drie bestaande CMS-projecten vanaf de index en schreef hun code zelf na om de logica te leren. Op RetroNet deelden we onze projecten en ervaringen. Uiteindelijk bouwde en verkocht ik mijn eigen CMS.',
+      'We verkochten ook credits die je kon kopen via bellen of sms’en. De VPS moest betaald worden, dus ik spaarde wat er overbleef.',
     ],
   },
   'panta-rhei': {

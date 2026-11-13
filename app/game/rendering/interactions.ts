@@ -19,3 +19,30 @@ export function tapTarget(node: Container, action: () => void, area?: Rectangle)
     start = undefined
   })
 }
+
+/** Press-and-release interaction; holding changes the game-state charge.
+ * Release-outside intentionally counts as release to avoid a stuck throttle.
+ */
+export function holdTarget(
+  node: Container,
+  start: () => boolean,
+  release: () => void,
+  area?: Rectangle,
+) {
+  let active = false
+  node.eventMode = 'static'
+  node.cursor = 'pointer'
+  if (area) node.hitArea = area
+  node.on('pointerdown', (event: FederatedPointerEvent) => {
+    active = start()
+    if (active) event.stopPropagation()
+  })
+  const finish = () => {
+    if (!active) return
+    active = false
+    release()
+  }
+  node.on('pointerup', finish)
+  node.on('pointerupoutside', finish)
+  node.on('pointercancel', finish)
+}
