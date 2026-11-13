@@ -159,7 +159,9 @@ function getWorldFrame() {
     navigating: running.value,
   }
 }
-const listMode = useState<boolean>('journey-list-mode', () => false)
+// A direct, shareable, no-canvas entry point for recruiters and low-power devices.
+const route = useRoute()
+const listMode = useState<boolean>('journey-list-mode', () => route.query.view === 'list')
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
