@@ -24,7 +24,6 @@ export class BuildingSprite extends Container {
     if (this.kind === 'codam') {
       label(this.facade, 'CODAM', -224, -212, 26, 0xf0e3c2, 190)
       label(this.facade, 'CODING COLLEGE', -224, -177, 9, 0xc1cbb4, 190)
-
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
       // The facade is a place, not a miniature CV. Roles and periods remain
@@ -252,15 +251,15 @@ export class BuildingSprite extends Container {
 
     for (const x of [-254, 245]) rect(this.facade, x, -242, 9, 230, 0x6e8276)
   }
+  /** Illuminate only the existing doorway contour; no second ring or target marker. */
   setEntranceHighlight(near: boolean, focused: boolean, time: number, reduced: boolean) {
     this.entranceHighlight.clear()
-    if (!near) return
-    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 380)) * 0.5
+    if (!near || !focused) return
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 530)) * 0.5
     this.entranceHighlight
-      .roundRect(-43, -103, 86, 107, 5)
-      .stroke({ color: 0xf7d9a0, width: focused ? 3.5 : 2, alpha: focused ? 0.72 + pulse * 0.22 : 0.35 + pulse * 0.1 })
-      .roundRect(-47, -107, 94, 115, 7)
-      .stroke({ color: 0xf6d7a0, width: 6, alpha: focused ? 0.11 + pulse * 0.08 : 0.07 })
+      .roundRect(-34, -94, 68, 96, 2)
+      .fill({ color: 0xffdca0, alpha: 0.055 + pulse * 0.04 })
+      .stroke({ color: 0xffdf9b, width: 2.6, alpha: 0.58 + pulse * 0.25 })
   }
   update(time: number, open: number, reduced: boolean, powered = false) {
     // Preserve the artwork and typography aspect ratio on phones too.

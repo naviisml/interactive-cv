@@ -24,6 +24,7 @@ const captions: Record<SceneAction, [string, string]> = {
 export class BuildingActivityScene extends Container {
   private object = new Container()
   private overlay = new Graphics()
+  private objectGlow = new Graphics()
   private status: Text
   private statusPanel = new Graphics()
   private net?: Graphics
@@ -38,6 +39,7 @@ export class BuildingActivityScene extends Container {
     private id: string,
     private state: ActivitySystem,
     private locale: string,
+    private onInteraction: () => void = () => {},
   ) {
     super()
     this.action = buildingActions[id]!
@@ -48,7 +50,9 @@ export class BuildingActivityScene extends Container {
     this.status.y = feedbackY
     this.statusPanel.y = feedbackY + 278
     this.status.visible = false
-    const start = () => state.trigger(id, this.action)
+    const start = () => {
+      if (state.trigger(id, this.action)) this.onInteraction()
+    }
     if (this.action === 'basketball') {
       rect(this, -150, -2, 400, 4, 0xb9b38b)
       this.addChild(
@@ -91,7 +95,10 @@ export class BuildingActivityScene extends Container {
         this.ball,
         () => {
           const started = state.beginCharge(id)
-          if (started) state.charges[id]!.origin = { x: this.ball!.x, y: this.ball!.y }
+          if (started) {
+            state.charges[id]!.origin = { x: this.ball!.x, y: this.ball!.y }
+            this.onInteraction()
+          }
           return started
         },
         () => state.releaseCharge(id, this.action),
@@ -105,7 +112,11 @@ export class BuildingActivityScene extends Container {
       this.object.addChild(this.plane)
       holdTarget(
         this.plane,
-        () => state.beginCharge(id),
+        () => {
+          const started = state.beginCharge(id)
+          if (started) this.onInteraction()
+          return started
+        },
         () => state.releaseCharge(id, this.action),
         new Rectangle(-110, -40, 220, 90),
         () => state.cancelCharge(id),
@@ -133,7 +144,11 @@ export class BuildingActivityScene extends Container {
       this.object.addChild(car)
       holdTarget(
         car,
-        () => state.beginCharge(id),
+        () => {
+          const started = state.beginCharge(id)
+          if (started) this.onInteraction()
+          return started
+        },
         () => state.releaseCharge(id, this.action),
         new Rectangle(-86, -66, 175, 76),
         () => state.cancelCharge(id),
@@ -156,11 +171,46 @@ export class BuildingActivityScene extends Container {
       for (const x of [-22, 23]) this.cart.addChild(new Graphics().circle(x, -5, 5).fill(0x35584a))
       this.object.addChild(this.cart)
     } else {
-      this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale)
+      this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale, this.onInteraction)
       this.school.x = SCHOOL_LAB_OFFSET
       this.addChild(this.school)
     }
-    this.addChild(this.object, this.overlay, this.statusPanel, this.status)
+    this.objectGlow.eventMode = 'none'
+    this.addChild(this.object, this.overlay, this.statusPanel, this.status, this.objectGlow)
+  }
+  /** The real prop silhouette glows; no detached targeting ellipse. */
+  setInteractionGlow(active: boolean, time: number, reduced: boolean) {
+    this.school?.setInteractionGlow(active, time, reduced)
+    const glow = this.objectGlow
+    glow.clear()
+    glow.position.set(0, 0)
+    glow.scale.set(1)
+    glow.rotation = 0
+    if (!active || this.school) return
+    const alpha = reduced ? 0.7 : 0.57 + Math.sin(time / 480) * 0.14
+    const style = { color: 0xffdd99, width: 2.8, alpha }
+    if (this.ball) {
+      glow.circle(this.ball.x, this.ball.y, 11).stroke(style)
+    } else if (this.plane) {
+      glow.position.copyFrom(this.plane.position)
+      glow.scale.set(this.plane.scale.x)
+      glow.rotation = this.plane.rotation
+      glow.poly([
+        -103, 0, -87, 0, -93, -31, -79, -31, -58, -4,
+        66, -4, 86, 1, 103, 10, 92, 15, -83, 15, -106, 7,
+      ]).stroke(style)
+    } else if (this.car) {
+      glow.position.copyFrom(this.car.position)
+      glow.poly([-62, -17, -57, -35, -29, -37, -12, -57, 34, -57, 54, -37, 75, -30, 78, -16])
+        .stroke(style)
+    } else if (this.cart) {
+      glow.moveTo(170, -59)
+        .bezierCurveTo(171, -77, 193, -77, 194, -59)
+        .lineTo(170, -59)
+        .stroke(style)
+        .rect(168, -56, 28, 4)
+        .fill({ color: 0xffe3aa, alpha: 0.17 })
+    }
   }
   /** Visible object position, in building-local world coordinates. */
   focusPoint(): { x: number; y: number } | undefined {

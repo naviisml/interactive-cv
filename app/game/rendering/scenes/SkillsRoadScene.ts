@@ -17,12 +17,14 @@ export class SkillsRoadScene extends Container {
     statusBackdrop: Graphics
     status: Text
     pipelineControls: Graphics[]
+    glow: Graphics
     logos: Container[]
   }[] = []
   constructor(
     private activity: ActivitySystem,
     private collected: (name: string, count: number) => void,
     private locale: string,
+    private onInteraction: (index: number) => void = () => {},
   ) {
     super()
     skillGroups.forEach((group, i) => {
@@ -134,18 +136,40 @@ export class SkillsRoadScene extends Container {
           )
           node.addChild(rack)
         }
+      const glow = new Graphics()
+      glow.eventMode = 'none'
+      node.addChild(glow)
       this.addChild(node)
-      this.stations.push({ node, x, machine, statusBackdrop, status, pipelineControls, logos })
+      this.stations.push({ node, x, machine, statusBackdrop, status, pipelineControls, glow, logos })
     })
   }
   activate(index: number) {
     const group = skillGroups[index]
     if (!group) return
+    this.onInteraction(index)
     if (!this.activity.activateSkillGroup(index)) return
     this.collected(
       group.title[this.locale === 'nl' ? 'nl' : 'en'],
       this.activity.exploredSkills.length,
     )
+  }
+  /** Light the workstation frame, not a hovering ring or another badge. */
+  setInteractionGlow(index: number | undefined, time: number, reduced: boolean) {
+    for (const [i, station] of this.stations.entries()) {
+      station.glow.clear()
+      if (i !== index) continue
+      const alpha = reduced ? 0.65 : 0.51 + Math.sin(time / 520) * 0.15
+      station.glow
+        .moveTo(-160, -265)
+        .lineTo(160, -265)
+        .moveTo(-147, -257)
+        .lineTo(-147, 0)
+        .moveTo(150, -257)
+        .lineTo(150, 0)
+        .moveTo(-137, -65)
+        .lineTo(137, -65)
+        .stroke({ color: 0xf8dc9d, width: 2.8, alpha })
+    }
   }
   update(frame: WorldFrame, ground: number, reduced: boolean, terrain: TerrainPoint[]) {
     const nl = this.locale === 'nl',

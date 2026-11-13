@@ -15,6 +15,7 @@ import { tapTarget } from '../interactions'
 /** A connected electrical lab and a programmable rover: different causes, visible outcomes. */
 export class SchoolActivityScene extends Container {
   private dynamic = new Graphics()
+  private boardGlow = new Graphics()
   private feedback: Text
   private code?: Text
   private rover?: Container
@@ -24,6 +25,7 @@ export class SchoolActivityScene extends Container {
     private kind: 'circuit' | 'compile',
     private state: ActivitySystem,
     private locale: string,
+    private onInteraction: () => void = () => {},
   ) {
     super()
     const nl = locale === 'nl'
@@ -48,7 +50,8 @@ export class SchoolActivityScene extends Container {
       244,
     )
     this.feedback = label(this, '', 67, -195, 12, 0xd6e0c5, 234)
-    this.addChild(this.dynamic)
+    this.boardGlow.eventMode = 'none'
+    this.addChild(this.dynamic, this.boardGlow)
     if (kind === 'circuit') {
       for (let i = 0; i < 6; i++) {
         const tile = new Graphics()
@@ -57,6 +60,7 @@ export class SchoolActivityScene extends Container {
           tile,
           () => {
             state.circuit[i] = (state.circuit[i]! + 1) % 4
+            this.onInteraction()
           },
           new Rectangle(-29, -26, 58, 52),
         )
@@ -104,9 +108,20 @@ export class SchoolActivityScene extends Container {
     node.addChild(new Graphics().roundRect(-width / 2, -17, width, 35, 4).fill(0xdce0bf))
     const title = label(node, text, 0, -10, 12, 0x294a3b, width - 4)
     title.anchor.x = 0.5
-    tapTarget(node, action, new Rectangle(-width / 2, -22, width, 44))
+    tapTarget(node, () => {
+      action()
+      this.onInteraction()
+    }, new Rectangle(-width / 2, -22, width, 44))
     this.controls.push({ node, action: text })
     this.addChild(node)
+  }
+  setInteractionGlow(active: boolean, time: number, reduced: boolean) {
+    this.boardGlow.clear()
+    if (!active) return
+    const alpha = reduced ? 0.65 : 0.57 + Math.sin(time / 510) * 0.13
+    this.boardGlow
+      .roundRect(44, -238, 278, 174, 3)
+      .stroke({ color: 0xf8d990, width: 3, alpha })
   }
   command(command: RoverCommand) {
     this.state.editRover(command)

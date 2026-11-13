@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { cuesForScene, selectWorldCue } from '../app/game/core/worldCues.ts'
+import { ActivitySystem } from '../app/game/engine/ActivitySystem.ts'
 
 test('interaction anchors belong to real objects rather than a chapter overlay', () => {
   const hotel = cuesForScene('fletcher')
@@ -32,4 +33,18 @@ test('hover selects actual pointed-to object and only one tooltip can show', () 
   assert.equal(selectWorldCue([
     { id: 'door', distance: 600, radius: 175 },
   ]), undefined)
+})
+
+test('first interaction suppresses hints for that individual object on later visits', () => {
+  const actions = new ActivitySystem()
+  assert.equal(actions.wasCueUsed('panta-rhei', 'door'), false)
+  assert.equal(actions.wasCueUsed('panta-rhei', 'ball'), false)
+  actions.markCueUsed('panta-rhei', 'door')
+  assert.equal(actions.wasCueUsed('panta-rhei', 'door'), true)
+  assert.equal(actions.wasCueUsed('panta-rhei', 'ball'), false)
+  actions.markCueUsed('panta-rhei', 'ball')
+  assert.equal(actions.wasCueUsed('panta-rhei', 'ball'), true)
+  assert.equal(actions.wasCueUsed('roc-hilversum', 'door'), false)
+  actions.markCueUsed('panta-rhei', 'door')
+  assert.equal(actions.usedCues.size, 2, 'repeated clicks do not create duplicate discoveries')
 })

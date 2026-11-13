@@ -29,6 +29,15 @@ function runAccessibleAction(index = 0) {
   const id = props.activeId,
     action = buildingActions[id]
   if (!action) return
+  const cue = {
+    circuit: 'cables',
+    compile: 'rover',
+    basketball: 'ball',
+    luggage: 'bell',
+    departure: 'plane',
+    camera: 'car',
+  }[action]
+  if (cue) props.activities.markCueUsed(id, cue)
   if (action === 'circuit')
     props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
   else if (action === 'compile') {
@@ -48,6 +57,7 @@ function runAccessibleAction(index = 0) {
     )
 }
 function activateSkills(index: number) {
+  props.activities.markCueUsed('skills-road', ['tooling', 'web', 'cloud'][index]!)
   if (props.activities.activateSkillGroup(index))
     emit(
       'skill',
@@ -109,6 +119,7 @@ function contextLost(event: Event) {
   releaseRenderer()
 }
 onMounted(async () => {
+  props.activities.restoreCues()
   try {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
     if (disposed || !host.value) return
@@ -154,11 +165,12 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       class="canvas-accessibility"
       @keydown.esc.stop.prevent="host?.closest<HTMLElement>('.world')?.focus()"
     >
-      <button v-if="activeId === 'first-lines'" @click="emit('openFirstComputer')">
+      <button v-if="activeId === 'first-lines'"
+        @click="props.activities.markCueUsed('first-lines', 'computer'); emit('openFirstComputer')">
         {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
       </button>
       <button v-if="currentAction && currentIndex !== undefined"
-        @click="emit('details', currentIndex)">
+        @click="props.activities.markCueUsed(activeId, 'door'); emit('details', currentIndex)">
         {{ t('building.enter') }}
       </button>
       <template v-if="currentAction === 'circuit'">
@@ -205,7 +217,8 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
         </button>
       </template>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
-      <button v-if="activeId === 'navel-development'" @click="emit('startComputer')">
+      <button v-if="activeId === 'navel-development'"
+        @click="props.activities.markCueUsed('navel-development', 'projects'); emit('startComputer')">
         {{ t('company.start') }}
       </button>
     </div>

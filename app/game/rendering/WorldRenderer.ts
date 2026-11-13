@@ -135,7 +135,10 @@ export class WorldRenderer {
     if (isBuilding(id))
       return new BuildingSprite(
         entry.event,
-        () => this.callbacks.details(entry.index),
+        () => {
+          this.activities.markCueUsed(id, 'door')
+          this.callbacks.details(entry.index)
+        },
         this.model.locale,
       )
     if (id === 'skills-road')
@@ -143,10 +146,16 @@ export class WorldRenderer {
         this.activities,
         (name, count) => this.callbacks.skill(name, count),
         this.model.locale,
+        (index) => this.activities.markCueUsed(id, ['tooling', 'web', 'cloud'][index]!),
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
-    if (id === 'contact') return new CampsiteScene(this.model.locale)
-    return new FirstLinesScene(() => this.callbacks.openFirstComputer())
+    if (id === 'contact')
+      return new CampsiteScene(this.model.locale, (action) =>
+        this.activities.markCueUsed(id, action === 'fire' ? 'campfire' : action))
+    return new FirstLinesScene(() => {
+      this.activities.markCueUsed(id, 'computer')
+      this.callbacks.openFirstComputer()
+    })
   }
   /** Keyboard action follows whichever object is highlighted in the scene. */
   interactNearest() {
@@ -154,6 +163,8 @@ export class WorldRenderer {
     if (!target) return false
     const { action, entry } = target
     const id = entry.event.id
+    const spec = cuesForScene(id).find((cue) => cue.action === action)
+    if (spec) this.activities.markCueUsed(id, spec.key)
     if (action === 'enter') this.callbacks.details(entry.index)
     else if (action === 'first-code') this.callbacks.openFirstComputer()
     else if (action === 'projects') this.callbacks.startComputer()
@@ -178,7 +189,8 @@ export class WorldRenderer {
     return true
   }
   private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
-    const candidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const hintCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const actionCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
     const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
     for (const [id, { node, entry }] of this.cues) {
       const x = entry.x + node.spec.x
@@ -199,21 +211,46 @@ export class WorldRenderer {
       const distance = Math.abs(frame.motion.x - (entry.x + node.x))
       const hovered = !!this.pointer && visible &&
         Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
-      const near = visible && (hovered || distance < node.spec.radius)
+      const used = this.activities.wasCueUsed(entry.event.id, node.spec.key)
+      const actionable = visible && (hovered || distance < node.spec.radius)
+      const near = !used && actionable
       positions.set(id, { screenX: projectedX, screenY: projectedY, near })
-      if (near) candidates.push({ id, distance, radius: node.spec.radius, hovered })
+      if (actionable) actionCandidates.push({ id, distance, radius: node.spec.radius, hovered })
+      if (near) hintCandidates.push({ id, distance, radius: node.spec.radius, hovered })
     }
-    const selected = frame.visit.phase === 'outside' && !frame.paused
-      ? selectWorldCue(candidates)
-      : undefined
-    // Highlight the actual door geometry, not merely the tooltip marker.
-    for (const [id, sprite] of this.scenes)
-      if (sprite instanceof BuildingSprite) {
-        const key = id + ':door'
-        sprite.setEntranceHighlight(positions.get(key)?.near ?? false,
-          selected === key, frame.time, this.reduced)
-      }
-    const picked = selected ? this.cues.get(selected) : undefined
+    const activeWorld = frame.visit.phase === 'outside' && !frame.paused
+    const selected = activeWorld ? selectWorldCue(hintCandidates) : undefined
+    // E keeps activating already-discovered objects even when their hint is gone.
+    // An actual visible hint wins so its keyboard action always matches the label.
+    const actionable = activeWorld ? (selected ?? selectWorldCue(actionCandidates)) : undefined
+    // Only the selected, never-used prop illuminates. No free-standing rings.
+    for (const [id, sprite] of this.scenes) {
+      if (sprite instanceof BuildingSprite)
+        sprite.setEntranceHighlight(selected === id + ':door',
+          selected === id + ':door', frame.time, this.reduced)
+      else if (sprite instanceof FirstLinesScene)
+        sprite.setInteractionGlow(selected === id + ':computer', frame.time, this.reduced)
+      else if (sprite instanceof ComputerSprite)
+        sprite.setInteractionGlow(selected === id + ':projects', frame.time, this.reduced)
+      else if (sprite instanceof SkillsRoadScene)
+        sprite.setInteractionGlow(
+          selected === id + ':tooling' ? 0 :
+          selected === id + ':web' ? 1 :
+          selected === id + ':cloud' ? 2 : undefined,
+          frame.time, this.reduced)
+      else if (sprite instanceof CampsiteScene)
+        sprite.setInteractionGlow(
+          selected === id + ':tent' ? 'tent' :
+          selected === id + ':campfire' ? 'fire' :
+          selected === id + ':lantern' ? 'lantern' : undefined,
+          frame.time, this.reduced)
+    }
+    for (const [id, activity] of this.activitiesByScene) {
+      const selectedActivity = selected?.startsWith(id + ':') &&
+        selected !== id + ':door'
+      activity.setInteractionGlow(!!selectedActivity, frame.time, this.reduced)
+    }
+    const picked = actionable ? this.cues.get(actionable) : undefined
     this.currentCue = picked ? { entry: picked.entry, action: picked.node.spec.action } : undefined
     const nl = this.model.locale === 'nl'
     for (const [id, { node, entry }] of this.cues) {
@@ -255,8 +292,7 @@ export class WorldRenderer {
         feedback, (safeX - p.screenX) / this.zoom, pushDown)
     }
     if (frame.paused) this.currentCue = undefined
-    this.app.canvas.dataset.cue = this.currentCue
-      ? `${this.currentCue.entry.event.id}:${picked!.node.spec.key}` : ''
+    this.app.canvas.dataset.cue = selected ?? ''
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
@@ -365,7 +401,7 @@ export class WorldRenderer {
                 ? this.callbacks.seek(
                     Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
                   )
-                : this.callbacks.startComputer(),
+                : (this.activities.markCueUsed(entry.event.id, 'projects'), this.callbacks.startComputer()),
             new Rectangle(-296, -354, 662, 244),
           )
         if (node instanceof BuildingSprite) {
@@ -373,6 +409,10 @@ export class WorldRenderer {
             entry.event.id,
             this.activities,
             this.model.locale,
+            () => {
+              const prop = cuesForScene(entry.event.id).find((cue) => cue.key !== 'door')
+              if (prop) this.activities.markCueUsed(entry.event.id, prop.key)
+            },
           )
           node.addChild(activity)
           this.activitiesByScene.set(entry.event.id, activity)
@@ -460,6 +500,7 @@ export class WorldRenderer {
       this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
       this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
       this.app.canvas.dataset.navigating = String(frame.navigating)
+      this.app.canvas.dataset.usedCues = JSON.stringify([...this.activities.usedCues])
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId

@@ -17,6 +17,35 @@ import {
 } from '../core/sceneActivities.ts'
 /** Scene state survives culling and locale changes. Renderers never own the score. */
 export class ActivitySystem {
+  /** Interaction education is shown once per object, not once per chapter. */
+  readonly usedCues = new Set<string>()
+  private readonly cuesStorageKey = 'navel:world-cues:v1'
+  restoreCues() {
+    if (typeof window === 'undefined') return
+    try {
+      const saved: unknown = JSON.parse(window.localStorage.getItem(this.cuesStorageKey) ?? '[]')
+      if (Array.isArray(saved))
+        for (const key of saved)
+          if (typeof key === 'string' && /^[a-z0-9-]+:[a-z0-9-]+$/.test(key))
+            this.usedCues.add(key)
+    } catch {
+      // Storage is optional (including in private browsing).
+    }
+  }
+  wasCueUsed(scene: string, object: string) {
+    return this.usedCues.has(`${scene}:${object}`)
+  }
+  markCueUsed(scene: string, object: string) {
+    const key = `${scene}:${object}`
+    if (this.usedCues.has(key)) return
+    this.usedCues.add(key)
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(this.cuesStorageKey, JSON.stringify([...this.usedCues]))
+    } catch {
+      // Keep session-level behavior when storage is disabled.
+    }
+  }
   circuit = [...circuitSeed]
   rover: RoverState = { commands: [], age: 0, status: 'idle' }
   editRover(command: RoverCommand | 'undo') {
