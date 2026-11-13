@@ -431,6 +431,7 @@ export class WorldRenderer {
       )
       this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
       this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
+      this.app.canvas.dataset.navigating = String(frame.navigating)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
