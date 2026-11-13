@@ -58,6 +58,15 @@ async function scenario(label, width, height, mobile) {
     assert.ok(
       (await firstCode.locator('iframe').getAttribute('srcdoc')).includes("default-src 'none'"),
     )
+    await page.frameLocator('iframe[title="Editable HTML preview"]').locator('body').waitFor()
+    assert.equal(
+      await page
+        .frameLocator('iframe[title="Editable HTML preview"]')
+        .locator('body')
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+      'rgb(230, 230, 250)',
+      'inline CSS still renders inside the restricted preview',
+    )
     await page.waitForTimeout(250)
     const retainedFrame = await canvas.getAttribute('data-rendered-at')
     await page.waitForTimeout(200)
@@ -98,12 +107,36 @@ async function scenario(label, width, height, mobile) {
       'code editor footer must remain below live preview instead of overlapping it',
     )
     await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
+    await page.evaluate(() => {
+      window.__closeTrace = []
+      for (const type of ['pointerdown', 'pointerup', 'click', 'focusin']) {
+        document.addEventListener(type, (event) => {
+          window.__closeTrace.push({ type, target: event.target.outerHTML?.slice(0, 170), prevented: event.defaultPrevented, time: performance.now() })
+        }, true)
+      }
+    })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
     await page.waitForFunction(() =>
       document.activeElement?.textContent?.includes('Open the first computer'),
     )
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
+    await openFirst.click()
+    await firstCode.getByRole('button', { name: 'style.css' }).click()
+    await firstCode
+      .getByRole('textbox', { name: 'CSS editor' })
+      .fill('body { background: lavender; }')
+    await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
+    await openFirst.click()
+    await firstCode.getByRole('button', { name: 'style.css' }).click()
+    assert.equal(
+      await firstCode.getByRole('textbox', { name: 'CSS editor' }).inputValue(),
+      'body { background: lavender; }',
+      'closing and reopening retains editor work',
+    )
+    await firstCode.getByRole('button', { name: 'Reset', exact: true }).click()
+    await page.keyboard.press('Escape')
+    await firstCode.waitFor({ state: 'hidden' })
 
     if (mobile) {
       await page.locator('.menu-toggle').click()
@@ -299,6 +332,7 @@ async function scenario(label, width, height, mobile) {
   } catch (error) {
     failures++
     console.error(`FAIL_${label}: ${error.stack || error}`)
+    console.error('DIAGNOSTICS', await page.evaluate(() => ({ url: location.href, trace: window.__closeTrace?.slice(-25) })))
   } finally {
     await page.screenshot({ path: `test-results/world/${label}-final.png` }).catch(() => {})
     await page.close()
@@ -335,15 +369,23 @@ async function readingModeScenario() {
   } catch (error) {
     failures++
     console.error(`FAIL_reading_mode: ${error.stack || error}`)
+    console.error('READING_DIAGNOSTICS', await page.evaluate(() => ({ url: location.href, text: document.body.innerText.slice(0, 1200) })))
+    await page.screenshot({ path: 'test-results/world/reading-mode-failure.png' })
   } finally {
     await page.close()
   }
 }
 async function graphicsFailureScenario() {
+  const errors = []
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   try {
+    page.on('pageerror', (error) => errors.push(error.message))
+    await page.route('**/world/textures/earth.png', (route) => route.abort())
+    await page.route('**/world/scenes/first-lines.svg', (route) => route.abort())
     await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('canvas[data-renderer="pixi"]').waitFor()
+    await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
+    assert.deepEqual(errors, [], 'optional scenery failures keep a working renderer')
     const supported = await page.evaluate(() => {
       const canvas = document.querySelector('canvas[data-renderer="pixi"]')
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')

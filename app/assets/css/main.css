@@ -715,3 +715,9 @@ kbd {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Match the visible navigation state to the world dialog's focus boundary. */
+.portfolio-header[inert],
+.journey-footer[inert] {
+  opacity: 0.55;
+}

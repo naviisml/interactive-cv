@@ -184,7 +184,7 @@ async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
   if (isBuilding(timeline.value[index]!.id)) {
-    buildingOpener = event?.currentTarget instanceof HTMLElement ? event.currentTarget : document.activeElement instanceof HTMLElement ? document.activeElement : worldRoot.value
+    buildingOpener = event?.currentTarget instanceof HTMLElement ? event.currentTarget : document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : worldRoot.value
     if (listMode.value) listMode.value = false
     buildingVisit.enter(index)
     return
@@ -260,7 +260,7 @@ const activeLevel = computed(() => levelForEvent(activeIndex.value))
 // Financial metadata follows the same ordered scenes as the active list/world,
 // including authored skills/contact scenes that have no separate CV record.
 const financeIndex = computed(() => activeIndex.value)
-const worldPanelOpen = computed(() => !!detailEvent.value || visit.phase === 'inside' || firstCodeOpen.value || workshopIndex.value !== null)
+const worldPanelOpen = computed(() => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value || workshopIndex.value !== null)
 let buildingOpener: HTMLElement | undefined
 watch(() => visit.phase, async (phase, previous) => {
   if (phase !== 'outside' || previous !== 'leaving') return
@@ -472,7 +472,7 @@ function interact(event: KeyboardEvent) {
 onMounted(async () => {
   // A static export shares one SSR payload across query strings. Resolve the
   // reading-mode URL before mounting Pixi, rather than reusing its world payload.
-  if (route.query.view === 'list') listMode.value = true
+  if (new URLSearchParams(window.location.search).get('view') === 'list') listMode.value = true
   worldReady.value = true
   if (
     !listMode.value &&
