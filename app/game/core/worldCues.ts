@@ -47,7 +47,10 @@ const cue = (
 })
 
 export function cuesForScene(id: string): WorldCueSpec[] {
-  if (id === 'first-lines') return [cue('computer', 'first-code', 153, -145, 'Explore the computer', 'Open de computer', 'Edit the first HTML & CSS', 'Bewerk de eerste HTML & CSS', 220)]
+  if (id === 'first-lines') return [{
+    ...cue('computer', 'first-code', 153, -145, 'Explore the computer', 'Open de computer', 'Edit the first HTML & CSS', 'Bewerk de eerste HTML & CSS', 220),
+    popupOffset: 154,
+  }]
   if (id === 'navel-development') return [cue('projects', 'projects', 20, -210, 'Explore my projects', 'Bekijk mijn projecten', 'Tap screen or press E', 'Tik op scherm of druk op E', 300)]
   if (id === 'skills-road')
     return [
@@ -64,8 +67,14 @@ export function cuesForScene(id: string): WorldCueSpec[] {
   const door = cue('door', 'enter', 0, -52, 'Enter building', 'Ga naar binnen', 'Tap doorway or press E', 'Tik op deur of druk op E', 175)
   const actions: Record<string, WorldCueSpec> = {
     'panta-rhei': cue('ball', 'basketball', 65, -35, 'Take a shot', 'Gooi op de basket', 'Hold the ball, then release', 'Houd de bal vast en laat los', 160),
-    'roc-hilversum': cue('cables', 'circuit', 410, -145, 'Power the campus', 'Verlicht de campus', 'Tap cables to rotate', 'Tik op kabels om te draaien', 240),
-    'coding-college': cue('rover', 'rover', 410, -140, 'Program the rover', 'Programmeer de rover', 'Build a route through the gaps', 'Bouw een route over de gaten', 240),
+    'roc-hilversum': {
+      ...cue('cables', 'circuit', 410, -145, 'Power the campus', 'Verlicht de campus', 'Tap cables to rotate', 'Tik op kabels om te draaien', 240),
+      popupOffset: 158,
+    },
+    'coding-college': {
+      ...cue('rover', 'rover', 410, -140, 'Program the rover', 'Programmeer de rover', 'Build a route through the gaps', 'Bouw een route over de gaten', 240),
+      popupOffset: 158,
+    },
     'fletcher': cue('bell', 'luggage', 182, -62, 'Ring the bell', 'Laat de bel klinken', 'Tap the bell or press E', 'Tik op de bel of druk op E', 150),
     'get-e': cue('plane', 'departure', 130, -45, 'Launch the aircraft', 'Laat het vliegtuig opstijgen', 'Hold to build power, release', 'Houd vast voor vermogen, laat los', 180),
     'appjection': cue('car', 'camera', 70, -40, 'Try the speed camera', 'Test de flitspaal', 'Hold the car, release near 50 km/h', 'Houd de auto vast, laat los rond 50 km/u', 180),
