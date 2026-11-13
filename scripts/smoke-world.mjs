@@ -169,15 +169,25 @@ async function scenario(label, width, height, mobile) {
         'exit restores movement',
       )
       await page.getByRole('button', { name: 'Company & projects', exact: true }).click()
-      await page
-        .getByRole('button', { name: 'Explore my projects', exact: true })
-        .waitFor({ state: 'visible', timeout: 20000 })
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      assert.equal(
+        await page.locator('.computer-invitation').count(),
+        0,
+        'a second floating project CTA must not cover the interactive computer',
+      )
       assert.equal(
         await page.locator('.company-controls').count(),
         0,
         'arriving does not silently start or capture walking',
       )
-      await page.getByRole('button', { name: 'Explore my projects', exact: true }).click()
+      // The in-world screen remains clickable, and keyboard users get an
+      // unobtrusive focus-revealed action with the same behavior.
+      const computerAction = page.locator('.canvas-accessibility').getByRole('button', {
+        name: 'Explore my projects',
+        exact: true,
+      })
+      await computerAction.focus()
+      await computerAction.click()
       await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
       assert.equal(
         await page.locator('.company-controls button[aria-pressed]').count(),
