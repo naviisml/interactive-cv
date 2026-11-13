@@ -31,6 +31,10 @@ async function scenario(label, width, height, mobile) {
     assert.ok(Math.abs(header.y + header.height - stage.y) < 3)
     assert.ok(Math.abs(stage.y + stage.height - footer.y) < 3)
     assert.ok(footer.y + footer.height < height + 3)
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+      'the world must not introduce horizontal document overflow',
+    )
     // The opening monitor is a genuine, accessible editable workstation.
     await page.locator('.journey-footer').getByRole('button', { name: /My first code/ }).click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
@@ -38,6 +42,7 @@ async function scenario(label, width, height, mobile) {
     await openFirst.click()
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
     await firstCode.waitFor({ state: 'visible' })
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
     await firstCode.getByRole('button', { name: 'style.css' }).click()
     await firstCode.getByRole('textbox', { name: 'CSS editor' }).fill('body { background: lavender; }')
     assert.ok(
@@ -56,6 +61,20 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
+    await page.waitForFunction(
+      () => document.activeElement?.textContent?.includes('Open the first computer'),
+    )
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
+
+    if (mobile) {
+      await page.locator('.menu-toggle').click()
+      await canvas.tap({ position: { x: 180, y: Math.min(280, Math.floor(stage.height * 0.6)) } })
+      assert.equal(
+        await page.locator('.menu-toggle').getAttribute('aria-expanded'),
+        'false',
+        'mobile menu closes after tapping outside',
+      )
+    }
 
     // Skills are now task-driven, not simply collected logos.
     const skillsLaunch = page.getByRole('button', { name: 'Skills', exact: true })
@@ -65,6 +84,7 @@ async function scenario(label, width, height, mobile) {
     await page.getByRole('button', { name: 'Open the workstations' }).click()
     const workshop = page.getByRole('dialog', { name: 'Build something that works.' })
     await workshop.waitFor({ state: 'visible' })
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
     for (const step of ['commit', 'test', 'build', 'deploy']) {
       await workshop.getByRole('button', { name: '+ ' + step }).click()
     }
@@ -73,6 +93,10 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-skills-workshop.png` })
     await workshop.getByRole('button', { name: 'Continue the journey' }).click()
     await workshop.waitFor({ state: 'hidden' })
+    await page.waitForFunction(
+      () => document.activeElement?.textContent?.includes('Open the workstations'),
+    )
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
 
     if (!mobile) {
       const before = Number(await canvas.getAttribute('data-player-x'))
