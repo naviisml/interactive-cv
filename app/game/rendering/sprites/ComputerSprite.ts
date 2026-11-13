@@ -53,10 +53,15 @@ export class ComputerSprite extends Container {
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.bezelGlow.clear()
     if (!active) return
-    const alpha = reduced ? 0.67 : 0.55 + Math.sin(time / 490) * 0.14
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 530)) * 0.5
+    const shimmer = reduced ? 0 : (time / 25) % 628
     this.bezelGlow
       .roundRect(-313, -369, 675, 247, 9)
-      .stroke({ color: 0xf7d99a, width: 4, alpha })
+      .stroke({ color: 0xffdba4, width: 16, alpha: 0.11 + pulse * 0.1 })
+      .roundRect(-313, -369, 675, 247, 9)
+      .stroke({ color: 0xffedbc, width: 4, alpha: 0.67 + pulse * 0.23 })
+    if (!reduced) this.bezelGlow.rect(-302 + shimmer, -374, 44, 5)
+      .fill({ color: 0xffffdd, alpha: 0.35 + pulse * 0.35 })
   }
   update(progress: number, scale = 1, active = false, time = 0, reduced = false) {
     const compact = scale < 0.65,
