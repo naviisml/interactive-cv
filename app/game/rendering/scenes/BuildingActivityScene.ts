@@ -259,6 +259,24 @@ export class BuildingActivityScene extends Container {
     this.telemetryText.text = message
     this.telemetry.position.set(x, y)
   }
+  /** Keep the prop-following readout visible without clipping on narrow screens. */
+  constrainTelemetry(entryX: number, camera: number, scale: number, screenWidth: number) {
+    if (!this.telemetry.visible) return
+    const screenX = (entryX + this.telemetry.x - camera) * scale
+    // Don't leave a floating label when the vehicle itself is far offscreen.
+    if (screenX < -70 || screenX > screenWidth + 70) {
+      this.telemetry.visible = false
+      return
+    }
+    const half = Math.min(screenWidth / 2, 114 * scale + 10)
+    const safeX = Math.max(half, Math.min(screenWidth - half, screenX))
+    this.telemetry.x += (safeX - screenX) / scale
+  }
+  getTelemetryScreenBounds(entryX: number, camera: number, scale: number) {
+    if (!this.telemetry.visible) return null
+    const x = (entryX + this.telemetry.x - camera) * scale
+    return { left: x - 114 * scale, right: x + 114 * scale }
+  }
   getTelemetry(): string {
     return this.telemetry.visible ? this.telemetryText.text : ''
   }
