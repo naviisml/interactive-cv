@@ -37,7 +37,6 @@ export class BuildingActivityScene extends Container {
   ) {
     super()
     this.action = buildingActions[id]!
-    const nl = locale === 'nl'
     // Action feedback lives above the architecture, never across its signs.
     this.status = label(this, '', 0, -341, 12, 0x274b3d, 278)
     this.status.anchor.x = 0.5
@@ -148,13 +147,7 @@ export class BuildingActivityScene extends Container {
         0xc9d9ac,
         105,
       )
-      if (this.action === 'compile') {
-
-
-
-
-
-      } else {
+      if (this.action !== 'compile') {
         rect(this, 237, -94, 4, 86, 0x7d8a6d)
         this.addChild(
           new Graphics().poly([225, -96, 251, -96, 246, -116, 230, -116]).fill(0xa9af83),
