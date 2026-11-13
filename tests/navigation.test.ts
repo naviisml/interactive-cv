@@ -15,16 +15,16 @@ for(const [fromX,toX] of [[100,1400],[1400,100]])test(`destination travel is con
  }
  assert.ok(done);assert.equal(previous,toX)
 })
-test('long journeys retain a bounded running speed instead of accelerating with distance',()=>{
- assert.ok(navigationDuration(15000)>20)
- assert.equal(navigationDuration(1200),1200/360)
+test('travel is symmetric and full-world trips take at most ten seconds',()=>{
+ for(const distance of [100,920,5000,17000])assert.equal(navigationDuration(distance),navigationDuration(-distance))
+ assert.equal(navigationDuration(17000),10)
+ assert.ok(navigationDuration(920)<2)
 })
-
 test('long runs reach a steady pace after the brief start ramp',()=>{
  const nav={index:0,fromX:100,fromY:0,toX:15100,elapsed:0,duration:navigationDuration(15000)}
  for(let n=0;n<30;n++)advanceDestination(nav,1/60,world)
  const early=advanceDestination(nav,1/60,world).motion.vx
- assert.ok(early>350&&early<400)
+ assert.ok(early>1500&&early<1600)
  for(let n=0;n<300;n++)advanceDestination(nav,1/60,world)
  assert.equal(advanceDestination(nav,1/60,world).motion.vx,early)
 })

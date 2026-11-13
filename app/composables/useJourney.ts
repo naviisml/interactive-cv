@@ -97,7 +97,7 @@ export function useJourney(trackIndices: ComputedRef<number[]>,view?:ComputedRef
       }
       if (!manualDirection) scrollDistance=consumeSwipeDistance(scrollDistance,motion.x-oldX)
       if (motion.mode==='climbing') strideDistance+=Math.abs(motion.y-oldY)
-      else if (motion.grounded && motion.mode!=='sliding') strideDistance+=Math.abs(motion.x-oldX)
+      else if (motion.grounded && motion.mode!=='sliding') strideDistance+=Math.min(Math.abs(motion.x-oldX),motionConfig.sprint*dt)
       animationFrame.value = running.value ? Math.floor(strideDistance/12)%12 : motion.mode==='climbing' ? Math.floor(strideDistance/12)%4 : motion.grounded && Math.abs(motion.vx)>15 && motion.mode!=='sliding' ? Math.floor(strideDistance/12)%12 : 0
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, worldWidth.value)

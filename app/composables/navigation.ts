@@ -1,6 +1,6 @@
 import {terrainHeight,type Motion,type WorldGeometry} from './physics.ts'
 export interface JourneyDestination {index:number;fromX:number;fromY:number;toX:number;elapsed:number;duration:number}
-export function navigationDuration(distance:number){return Math.max(1,Math.abs(distance)/360)}
+export function navigationDuration(distance:number){return Math.min(10,Math.max(.65,Math.abs(distance)/600+.22))}
 export function advanceDestination(nav:JourneyDestination,dt:number,world:WorldGeometry):{motion:Motion;done:boolean} {
   nav.elapsed=Math.min(nav.duration,nav.elapsed+Math.max(0,Math.min(dt,.05)))
   const t=nav.elapsed/nav.duration,ramp=Math.min(.22,nav.duration/3),cruise=nav.duration-ramp
