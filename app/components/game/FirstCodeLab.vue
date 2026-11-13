@@ -129,13 +129,16 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   background: #223b35;
   border: 2px solid #8daa92;
   box-shadow: 0 20px 80px #0c211f80;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .lab-header, .lab-heading, .editor-toolbar, .editor-toolbar > div, footer {
   display: flex;
   align-items: center;
 }
 .lab-header {
+  flex-shrink: 0;
   justify-content: space-between;
   padding: 9px 16px;
   background: #152d28;
@@ -143,10 +146,10 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
 }
 .lab-heading { gap: 10px; font: 600 12px 'Space Grotesk'; letter-spacing: .04em; }
 .code-close { display: grid; place-items: center; min-width: 42px; min-height: 42px; }
-.lab-intro { padding: 16px 22px; }
+.lab-intro { flex-shrink: 0; padding: 16px 22px; }
 .lab-intro h2 { font: 500 clamp(22px, 3vw, 33px) 'Space Grotesk'; margin: 0 0 6px; }
 .lab-intro p { font-size: 13px; line-height: 1.6; max-width: 750px; color: #bed0be; }
-.lab-workbench { display: grid; grid-template-columns: 1fr 1fr; min-height: 290px; border-block: 1px solid #547565; }
+.lab-workbench { display: grid; grid-template-columns: 1fr 1fr; min-height: 290px; flex: 0 0 auto; border-block: 1px solid #547565; }
 .lab-editor, .lab-preview { display: flex; flex-direction: column; min-width: 0; }
 .lab-editor { border-right: 1px solid #547565; }
 .editor-toolbar, .preview-toolbar {
@@ -175,16 +178,19 @@ textarea {
 .preview-toolbar { display: flex; align-items: center; gap: 9px; padding-inline: 13px; color: #d5e7d3; }
 .preview-dot { width: 8px; height: 8px; border-radius: 50%; background: #a1cd8f; }
 iframe { border: 0; width: 100%; flex: 1; min-height: 245px; background: #fff; }
-footer { padding: 11px 16px; justify-content: space-between; gap: 20px; }
+footer { flex-shrink: 0; padding: 11px 16px; justify-content: space-between; gap: 20px; }
 footer p { color: #b4c9b7; font-size: 11px; line-height: 1.5; margin: 0; }
 footer button { white-space: nowrap; background: #dbe4cb; color: #254639; padding: 10px 14px; font: 12px 'Space Grotesk'; }
 button:focus-visible, textarea:focus-visible { outline: 3px solid #e8cc90; outline-offset: -3px; }
 @media(max-width: 680px) {
   .first-code-lab { padding: 8px; }
-  .lab-workbench { grid-template-columns: 1fr; }
+  .lab-window { min-height: 0; }
+  .lab-header { position: sticky; top: 0; z-index: 2; }
+  .lab-workbench { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+  .lab-editor, .lab-preview { flex: none; min-height: 0; }
   .lab-editor { border-right: 0; border-bottom: 1px solid #547565; }
   textarea { min-height: 130px; max-height: 180px; }
-  iframe { min-height: 180px; }
+  iframe { flex: none; display: block; height: 210px; min-height: 210px; }
   footer { align-items: flex-start; flex-direction: column; gap: 10px; }
 }
 </style>
