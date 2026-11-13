@@ -30,6 +30,12 @@ const detailEvent = computed(() =>
   detailIndex.value === null ? undefined : timeline.value[detailIndex.value],
 )
 const moneyOpen = ref(false)
+const firstCodeOpen = ref(false)
+function openFirstComputer() {
+  if (listMode.value || firstCodeOpen.value) return
+  stop()
+  firstCodeOpen.value = true
+}
 let detailOpener: HTMLElement | undefined
 const worldRoot = ref<HTMLElement>()
 const view = useWorldViewport(worldRoot)
@@ -124,12 +130,13 @@ const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen],
   () => {
     paused.value =
       listMode.value ||
       detailIndex.value !== null ||
       moneyOpen.value ||
+      firstCodeOpen.value ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -401,7 +408,7 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || detailIndex.value !== null || moneyOpen.value || buildingVisit.blocking.value
+    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -468,6 +475,7 @@ onBeforeUnmount(() => {
             @details="handleSceneDetails"
             @seek="seekPresentation"
             @start-computer="startPresentation"
+            @open-first-computer="openFirstComputer"
         /></ClientOnly>
         <ChapterCaption
           :current="current"
@@ -479,6 +487,13 @@ onBeforeUnmount(() => {
           @details="openDetail(nearestIndex, $event)"
           @cancel="stop"
         />
+        <button
+          v-if="current.id === 'first-lines' && !running && !firstCodeOpen"
+          class="first-code-launch"
+          @click="openFirstComputer"
+        >
+          {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+        </button>
         <ComputerInvitation
           v-if="
             current.id === 'navel-development' &&
@@ -510,6 +525,7 @@ onBeforeUnmount(() => {
         @leave="buildingVisit.leave"
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
+      <FirstCodeLab v-if="firstCodeOpen" @close="firstCodeOpen = false" />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
@@ -533,3 +549,24 @@ onBeforeUnmount(() => {
     />
   </main>
 </template>
+
+<style scoped>
+.first-code-launch {
+  position: absolute;
+  top: 145px;
+  right: 24px;
+  z-index: 7;
+  min-height: 44px;
+  padding: 11px 15px;
+  color: #e9e7cc;
+  background: #365f4c;
+  border: 1px solid #c6cea6;
+  border-radius: 3px;
+  box-shadow: 4px 4px 0 #25473a44;
+  font: 500 12px 'Space Grotesk', sans-serif;
+}
+.first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
+@media (max-width: 700px) {
+  .first-code-launch { top: 116px; right: 12px; max-width: 180px; }
+}
+</style>
