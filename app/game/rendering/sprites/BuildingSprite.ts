@@ -24,24 +24,13 @@ export class BuildingSprite extends Container {
     if (this.kind === 'codam') {
       label(this.facade, 'CODAM', -224, -212, 26, 0xf0e3c2, 190)
       label(this.facade, 'CODING COLLEGE', -224, -177, 9, 0xc1cbb4, 190)
-      label(this.facade, event.role ?? 'Software Development', 104, -210, 10, 0xd8dec5, 136)
-      label(this.facade, event.period ?? event.label, 104, -175, 10, 0xc9d0b8, 140)
+
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
-      const title = label(this.facade, event.title, 0, signY, 23, 0xf2e8cb, 490)
+      // The facade is a place, not a miniature CV. Roles and periods remain
+      // available in the building interior and the accessible reading mode.
+      const title = label(this.facade, event.title, 0, signY + 10, 23, 0xf2e8cb, 490)
       title.anchor.x = 0.5
-      const role = label(this.facade, event.role ?? event.chapter, 0, signY + 27, 10, 0xd1d8bb, 470)
-      role.anchor.x = 0.5
-      const period = label(
-        this.facade,
-        event.period ?? event.label,
-        0,
-        signY + 44,
-        10,
-        0xc4cba9,
-        470,
-      )
-      period.anchor.x = 0.5
     }
     const edge =
       this.kind === 'airport'
