@@ -246,6 +246,20 @@ async function scenario(label, width, height, mobile) {
       () => Number(document.querySelector('canvas')?.dataset.skillCount) === 18,
     )
     assert.equal(await page.getByRole('dialog').count(), 0, 'skills remain in the world')
+    const invalidStage = page.getByRole('button', { name: 'Pipeline: build', exact: true })
+    await invalidStage.focus()
+    await invalidStage.click()
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'error',
+    )
+    for (const step of ['commit', 'test', 'build', 'deploy']) {
+      const stage = page.getByRole('button', { name: 'Pipeline: ' + step, exact: true })
+      await stage.focus()
+      await stage.click()
+    }
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'success',
+    )
     const theme = page.getByRole('button', { name: 'Change CSS theme', exact: true })
     await theme.focus()
     await page.keyboard.press('Space')
