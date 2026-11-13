@@ -11,6 +11,7 @@ defineProps<{
 const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }>()
 const { t, locale } = useI18n()
 const sceneHints: Record<string, [string, string]> = {
+  'first-lines': ['Open de monitor om HTML en CSS te bewerken.', 'Open the monitor to edit HTML and CSS.'],
   'panta-rhei': ['Houd de bal vast en laat los om te schieten.', 'Hold the ball and release to shoot.'],
   'roc-hilversum': [
     'Tik op de werkbank om de verbinding te maken.',
