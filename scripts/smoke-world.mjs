@@ -218,6 +218,21 @@ async function scenario(label, width, height, mobile) {
     await page.keyboard.press('Escape')
     await firstCode.waitFor({ state: 'hidden' })
 
+    // Both quick toggles are visible and independent of the main menu.
+    const tooltipToggle = page.locator('.header-tooltip-toggle')
+    const viewToggle = page.locator('.header-view-toggle')
+    assert.equal(await tooltipToggle.getAttribute('aria-pressed'), 'true')
+    await tooltipToggle.click()
+    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'false')
+    await tooltipToggle.click()
+    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'true')
+    assert.equal(await viewToggle.count(), 1)
+    if (mobile) {
+      const select = await page.locator('.language-switch').boundingBox()
+      const menu = await page.locator('.menu-toggle').boundingBox()
+      assert.ok(select && menu && Math.abs((select.y + select.height / 2) - (menu.y + menu.height / 2)) < 4,
+        'language selector is vertically centered beside menu on mobile')
+    }
     if (mobile) {
       await page.locator('.menu-toggle').click()
       await page
@@ -313,13 +328,11 @@ async function scenario(label, width, height, mobile) {
         'Space must not reactivate focused navigation')
     } else {
       assert.ok(await page.getByRole('button', { name: 'Jump', exact: true }).isVisible())
-      await page.locator('.menu-toggle').click()
-      await page.locator('.view-toggle').click()
+      await page.locator('.header-view-toggle').click()
       await page.locator('.timeline-list').waitFor({ state: 'visible' })
       const sticky = await page.locator('.portfolio-header').boundingBox()
       assert.ok(Math.abs(sticky.y) < 3)
-      await page.locator('.menu-toggle').click()
-      await page.locator('.view-toggle').click()
+      await page.locator('.header-view-toggle').click()
       await canvas.waitFor({ state: 'visible' })
     }
     if (!mobile) {
@@ -336,7 +349,8 @@ async function scenario(label, width, height, mobile) {
       )
       await page.getByRole('button', { name: 'Work', exact: true }).click()
       await waitForArrival(page, 'fletcher')
-      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.cue === 'fletcher:door')
+      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door')
+      assert.equal(await canvas.getAttribute('data-cue'), '', 'doors never show tooltip balloons')
       assert.equal(await page.locator('.world-caption').count(), 0)
       assert.equal(await page.locator('.canvas-accessibility').getByRole('button', {
         name: 'Enter building', exact: true,
@@ -572,12 +586,12 @@ async function visualAuditScenario() {
       if (name === '06-hotel') {
         // A character walking from the entrance towards the luggage bell should
         // switch which world object is highlighted, without any floating HUD.
-        await page.waitForFunction(() => document.querySelector('canvas')?.dataset.cue === 'fletcher:door')
+        await page.waitForFunction(() => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door')
         await page.locator('.world').focus()
         await page.keyboard.down('ArrowRight')
         try {
           await page.waitForFunction(
-            () => document.querySelector('canvas')?.dataset.cue === 'fletcher:bell',
+            () => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:bell',
             {},
             { timeout: 6000 },
           )
@@ -593,6 +607,7 @@ async function visualAuditScenario() {
               el?.dataset.cue !== 'fletcher:bell'
           },
         )
+        assert.equal(await canvas.getAttribute('data-cue'), '', 'used bell has no introductory hint')
         await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
         await page.waitForFunction(
           () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.completed,
@@ -614,11 +629,17 @@ async function visualAuditScenario() {
       }
       if (name === '07-airport') {
         await chargeWorld(page, canvas, 'get-e', 130, -22, 1500)
+        await page.waitForFunction(() =>
+          /Sim. speed: [0-9]+ km\/h/.test(JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}')['get-e'] || ''),
+          {}, { timeout: 4000 })
         await page.waitForTimeout(2200)
         await page.screenshot({ path: 'test-results/world/audit-aircraft-airborne.png' })
       }
       if (name === '08-office') {
         await chargeWorld(page, canvas, 'appjection', 70, -30, 650)
+        await page.waitForFunction(() =>
+          /km\/h/.test(JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection || ''),
+          {}, { timeout: 4000 })
         await page.waitForTimeout(1100)
         await page.screenshot({ path: 'test-results/world/audit-car-passing-camera.png' })
       }
