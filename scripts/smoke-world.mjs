@@ -44,6 +44,15 @@ async function scenario(label, width, height, mobile) {
       (await firstCode.locator('iframe').getAttribute('srcdoc')).includes('background: lavender'),
       'HTML/CSS preview follows editor changes',
     )
+    const editorLayout = await firstCode.evaluate((dialog) => {
+      const preview = dialog.querySelector('iframe').getBoundingClientRect()
+      const footer = dialog.querySelector('footer').getBoundingClientRect()
+      return { previewBottom: preview.bottom, footerTop: footer.top }
+    })
+    assert.ok(
+      editorLayout.footerTop >= editorLayout.previewBottom - 2,
+      'code editor footer must remain below live preview instead of overlapping it',
+    )
     await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
