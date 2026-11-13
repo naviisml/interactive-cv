@@ -33,5 +33,5 @@ for (const id of [
   const svg = html
     .match(/<svg[\s\S]*?<\/svg>/)[0]
     .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="310" ')
-  await fs.writeFile(`public/world/scenes/${id}.svg`, svg)
+  await fs.writeFile(`public/world/scenes/${id}.svg`, svg.replace(/\sdata-v-[\w-]+(?=[\s>])/g, ''))
 }

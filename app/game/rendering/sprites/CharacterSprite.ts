@@ -9,6 +9,8 @@ export class CharacterSprite extends Container {
   async load() {
     const atlas = await Assets.load<Texture>('/sprites/navi.png')
     if (this.destroyed) return
+    atlas.source.scaleMode = 'nearest'
+    this.body.roundPixels = true
     const width = atlas.width / SPRITE_FRAMES
     this.frames = Array.from(
       { length: SPRITE_FRAMES },

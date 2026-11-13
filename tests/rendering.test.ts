@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import sharp from 'sharp'
 import { renderWindow, parallaxTiles, parallaxOffset } from '../app/game/core/worldProjection.ts'
 import { storyParagraphs, type TimelineEvent } from '../app/content/timeline.ts'
 
@@ -34,4 +35,16 @@ test('detail copy omits repeated summary paragraphs', () => {
     body: ['Laravel and Vue.', 'Additional detail.', 'Additional detail.'],
   } as TimelineEvent
   assert.deepEqual(storyParagraphs(event), ['Additional detail.'])
+})
+
+test('every exported scene decodes as a real image texture', async () => {
+  const directory = new URL('../public/world/scenes/', import.meta.url)
+  for (const file of fs.readdirSync(directory)) {
+    const decoded = await sharp(fs.readFileSync(new URL(file, directory)))
+      .png()
+      .toBuffer({ resolveWithObject: true })
+    assert.equal(decoded.info.width, 600, file)
+    assert.equal(decoded.info.height, 310, file)
+    assert.ok(decoded.data.length > 200, file)
+  }
 })
