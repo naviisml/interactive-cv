@@ -261,7 +261,7 @@ function toggleView() {
     border-left: 0;
     gap: 12px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
   }
   .portfolio-header :deep(.debt-balance) {
     min-width: 0;
@@ -281,8 +281,8 @@ function toggleView() {
   }
   .portfolio-header :deep(.debt-info-button) {
     margin: 0;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
   }
 }
 @media (max-width: 380px) {
