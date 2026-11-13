@@ -39,7 +39,7 @@ export class BuildingActivityScene extends Container {
     this.action = buildingActions[id]!
     const nl = locale === 'nl'
     // Action feedback lives above the architecture, never across its signs.
-    this.status = label(this, '', 0, -343, 12, 0xf1eddb, 316)
+    this.status = label(this, '', 0, -341, 12, 0x274b3d, 278)
     this.status.anchor.x = 0.5
     this.status.visible = false
     const start = () => state.trigger(id, this.action)
@@ -193,25 +193,29 @@ export class BuildingActivityScene extends Container {
     this.statusPanel.clear()
     const charge = this.state.charges[this.id]
     const charging = !!charge?.holding
-    const showStatus =
-      !frame.navigating &&
-      frame.visit.phase === 'outside' &&
-      Math.abs(frame.motion.x - entryX) < 310
+    const distance = Math.abs(frame.motion.x - entryX)
+    const showStatus = !frame.navigating && frame.visit.phase === 'outside' && distance < 310
+    const opacity = Math.min(1, Math.max(0, (310 - distance) / 85))
     this.status.visible = showStatus
+    this.status.alpha = opacity
+    this.statusPanel.alpha = opacity
     if (showStatus) {
+      // The label reads like an architectural annotation, not a second HUD.
       this.statusPanel
-        .roundRect(-188, -362, 376, 75, 8)
-        .fill({ color: 0x203f36, alpha: 0.96 })
-        .stroke({ width: 1.5, color: 0xb8c9a4, alpha: 0.9 })
-        .roundRect(-176, -303, 352, 5, 2)
-        .fill(0x456657)
+        .roundRect(-152, -351, 308, 61, 7)
+        .fill({ color: 0x19392f, alpha: 0.17 })
+        .roundRect(-156, -355, 308, 61, 7)
+        .fill({ color: 0xf4f0df, alpha: 0.97 })
+        .stroke({ width: 1.5, color: 0x8da78f, alpha: 0.9 })
       if (charging) {
         this.statusPanel
-          .roundRect(-176, -303, 352 * charge.power, 5, 2)
-          .fill(charge.power >= 0.8 ? 0xdb9c72 : 0xb5d1a0)
+          .roundRect(-142, -306, 280, 5, 2)
+          .fill(0xc4ceba)
+          .roundRect(-142, -306, 280 * charge.power, 5, 2)
+          .fill(charge.power >= 0.8 ? 0xb97758 : 0x4d8a66)
         if (this.action === 'basketball')
           for (const threshold of [0.52, 0.78])
-            this.statusPanel.rect(-176 + 352 * threshold, -306, 2, 11).fill(0xf2f0d9)
+            this.statusPanel.rect(-142 + 280 * threshold, -309, 2, 11).fill(0x24483a)
       }
     }
     if (this.ball) {
