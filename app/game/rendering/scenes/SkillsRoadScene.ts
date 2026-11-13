@@ -6,9 +6,9 @@ import { label } from '../drawing'
 import type { ActivitySystem } from '../../engine/ActivitySystem'
 import type { WorldFrame } from '../types'
 export class SkillsRoadScene extends Container {
-  private lastPad = -1
   private groups: {
     node: Container
+    id: string
     x: number
     base: Graphics
     pad: Graphics
@@ -18,6 +18,7 @@ export class SkillsRoadScene extends Container {
     private activity: ActivitySystem,
     private collected: (name: string, count: number) => void,
     locale: string,
+    private openWorkshop: (index: number) => void,
   ) {
     super()
     skillGroups.forEach((group, i) => {
@@ -63,15 +64,30 @@ export class SkillsRoadScene extends Container {
         node.addChild(badge)
         return { id, halo, x: lx, y: ly }
       })
+      const terminal = new Container()
+      node.addChild(terminal)
+      terminal.addChild(
+        new Graphics()
+          .roundRect(-90, -50, 180, 34, 4)
+          .fill(0x284d43)
+          .stroke({ width: 2, color: 0xb9c99e }),
+      )
+      const cta = label(
+        terminal,
+        locale === 'nl' ? 'OPEN DE WERKBANK' : 'OPEN WORKSTATION',
+        0, -40, 11, 0xe9e8c9, 170,
+      )
+      cta.anchor.x = 0.5
+      tapTarget(terminal, () => this.openWorkshop(i), new Rectangle(-90, -50, 180, 40))
       this.addChild(node)
 
       const base = new Graphics().ellipse(x, 0, 140, 4).fill({ color: 0x284d40, alpha: 0.2 })
       this.addChild(base)
       const pad = new Graphics()
       pad.position.set(x, 0)
-      tapTarget(pad, () => this.activity.toggle('skills-road', i), new Rectangle(-35, -30, 70, 40))
+      tapTarget(pad, () => this.openWorkshop(i), new Rectangle(-35, -30, 70, 40))
       this.addChild(pad)
-      this.groups.push({ node, x, logos, base, pad })
+      this.groups.push({ node, id: group.id, x, logos, base, pad })
     })
   }
   private explore(id: string) {
@@ -87,7 +103,7 @@ export class SkillsRoadScene extends Container {
       group.node.y = floor + (reduced ? 0 : Math.sin(frame.time / 1100 + i * 1.4) * 6)
       group.base.y = floor
       group.pad.y = floor
-      const on = !!this.activity.switches['skills-road']?.[i]
+      const on = this.activity.completedWorkshops.includes(group.id)
       group.pad
         .clear()
         .roundRect(-27, -10, 54, 10, 3)
@@ -97,18 +113,6 @@ export class SkillsRoadScene extends Container {
       if (on && !reduced)
         for (let p = 0; p < 5; p++)
           group.pad.rect(-90 + ((frame.time / 20 + p * 39) % 180), -21, 3, 3).fill(0xe7d89e)
-      if (
-        !frame.navigating &&
-        !frame.paused &&
-        frame.motion.grounded &&
-        Math.abs(px - group.x) < 23 &&
-        Math.abs(foot - floor) < 4
-      ) {
-        if (this.lastPad !== i) {
-          this.activity.toggle('skills-road', i)
-          this.lastPad = i
-        }
-      } else if (this.lastPad === i && Math.abs(px - group.x) > 35) this.lastPad = -1
       group.node.rotation = reduced ? 0 : Math.sin(frame.time / 2300 + i) * 0.008
       group.logos.forEach((logo) => {
         const seen = this.activity.exploredSkills.includes(logo.id)
