@@ -291,11 +291,11 @@ export function useJourney(
       else if (motion.grounded && motion.mode !== 'sliding')
         strideDistance += Math.min(Math.abs(motion.x - oldX), motionConfig.sprint * dt)
       animationFrame.value = running.value
-        ? Math.floor(strideDistance / 12) % 12
+        ? Math.floor(strideDistance / 12)
         : motion.mode === 'climbing'
-          ? Math.floor(strideDistance / 12) % 4
+          ? Math.floor(strideDistance / 12)
           : motion.grounded && Math.abs(motion.vx) > 15 && motion.mode !== 'sliding'
-            ? Math.floor(strideDistance / 12) % 12
+            ? Math.floor(strideDistance / 12)
             : 0
       if (motion.mode === 'sliding') facing.value = 1
       const target = cameraTarget(motion.x, viewport.value, worldWidth.value)
