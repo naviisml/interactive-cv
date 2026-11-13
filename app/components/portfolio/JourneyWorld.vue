@@ -221,7 +221,7 @@ const activeLevel = computed(() => levelForEvent(activeIndex.value))
 // including authored skills/contact scenes that have no separate CV record.
 const financeIndex = computed(() => activeIndex.value)
 const worldPanelOpen = computed(
-  () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value,
+  () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value || presentation.active,
 )
 let buildingOpener: HTMLElement | undefined
 function enterBuilding(index: number, event?: MouseEvent) {
@@ -263,6 +263,7 @@ function gestureStart(event: PointerEvent) {
   if (
     activities.charging ||
     paused.value ||
+    presentation.active ||
     event.pointerType !== 'pen' ||
     !event.isPrimary ||
     (event.target as HTMLElement)?.closest(
@@ -306,7 +307,7 @@ function gestureEnd(event: PointerEvent) {
 let touchGesture:
   { id: number; startX: number; startY: number; lastX: number; axis: SwipeAxis } | undefined
 function touchStart(event: TouchEvent) {
-  if (activities.charging || paused.value) return
+  if (activities.charging || paused.value || presentation.active) return
   touchGesture = undefined
   endScrollTravel()
   if (
@@ -375,7 +376,8 @@ watch(
   { flush: 'post' },
 )
 function wheelTravel(event: WheelEvent) {
-  if (event.ctrlKey || paused.value || activities.charging) return
+  if (event.ctrlKey || paused.value || activities.charging || presentation.active ||
+      (event.target as HTMLElement)?.closest('[data-world-panel]')) return
   const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
   event.preventDefault()
   scrollByDistance(delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1), 'wheel')
@@ -424,13 +426,18 @@ async function toggleList() {
     scrollToEvent(listActive.value)
   }
 }
+async function closeProjectArchive() {
+  exitPresentation()
+  await nextTick()
+  worldRoot.value?.focus({ preventScroll: true })
+}
 function navigateTimeline(index: number) {
   buildingVisit.cancel()
   if (listMode.value) scrollToEvent(index)
   else goTo(index)
 }
 function interact(event: KeyboardEvent) {
-  if (paused.value || event.defaultPrevented || event.repeat || listMode.value ||
+  if (paused.value || presentation.active || event.defaultPrevented || event.repeat || listMode.value ||
       visit.phase !== 'outside' || event.key.toLowerCase() !== 'e' ||
       (event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]'))
     return
@@ -541,20 +548,21 @@ onBeforeUnmount(() => {
           <p class="world-chapter-announcement" role="status" aria-live="polite">
             {{ current.title }}. {{ skillFeedback }}
           </p>
-          <CompanyControls
-            v-if="presentation.active"
-            :progress="presentation.progress"
-            :slides="rendererModel.slides"
-            @seek="seekPresentation"
-            @exit="exitPresentation"
-          />
           <MovementControls
+            v-if="!presentation.active"
             :near-ladder="!!nearLadder"
             :paused="paused"
             @direction="touchDirection = $event"
             @vertical="touchVertical = $event"
             @sprint="touchSprint = $event"
             @jump="jump"
+          />
+          <ProjectArchive
+            v-if="presentation.active"
+            :progress="presentation.progress"
+            :slides="rendererModel.slides"
+            @seek="seekPresentation"
+            @exit="closeProjectArchive"
           />
         </div>
       </div>
