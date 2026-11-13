@@ -43,8 +43,10 @@ export function financialSnapshot(
       result.featured = data.featured
 
     for (const key of ['debt', 'savings'] as const) {
-      if (Object.hasOwn(data, key))
-        result[key] = validAmount(data[key]) ? data[key] : null
+      if (Object.hasOwn(data, key)) {
+        const value = data[key]
+        result[key] = validAmount(value) ? value : null
+      }
     }
 
     if (Object.hasOwn(data, 'yearlyIncome')) {
