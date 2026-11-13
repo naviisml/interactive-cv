@@ -259,6 +259,9 @@ export class BuildingActivityScene extends Container {
     this.telemetryText.text = message
     this.telemetry.position.set(x, y)
   }
+  getTelemetry(): string {
+    return this.telemetry.visible ? this.telemetryText.text : ''
+  }
   /** The real prop silhouette glows; no detached targeting ellipse. */
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.school?.setInteractionGlow(active, time, reduced)
