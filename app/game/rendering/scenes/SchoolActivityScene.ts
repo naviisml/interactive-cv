@@ -20,7 +20,6 @@ export class SchoolActivityScene extends Container {
   private code?: Text
   private rover?: Container
   private cells: Graphics[] = []
-  private controls: { node: Container; action: string }[] = []
   constructor(
     private kind: 'circuit' | 'compile',
     private state: ActivitySystem,
@@ -108,11 +107,14 @@ export class SchoolActivityScene extends Container {
     node.addChild(new Graphics().roundRect(-width / 2, -17, width, 35, 4).fill(0xdce0bf))
     const title = label(node, text, 0, -10, 12, 0x294a3b, width - 4)
     title.anchor.x = 0.5
-    tapTarget(node, () => {
-      action()
-      this.onInteraction()
-    }, new Rectangle(-width / 2, -22, width, 44))
-    this.controls.push({ node, action: text })
+    tapTarget(
+      node,
+      () => {
+        action()
+        this.onInteraction()
+      },
+      new Rectangle(-width / 2, -22, width, 44),
+    )
     this.addChild(node)
   }
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
@@ -125,8 +127,10 @@ export class SchoolActivityScene extends Container {
       .stroke({ color: 0xf8d893, width: 13, alpha: 0.1 + pulse * 0.12 })
       .roundRect(44, -238, 278, 174, 3)
       .stroke({ color: 0xffeab6, width: 3, alpha: 0.67 + pulse * 0.24 })
-    if (!reduced) this.boardGlow.rect(49 + travel, -242, 22, 5)
-      .fill({ color: 0xffffd6, alpha: 0.4 + pulse * 0.3 })
+    if (!reduced)
+      this.boardGlow
+        .rect(49 + travel, -242, 22, 5)
+        .fill({ color: 0xffffd6, alpha: 0.4 + pulse * 0.3 })
   }
   command(command: RoverCommand) {
     this.state.editRover(command)
@@ -162,7 +166,17 @@ export class SchoolActivityScene extends Container {
         ])
           if (mask & bit!) tile.moveTo(0, 0).lineTo(x!, y!).stroke({ width: 5, color })
         tile.circle(0, 0, 4).fill(color)
-        if (on && !reduced) tile.circle(Math.sin(time * 4 + i) * 12, 0, 2).fill(0xfff5c7)
+        if (on && !reduced) {
+          const arms = [
+            [1, 0, -22],
+            [2, 23, 0],
+            [4, 0, 22],
+            [8, -23, 0],
+          ].filter(([bit]) => mask & bit!)
+          const arm = arms[Math.floor(time + i) % arms.length]
+          const travel = (time * 1.7 + i * 0.2) % 1
+          if (arm) tile.circle(arm[1]! * travel, arm[2]! * travel, 2).fill(0xfff5c7)
+        }
       })
       // Visible bridge segments agree with the electrical graph, including gaps between tiles.
       for (let row = 0; row < 2; row++)

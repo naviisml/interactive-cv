@@ -66,7 +66,8 @@
     "wire": "Draai draad {n}",
     "schoolyard": "SCHOOLPLEIN",
     "skillsHint": "Spring of tik op een logo om het te ontdekken.",
-    "skillFound": "{name} ontdekt · {count}/{total} tools"
+    "skillFound": "{name} ontdekt · {count}/{total} tools",
+    "departure": "Haal de reiziger op"
   },
   "company": {
     "slideshow": "Presentatie van Navel Development",
@@ -81,25 +82,6 @@
   "world": {
     "tutorial": "UITLEG",
     "route": "Klim omhoog. Glijd omlaag."
-  },
-  "finance": {
-    "debt": "Schuld",
-    "savings": "Spaargeld",
-    "income": "Jaarinkomen",
-    "notShared": "Niet gedeeld",
-    "about": "Over schulden, spaargeld, inkomen en hulp",
-    "title": "Geld door de jaren heen.",
-    "eyebrow": "GELD & WERK",
-    "intro": "Ik wil open zijn over geld én werk. Schulden, spaargeld en inkomen horen allemaal bij dit verhaal. Je hoeft je niet te schamen voor schulden. Praten over inkomen en spaargeld zou ook geen taboe moeten zijn.",
-    "support": "Hulp bij schulden",
-    "supportIntro": "Je hoeft het niet alleen op te lossen. Deze organisaties kunnen je helpen een eerste stap te zetten.",
-    "helpIn": "Hulp in",
-    "other": "Een ander land",
-    "fallback": "Begin bij je gemeente of sociale dienst en vraag naar erkende schuldhulpverlening in jouw omgeving.",
-    "footnote": "Voorwaarden, kosten en mogelijkheden verschillen. Controleer dit bij de organisatie voordat je begint.",
-    "close": "Geldinformatie sluiten",
-    "gross": "bruto",
-    "net": "netto"
   },
   "page": {
     "life": "EEN LEVEN IN ONTWIKKELING",
@@ -116,7 +98,7 @@
   },
   "scene": {
     "basketball": "Gooi de basketbal",
-    "departure": "Laat het vliegtuig vertrekken",
+    "departure": "Haal de reiziger op",
     "camera": "Start de rit langs de flitspaal",
     "luggage": "Bel voor de bagage",
     "circuit": "Verbind kabel",

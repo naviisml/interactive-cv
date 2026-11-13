@@ -5,7 +5,9 @@ import { mkdir } from 'node:fs/promises'
 await mkdir('test-results/world', { recursive: true })
 const base = process.env.SMOKE_URL || 'http://127.0.0.1:3000'
 const browser = await chromium.launch({
-  channel: 'chrome',
+  ...(process.env.CHROMIUM_EXECUTABLE
+    ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
+    : { channel: 'chrome' }),
   headless: true,
   args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
 })
@@ -80,6 +82,19 @@ async function scenario(label, width, height, mobile) {
     const canvas = page.locator('canvas[data-renderer="pixi"]')
     await canvas.waitFor({ state: 'visible', timeout: 30000 })
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
+    await page.locator('.intro-hero h1').waitFor({ state: 'visible' })
+    await page.screenshot({ path: `test-results/world/${label}-intro.png` })
+    await page.locator('.world').focus()
+    await page.keyboard.down('ArrowRight')
+    await page.waitForTimeout(180)
+    await page.keyboard.up('ArrowRight')
+    await page.waitForTimeout(850)
+    assert.equal(
+      await page
+        .locator('.explore-stage')
+        .evaluate((el) => el.classList.contains('intro-dismissed')),
+      true,
+    )
     const header = await page.locator('.portfolio-header').boundingBox(),
       stage = await page.locator('.world').boundingBox(),
       footer = await page.locator('.journey-footer').boundingBox()
@@ -98,11 +113,14 @@ async function scenario(label, width, height, mobile) {
       .getByRole('button', { name: /My first code/ })
       .click()
     await waitForArrival(page, 'first-lines')
-    assert.equal(await page.locator('.world-caption, .first-code-launch').count(), 0,
-      'the world must not be covered by chapter banners or floating CTA buttons')
+    assert.equal(
+      await page.locator('.world-caption, .first-code-launch').count(),
+      0,
+      'the world must not be covered by chapter banners or floating CTA buttons',
+    )
     const openFirst = page.getByRole('button', { name: /Open the first computer/i })
     await tapWorld(page, canvas, 'first-lines', 150, -140, mobile)
-    const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
+    const firstCode = page.getByRole('region', { name: 'Explore the code' })
     await firstCode.waitFor({ state: 'visible' })
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
     assert.equal(await page.locator('.portfolio-header').evaluate((element) => element.inert), true)
@@ -223,15 +241,21 @@ async function scenario(label, width, height, mobile) {
     const viewToggle = page.locator('.header-view-toggle')
     assert.equal(await tooltipToggle.getAttribute('aria-pressed'), 'true')
     await tooltipToggle.click()
-    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'false')
+    await page.waitForFunction(
+      () => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'false',
+    )
     await tooltipToggle.click()
-    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'true')
+    await page.waitForFunction(
+      () => document.querySelector('canvas')?.dataset.tooltipsEnabled === 'true',
+    )
     assert.equal(await viewToggle.count(), 1)
     if (mobile) {
       const select = await page.locator('.language-switch').boundingBox()
       const menu = await page.locator('.menu-toggle').boundingBox()
-      assert.ok(select && menu && Math.abs((select.y + select.height / 2) - (menu.y + menu.height / 2)) < 4,
-        'language selector is vertically centered beside menu on mobile')
+      assert.ok(
+        select && menu && Math.abs(select.y + select.height / 2 - (menu.y + menu.height / 2)) < 4,
+        'language selector is vertically centered beside menu on mobile',
+      )
     }
     if (mobile) {
       await page.locator('.menu-toggle').click()
@@ -240,8 +264,11 @@ async function scenario(label, width, height, mobile) {
         .getByRole('button', { name: /Panta Rhei/ })
         .click()
       assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false')
-      assert.equal(await canvas.getAttribute('data-navigating'), 'false',
-        'outside menu dismissal must not start a journey')
+      assert.equal(
+        await canvas.getAttribute('data-navigating'),
+        'false',
+        'outside menu dismissal must not start a journey',
+      )
       assert.equal(await page.getByRole('dialog').count(), 0)
       await page.locator('.menu-toggle').click()
       await page.getByRole('button', { name: 'Skills', exact: true }).focus()
@@ -274,7 +301,8 @@ async function scenario(label, width, height, mobile) {
     await invalidStage.focus()
     await invalidStage.click()
     await page.waitForFunction(
-      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'error',
+      () =>
+        JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'error',
     )
     for (const step of ['commit', 'test', 'build', 'deploy']) {
       const stage = page.getByRole('button', { name: 'Pipeline: ' + step, exact: true })
@@ -282,7 +310,8 @@ async function scenario(label, width, height, mobile) {
       await stage.click()
     }
     await page.waitForFunction(
-      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'success',
+      () =>
+        JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'success',
     )
     const theme = page.getByRole('button', { name: 'Change CSS theme', exact: true })
     await theme.focus()
@@ -324,8 +353,11 @@ async function scenario(label, width, height, mobile) {
       await page.getByRole('button', { name: 'Skills', exact: true }).click()
       await page.keyboard.press('Space')
       await page.waitForTimeout(150)
-      assert.equal(await canvas.getAttribute('data-navigating'), 'false',
-        'Space must not reactivate focused navigation')
+      assert.equal(
+        await canvas.getAttribute('data-navigating'),
+        'false',
+        'Space must not reactivate focused navigation',
+      )
     } else {
       assert.ok(await page.getByRole('button', { name: 'Jump', exact: true }).isVisible())
       await page.locator('.header-view-toggle').click()
@@ -349,12 +381,22 @@ async function scenario(label, width, height, mobile) {
       )
       await page.getByRole('button', { name: 'Work', exact: true }).click()
       await waitForArrival(page, 'fletcher')
-      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door')
+      await page.waitForFunction(
+        () => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door',
+      )
       assert.equal(await canvas.getAttribute('data-cue'), '', 'doors never show tooltip balloons')
       assert.equal(await page.locator('.world-caption').count(), 0)
-      assert.equal(await page.locator('.canvas-accessibility').getByRole('button', {
-        name: 'Enter building', exact: true,
-      }).count(), 1, 'keyboard alternatives remain available')
+      assert.equal(
+        await page
+          .locator('.canvas-accessibility')
+          .getByRole('button', {
+            name: 'Enter building',
+            exact: true,
+          })
+          .count(),
+        1,
+        'keyboard alternatives remain available',
+      )
       await page.locator('.world').focus()
       await page.keyboard.press('e')
       await page.getByRole('dialog').waitFor({ state: 'visible' })
@@ -365,13 +407,13 @@ async function scenario(label, width, height, mobile) {
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
       )
-      await page.waitForFunction(
-        () => {
-          const canvas = document.querySelector('canvas')
-          return JSON.parse(canvas?.dataset.usedCues || '[]').includes('fletcher:door') &&
-            canvas?.dataset.cue !== 'fletcher:door'
-        },
-      )
+      await page.waitForFunction(() => {
+        const canvas = document.querySelector('canvas')
+        return (
+          JSON.parse(canvas?.dataset.usedCues || '[]').includes('fletcher:door') &&
+          canvas?.dataset.cue !== 'fletcher:door'
+        )
+      })
       // A used doorway stays accessible by E even after its hint disappears.
       await page.locator('.world').focus()
       await page.keyboard.press('e')
@@ -387,9 +429,7 @@ async function scenario(label, width, height, mobile) {
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
       )
-      await page.waitForFunction(
-        () => document.activeElement?.matches('.world'),
-      )
+      await page.waitForFunction(() => document.activeElement?.matches('.world'))
       const doorX = Number(await canvas.getAttribute('data-player-x'))
       await page.keyboard.down('ArrowLeft')
       await page.waitForTimeout(400)
@@ -420,8 +460,16 @@ async function scenario(label, width, height, mobile) {
       await computerAction.click()
       const archive = page.locator('.archive-shell')
       await archive.waitFor({ state: 'visible', timeout: 20000 })
-      assert.equal(await archive.locator('.archive-file').count(), 7, 'all project dossiers are available')
-      assert.equal(await page.locator('.company-controls').count(), 0, 'old slideshow controls are removed')
+      assert.equal(
+        await archive.locator('.archive-file').count(),
+        7,
+        'all project dossiers are available',
+      )
+      assert.equal(
+        await page.locator('.company-controls').count(),
+        0,
+        'old slideshow controls are removed',
+      )
       await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
       const first = archive.locator('.archive-document h1')
       await first.getByText('Navel Development').waitFor()
@@ -434,7 +482,10 @@ async function scenario(label, width, height, mobile) {
       const diagram = archive.locator('.artifact')
       assert.equal(await diagram.locator('.artifact-node').count(), 5)
       await diagram.getByRole('button', { name: /Docker Swarm/ }).click()
-      assert.match(await diagram.locator('.artifact-info').innerText(), /Each website runs as its own service/)
+      assert.match(
+        await diagram.locator('.artifact-info').innerText(),
+        /Each website runs as its own service/,
+      )
       const x = Number(await canvas.getAttribute('data-player-x'))
       await archive.focus()
       await page.keyboard.press('ArrowLeft')
@@ -446,7 +497,9 @@ async function scenario(label, width, height, mobile) {
       await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
       await page.keyboard.press('Escape')
       await archive.waitFor({ state: 'hidden' })
-      await page.waitForFunction(() => document.querySelector('canvas')?.dataset.presentation === '1.000')
+      await page.waitForFunction(
+        () => document.querySelector('canvas')?.dataset.presentation === '1.000',
+      )
       assert.equal(
         await page
           .locator('.journey-footer')
@@ -463,8 +516,11 @@ async function scenario(label, width, height, mobile) {
       .click()
     await waitForArrival(page, 'roc-hilversum')
     await page.waitForTimeout(500)
-    assert.equal(await page.locator('.money-counter').count(), 0,
-      'unshared debt, savings and annual income do not occupy the mobile header')
+    assert.equal(
+      await page.locator('.money-counter').count(),
+      0,
+      'removed financial controls never occupy the header',
+    )
     for (const [index, turns] of [
       [0, 3],
       [2, 1],
@@ -528,10 +584,18 @@ async function scenario(label, width, height, mobile) {
       const stop = page.locator('.journey-footer').getByRole('button', { name: title })
       if (!(await stop.count())) continue
       await stop.click()
-      await waitForArrival(page, ({
-        school: 'panta-rhei', codam: 'coding-college', hotel: 'fletcher',
-        airport: 'get-e', office: 'appjection', computer: 'navel-development', camp: 'contact',
-      })[name])
+      await waitForArrival(
+        page,
+        {
+          school: 'panta-rhei',
+          codam: 'coding-college',
+          hotel: 'fletcher',
+          airport: 'get-e',
+          office: 'appjection',
+          computer: 'navel-development',
+          camp: 'contact',
+        }[name],
+      )
       if (mobile) await canvas.tap({ position: { x: 180, y: 200 } })
       await page.waitForTimeout(350)
       await page.screenshot({ path: `test-results/world/${label}-${name}.png` })
@@ -584,19 +648,29 @@ async function visualAuditScenario() {
     ]) {
       const button = page.locator('.journey-footer').getByRole('button', { name: title })
       await button.click()
-      await waitForArrival(page, ({
-        '01-first-code': 'first-lines', '02-basket': 'panta-rhei',
-        '03-circuit': 'roc-hilversum', '04-rover': 'coding-college',
-        '05-skills': 'skills-road', '06-hotel': 'fletcher',
-        '07-airport': 'get-e', '08-office': 'appjection',
-        '09-company': 'navel-development', '10-camp': 'contact',
-      })[name])
+      await waitForArrival(
+        page,
+        {
+          '01-first-code': 'first-lines',
+          '02-basket': 'panta-rhei',
+          '03-circuit': 'roc-hilversum',
+          '04-rover': 'coding-college',
+          '05-skills': 'skills-road',
+          '06-hotel': 'fletcher',
+          '07-airport': 'get-e',
+          '08-office': 'appjection',
+          '09-company': 'navel-development',
+          '10-camp': 'contact',
+        }[name],
+      )
       await page.waitForTimeout(500)
       await page.screenshot({ path: `test-results/world/audit-${name}.png` })
       if (name === '06-hotel') {
         // A character walking from the entrance towards the luggage bell should
         // switch which world object is highlighted, without any floating HUD.
-        await page.waitForFunction(() => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door')
+        await page.waitForFunction(
+          () => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door',
+        )
         await page.locator('.world').focus()
         await page.keyboard.down('ArrowRight')
         try {
@@ -609,23 +683,32 @@ async function visualAuditScenario() {
           await page.keyboard.up('ArrowRight')
         }
         await page.keyboard.press('e')
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('canvas')
-            return !!JSON.parse(el?.dataset.actions || '{}').fletcher?.running &&
-              JSON.parse(el?.dataset.usedCues || '[]').includes('fletcher:bell') &&
-              el?.dataset.cue !== 'fletcher:bell'
-          },
+        await page.waitForFunction(() => {
+          const el = document.querySelector('canvas')
+          return (
+            !!JSON.parse(el?.dataset.actions || '{}').fletcher?.running &&
+            JSON.parse(el?.dataset.usedCues || '[]').includes('fletcher:bell') &&
+            el?.dataset.cue !== 'fletcher:bell'
+          )
+        })
+        assert.equal(
+          await canvas.getAttribute('data-cue'),
+          '',
+          'used bell has no introductory hint',
         )
-        assert.equal(await canvas.getAttribute('data-cue'), '', 'used bell has no introductory hint')
         await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
         await page.waitForFunction(
-          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.completed,
+          () =>
+            !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher
+              ?.completed,
           {},
           { timeout: 7000 },
         )
         await page.screenshot({ path: 'test-results/world/audit-hotel-luggage-delivered.png' })
-        assert.equal(await page.locator('.world-caption,.caption-activity,.first-code-launch').count(), 0)
+        assert.equal(
+          await page.locator('.world-caption,.caption-activity,.first-code-launch').count(),
+          0,
+        )
       }
       if (name === '02-basket') {
         await chargeWorld(page, canvas, 'panta-rhei', 65, -10, 1130)
@@ -638,23 +721,31 @@ async function visualAuditScenario() {
         )
       }
       if (name === '07-airport') {
-        await chargeWorld(page, canvas, 'get-e', 130, -22, 1500)
-        await page.waitForFunction(() =>
-          /Sim. speed: [0-9]+ km\/h/.test(JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}')['get-e'] || ''),
-          {}, { timeout: 4000 })
-        await page.waitForTimeout(2200)
-        await page.screenshot({ path: 'test-results/world/audit-aircraft-airborne.png' })
+        await page.waitForFunction(
+          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}')['get-e'],
+        )
+        await page.screenshot({ path: 'test-results/world/audit-taxi-transfer.png' })
       }
       if (name === '08-office') {
         await chargeWorld(page, canvas, 'appjection', 70, -30, 650)
-        await page.waitForFunction(() =>
-          /km\/h/.test(JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection || ''),
-          {}, { timeout: 4000 })
+        await page.waitForFunction(
+          () =>
+            /km\/h/.test(
+              JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection ||
+                '',
+            ),
+          {},
+          { timeout: 4000 },
+        )
         await page.waitForTimeout(1100)
-        const bounds = await canvas.evaluate((el) => JSON.parse(el.dataset.telemetryBounds || '{}').appjection)
+        const bounds = await canvas.evaluate(
+          (el) => JSON.parse(el.dataset.telemetryBounds || '{}').appjection,
+        )
         if (bounds) {
-          assert.ok(bounds.left >= -1 && bounds.right <= 391,
-            'moving speed telemetry must remain inside the mobile viewport')
+          assert.ok(
+            bounds.left >= -1 && bounds.right <= 391,
+            'moving speed telemetry must remain inside the mobile viewport',
+          )
         }
         await page.screenshot({ path: 'test-results/world/audit-car-passing-camera.png' })
       }
@@ -680,11 +771,15 @@ async function mobileArchiveScenario(label, width, height) {
   try {
     await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('canvas[data-renderer="pixi"]').waitFor({ state: 'visible' })
-    await page.locator('.journey-footer')
-      .getByRole('button', { name: /Navel Development/ }).click()
+    await page
+      .locator('.journey-footer')
+      .getByRole('button', { name: /Navel Development/ })
+      .click()
     await waitForArrival(page, 'navel-development')
-    await page.locator('.canvas-accessibility')
-      .getByRole('button', { name: 'Explore my projects', exact: true }).click()
+    await page
+      .locator('.canvas-accessibility')
+      .getByRole('button', { name: 'Explore my projects', exact: true })
+      .click()
     const archive = page.locator('.archive-shell')
     await archive.waitFor({ state: 'visible', timeout: 20000 })
     const bounds = await archive.boundingBox()
@@ -700,27 +795,44 @@ async function mobileArchiveScenario(label, width, height) {
     const active = archive.locator('.archive-file.is-active')
     const listBox = await list.boundingBox()
     const activeBox = await active.boundingBox()
-    assert.ok(listBox && activeBox && activeBox.x >= listBox.x - 3 &&
-      activeBox.x + activeBox.width <= listBox.x + listBox.width + 3,
-      'mobile file index keeps the selected project in view')
-    await archive.locator('.artifact').getByRole('button', { name: /Traefik/ }).click()
-    await archive.locator('.artifact-info').getByText(/Routing traffic/).waitFor()
+    assert.ok(
+      listBox &&
+        activeBox &&
+        activeBox.x >= listBox.x - 3 &&
+        activeBox.x + activeBox.width <= listBox.x + listBox.width + 3,
+      'mobile file index keeps the selected project in view',
+    )
+    await archive
+      .locator('.artifact')
+      .getByRole('button', { name: /Traefik/ })
+      .click()
+    await archive
+      .locator('.artifact-info')
+      .getByText(/Routing traffic/)
+      .waitFor()
     await archive.locator('.archive-main-scroll').evaluate((el) => {
       el.scrollTop = el.scrollHeight
     })
     await archive.locator('.archive-story h2').waitFor({ state: 'visible' })
     await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-      'project archive does not create horizontal document overflow')
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      'project archive does not create horizontal document overflow',
+    )
     await archive.getByRole('button', { name: 'Return to world', exact: true }).click()
     await archive.waitFor({ state: 'hidden' })
-    assert.ok(await page.locator('.movement-controls').count() || await page.locator('.world').isVisible())
+    assert.ok(
+      (await page.locator('.movement-controls').count()) ||
+        (await page.locator('.world').isVisible()),
+    )
     assert.deepEqual(errors, [])
     console.log(`PASS_${label}: interactive project archive, mobile scroll and return`)
   } catch (error) {
     failures++
     console.error(`FAIL_${label}: ${error.stack || error}`)
-    await page.screenshot({ path: `test-results/world/${label}-archive-failure.png` }).catch(() => {})
+    await page
+      .screenshot({ path: `test-results/world/${label}-archive-failure.png` })
+      .catch(() => {})
   } finally {
     await page.close()
   }

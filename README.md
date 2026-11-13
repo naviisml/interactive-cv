@@ -21,16 +21,15 @@ npm run format:check
 
 | Directory | Responsibility |
 | --- | --- |
-| `app/components/layout` | Navigation, finance placement and language selection |
+| `app/components/layout` | Navigation and language selection |
 | `app/components/portfolio` | Journey shell and chapter dialog |
 | `app/components/game` | Canvas lifecycle, touch/keyboard hints, computer invitation, slideshow controls and building interiors |
-| `app/components/finance` | Money counters and support information |
 | `app/components/ui` | Shared UI components |
-| `app/content` | CV events with finance metadata, journey sections, logo manifest, company slides and support resources |
+| `app/content` | CV events, journey sections, logo manifest and company slides |
 | `app/content/locales` | Dutch CV and support-resource copy |
 | `i18n/locales` | English and Dutch interface messages |
 | `app/game/engine` | Movement loop, viewport and persistent activity state |
-| `app/game/core` | Framework-independent movement, terrain, navigation, finance history and presentation rules |
+| `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
 | `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
 | `app/game/rendering/sprites` | Character atlas, scenery textures, aircraft, computer, character and building exteriors |
 | `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and building activities, campsite and layered level entrances |
@@ -62,7 +61,6 @@ The opening CRT and desk are native `FirstLinesScene` objects, with their artwor
 
 `@nuxtjs/i18n` loads English and Dutch messages lazily. The header language selector persists the choice in the locale cookie. UI messages live in `i18n/locales`; event translations are separate content objects so paragraphs stay readable and editable. Locale changes update signs and the computer without rebuilding physical layout or restarting the journey.
 
-Financial snapshots now live in the `finance` metadata on the original event in `app/content/timeline.ts`. Omitted values carry forward, while explicit `null` withholds information at and after an event. Current/private balances and salary are not published. Historic business turnover in a context note is not confused with personal gross/net annual income. The country-specific support links live in `app/content/finance-support.json` and retain their original URLs.
 
 ## Controls and checks
 

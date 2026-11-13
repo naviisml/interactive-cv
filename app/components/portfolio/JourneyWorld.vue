@@ -24,6 +24,7 @@ const entries = computed(() =>
 )
 const filters = ['all', 'work', 'projects', 'school', 'skills'] as const
 const worldCanvas = ref<{ interactNearest: () => boolean }>()
+const introDismissed = useState('journey-intro-dismissed', () => false)
 const sceneChanging = ref(false)
 const worldReady = ref(false)
 const rendererUnavailable = ref(false)
@@ -32,7 +33,6 @@ const detailIndex = ref<number | null>(null),
 const detailEvent = computed(() =>
   detailIndex.value === null ? undefined : timeline.value[detailIndex.value],
 )
-const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
 let interactionOpener: HTMLElement | undefined
 async function restoreInteractionFocus() {
@@ -40,6 +40,10 @@ async function restoreInteractionFocus() {
   if (interactionOpener?.isConnected) interactionOpener.focus({ preventScroll: true })
   else worldRoot.value?.focus({ preventScroll: true })
   interactionOpener = undefined
+}
+function dismissIntro() {
+  introDismissed.value = true
+  worldRoot.value?.focus()
 }
 function openFirstComputer(event?: MouseEvent) {
   if (listMode.value || firstCodeOpen.value) return
@@ -100,6 +104,12 @@ const {
   scrollByDistance,
   endScrollTravel,
 } = journey
+watch(
+  () => motion.x,
+  (x, previous) => {
+    if (Math.abs(x - previous) > 0.1) introDismissed.value = true
+  },
+)
 const scenery = computed(() =>
   sceneryTransition(
     motion.x,
@@ -157,13 +167,12 @@ function setTooltips(enabled: boolean) {
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, rendererUnavailable],
+  [listMode, detailIndex, buildingVisit.blocking, firstCodeOpen, rendererUnavailable],
   () => {
     paused.value =
       listMode.value ||
       rendererUnavailable.value ||
       detailIndex.value !== null ||
-      moneyOpen.value ||
       firstCodeOpen.value ||
       buildingVisit.blocking.value
   },
@@ -226,11 +235,12 @@ const displayProgress = computed(() => (listMode.value ? listProgress.value : pr
 const visitEvent = computed(() => (visit.index === null ? undefined : timeline.value[visit.index]))
 const current = computed(() => timeline.value[nearestIndex.value]!)
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
-// Financial metadata follows the same ordered scenes as the active list/world,
-// including authored skills/contact scenes that have no separate CV record.
-const financeIndex = computed(() => activeIndex.value)
 const worldPanelOpen = computed(
-  () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value || presentation.active,
+  () =>
+    !!detailEvent.value ||
+    buildingVisit.blocking.value ||
+    firstCodeOpen.value ||
+    presentation.active,
 )
 let buildingOpener: HTMLElement | undefined
 function enterBuilding(index: number, event?: MouseEvent) {
@@ -385,8 +395,14 @@ watch(
   { flush: 'post' },
 )
 function wheelTravel(event: WheelEvent) {
-  if (event.ctrlKey || paused.value || activities.charging || presentation.active ||
-      (event.target as HTMLElement)?.closest('[data-world-panel]')) return
+  if (
+    event.ctrlKey ||
+    paused.value ||
+    activities.charging ||
+    presentation.active ||
+    (event.target as HTMLElement)?.closest('[data-world-panel]')
+  )
+    return
   const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
   event.preventDefault()
   scrollByDistance(delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1), 'wheel')
@@ -446,9 +462,22 @@ function navigateTimeline(index: number) {
   else goTo(index)
 }
 function interact(event: KeyboardEvent) {
-  if (paused.value || presentation.active || event.defaultPrevented || event.repeat || listMode.value ||
-      visit.phase !== 'outside' || event.key.toLowerCase() !== 'e' ||
-      (event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]'))
+  const ball = activities.charges['panta-rhei']
+  if (ball?.holding && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+    event.preventDefault()
+    ball.power = Math.max(0, Math.min(1, ball.power + (event.key === 'ArrowUp' ? 0.06 : -0.06)))
+    return
+  }
+  if (
+    paused.value ||
+    presentation.active ||
+    event.defaultPrevented ||
+    event.repeat ||
+    listMode.value ||
+    visit.phase !== 'outside' ||
+    event.key.toLowerCase() !== 'e' ||
+    (event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]')
+  )
     return
   // A world interaction is chosen by proximity to an actual object, not by
   // whichever chapter happened to be selected in the HTML header.
@@ -481,7 +510,6 @@ onNuxtReady(async () => {
     listMode.value ||
     rendererUnavailable.value ||
     detailIndex.value !== null ||
-    moneyOpen.value ||
     firstCodeOpen.value ||
     buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
@@ -505,16 +533,12 @@ onBeforeUnmount(() => {
   <main class="journey-shell" :class="{ 'is-list': listMode, 'scene-changing': sceneChanging }">
     <PortfolioHeader
       :inert="worldPanelOpen"
-      :finance-events="timeline"
       :active="activeLevel.id"
-      :finance-index="financeIndex"
-      :context-title="timeline[activeIndex]?.title"
       :list-mode="listMode"
       @navigate="navigateLevel"
       @toggle-list="toggleList"
       :tooltips-enabled="tooltipsEnabled"
-    @toggle-tooltips="setTooltips"
-    @money-toggle="moneyOpen = $event"
+      @toggle-tooltips="setTooltips"
     />
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories">
       <button
@@ -528,70 +552,103 @@ onBeforeUnmount(() => {
         ><small>{{ filteredIndexes(filter).length }}</small>
       </button>
     </nav>
-    <section
-      v-if="!listMode"
-      ref="worldRoot"
-      class="world"
-      :style="{ '--ground-y': `${view.groundInset}px` }"
-      :class="`level-${activeLevel.id}`"
-      tabindex="-1"
-      @pointerdown="gestureStart"
-      @pointermove="gestureMove"
-      @pointerup="gestureEnd"
-      @pointercancel="gestureEnd"
-      @lostpointercapture="gestureEnd"
-      @wheel="wheelTravel"
-      :aria-label="t('common.worldLabel')"
-    >
-      <div class="world-scene" :inert="worldPanelOpen && !presentation.active">
-        <ClientOnly
-          ><GameCanvas
-            v-if="worldReady"
-            ref="worldCanvas"
-            @availability="rendererUnavailable = !$event"
-            :model="rendererModel"
-            :active-id="current.id"
-            :show-tooltips="tooltipsEnabled"
-            :get-frame="getWorldFrame"
-            :subscribe="subscribe"
-            :activities="activities"
-            @skill="(name, count) => (exploredSkill = { name, count })"
-            @details="handleSceneDetails"
-            @seek="seekPresentation"
-            @start-computer="startPresentation"
-            @read-fallback="toggleList"
-            @open-first-computer="openFirstComputer"
-        /></ClientOnly>
-        <div class="world-chrome" :inert="rendererUnavailable">
-          <p class="world-chapter-announcement" role="status" aria-live="polite">
-            {{ current.title }}. {{ skillFeedback }}
+    <div v-if="!listMode" class="explore-stage" :class="{ 'intro-dismissed': introDismissed }">
+      <aside class="intro-hero" :inert="introDismissed" :aria-hidden="introDismissed">
+        <div class="intro-copy">
+          <p class="eyebrow">NAVARONE ISMAIL / SOFTWARE DEVELOPER</p>
+          <h1>{{ locale === 'nl' ? 'Welkom in mijn portfolio.' : 'Welcome to my portfolio.' }}</h1>
+          <p>
+            {{
+              locale === 'nl'
+                ? 'Een loopbaan is meer dan een lijst functies. Daarom kun je door mijn verhaal lopen: ontdek wat ik bouwde, hoe ik leerde en de mensen en projecten onderweg.'
+                : 'A career is more than a list of job titles. So I made mine a place to explore. Walk through my story, try what I built, and discover the projects along the way.'
+            }}
           </p>
-          <MovementControls
-            v-if="!presentation.active"
-            :near-ladder="!!nearLadder"
-            :paused="paused"
-            @direction="touchDirection = $event"
-            @vertical="touchVertical = $event"
-            @sprint="touchSprint = $event"
-            @jump="jump"
-          />
-          <ProjectArchive
-            v-if="presentation.active"
-            :progress="presentation.progress"
-            :slides="rendererModel.slides"
-            @seek="seekPresentation"
-            @exit="closeProjectArchive"
-          />
+          <p class="intro-desktop">
+            <kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd>
+            {{ locale === 'nl' ? 'lopen' : 'walk' }} · <kbd>Space</kbd>
+            {{ locale === 'nl' ? 'springen' : 'jump' }} · <kbd>E</kbd>
+            {{ locale === 'nl' ? 'ontdekken' : 'interact' }}
+          </p>
+          <p class="intro-touch">
+            {{
+              locale === 'nl'
+                ? 'Veeg door de wereld of gebruik de pijlen. Tik op objecten om ze te ontdekken.'
+                : 'Swipe through the world or use the arrows. Tap objects to discover what they do.'
+            }}
+          </p>
+          <button
+            class="intro-start"
+            @click="dismissIntro"
+          >
+            {{ locale === 'nl' ? 'Begin met ontdekken' : 'Start exploring' }} →
+          </button>
         </div>
-      </div>
-      <BuildingInterior
-        v-if="visit.phase === 'inside' && visitEvent"
-        :event="visitEvent"
-        @leave="buildingVisit.leave"
-      />
-      <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
-      <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
-    </section>
+      </aside>
+      <section
+        ref="worldRoot"
+        class="world"
+        :style="{ '--ground-y': `${view.groundInset}px` }"
+        :class="`level-${activeLevel.id}`"
+        tabindex="-1"
+        @pointerdown="gestureStart"
+        @pointermove="gestureMove"
+        @pointerup="gestureEnd"
+        @pointercancel="gestureEnd"
+        @lostpointercapture="gestureEnd"
+        @wheel="wheelTravel"
+        :aria-label="t('common.worldLabel')"
+      >
+        <div class="world-scene" :inert="worldPanelOpen && !presentation.active">
+          <ClientOnly
+            ><GameCanvas
+              v-if="worldReady"
+              ref="worldCanvas"
+              @availability="rendererUnavailable = !$event"
+              :model="rendererModel"
+              :active-id="current.id"
+              :show-tooltips="tooltipsEnabled"
+              :get-frame="getWorldFrame"
+              :subscribe="subscribe"
+              :activities="activities"
+              @skill="(name, count) => (exploredSkill = { name, count })"
+              @details="handleSceneDetails"
+              @seek="seekPresentation"
+              @start-computer="startPresentation"
+              @read-fallback="toggleList"
+              @open-first-computer="openFirstComputer"
+          /></ClientOnly>
+          <div class="world-chrome" :inert="rendererUnavailable">
+            <p class="world-chapter-announcement" role="status" aria-live="polite">
+              {{ current.title }}. {{ skillFeedback }}
+            </p>
+            <MovementControls
+              v-if="!presentation.active"
+              :near-ladder="!!nearLadder"
+              :paused="paused"
+              @direction="touchDirection = $event"
+              @vertical="touchVertical = $event"
+              @sprint="touchSprint = $event"
+              @jump="jump"
+            />
+            <ProjectArchive
+              v-if="presentation.active"
+              :progress="presentation.progress"
+              :slides="rendererModel.slides"
+              @seek="seekPresentation"
+              @exit="closeProjectArchive"
+            />
+          </div>
+        </div>
+        <BuildingInterior
+          v-if="visit.phase === 'inside' && visitEvent"
+          :event="visitEvent"
+          @leave="buildingVisit.leave"
+        />
+        <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
+        <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
+      </section>
+    </div>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
         :entries="entries"
@@ -617,6 +674,135 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.explore-stage {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  background: #ded5be;
+}
+.explore-stage > .world {
+  flex: 1;
+  min-width: 0;
+}
+.intro-hero {
+  flex: 0 0 50%;
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+  z-index: 2;
+  background: linear-gradient(100deg, #f8f5ed 55%, #ded5be);
+  transition:
+    flex-basis 0.75s ease,
+    opacity 0.35s ease;
+}
+.intro-copy {
+  width: 100%;
+  min-width: 320px;
+  padding: 28px clamp(24px, 4vw, 72px);
+  box-sizing: border-box;
+}
+.intro-copy h1 {
+  font:
+    600 clamp(32px, 4vw, 65px)/1.06 'Space Grotesk',
+    sans-serif;
+  letter-spacing: -0.05em;
+  margin: 22px 0;
+  color: #294e40;
+  text-wrap: balance;
+}
+.intro-copy > p:not(.eyebrow) {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #4f695b;
+  max-width: 470px;
+}
+.intro-copy .intro-desktop {
+  font-size: 12px !important;
+  margin-top: 26px;
+}
+.intro-touch {
+  display: none;
+}
+.intro-start {
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #587b64;
+  border-radius: 6px;
+  margin-top: 8px;
+  background: #315747;
+  color: #f8f5ed;
+  font-size: 13px;
+}
+.intro-dismissed .intro-hero {
+  flex-basis: 0%;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .intro-desktop {
+    display: none;
+  }
+  .intro-touch {
+    display: block;
+  }
+}
+@media (max-width: 700px) {
+  .explore-stage {
+    flex-direction: column;
+  }
+  .intro-hero {
+    flex-basis: 43%;
+    background: linear-gradient(#f8f5ed 65%, #ded5be);
+    transition:
+      flex-basis 0.65s ease,
+      opacity 0.25s ease;
+  }
+  .intro-copy {
+    min-width: 0;
+    padding: 12px 22px 18px;
+  }
+  .intro-copy .eyebrow {
+    font-size: 8px;
+    margin: 0;
+  }
+  .intro-copy h1 {
+    font-size: clamp(25px, 7vw, 36px);
+    margin: 9px 0;
+  }
+  .intro-copy > p:not(.eyebrow) {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 8px 0;
+  }
+  .intro-copy .intro-desktop {
+    display: none;
+  }
+  .intro-touch {
+    display: block;
+  }
+  .intro-start {
+    margin: 0;
+    min-height: 44px;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+}
+@media (max-height: 740px) and (max-width: 700px) {
+  .intro-hero {
+    flex-basis: 49%;
+  }
+  .intro-copy > p:nth-of-type(2) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-hero {
+    transition: none;
+  }
+}
+
 .world-chapter-announcement {
   position: absolute;
   width: 1px;

@@ -1,4 +1,3 @@
-import type { FinancialMetadata } from '../game/core/financialSnapshot.ts'
 export type EventCategory = 'work' | 'projects' | 'school' | 'skills' | 'contact'
 export type TimelineFilter = EventCategory | 'all'
 export const categoryNames = {
@@ -35,8 +34,6 @@ export interface TimelineEvent {
   via?: string
   tags?: string[]
   landmark: Landmark
-  /** Public historical financial information, scoped to this event. */
-  finance?: FinancialMetadata
 }
 // Source: CV 2026 — Navarone Ismail, Figma file fRNmeTPW9BxYg11rzeDezV.
 // Chronological by starting date. Overlapping study, employment and client work are intentional.
@@ -56,14 +53,6 @@ export const timeline: TimelineEvent[] = [
       'I studied three existing CMS projects from their entry points, followed their logic and rewrote the code myself to understand it. On RetroNet, we shared what we built. Eventually I developed and sold my own CMS.',
       'We also sold in-game credits purchased by phone or text. Hosting the VPS cost money, so I put the surplus aside rather than spending it.',
     ],
-    finance: {
-      featured: 'debt',
-      debt: 0,
-      context: {
-        en: 'In the first year, CMS sales and credits generated approximately €700 in revenue against €120 of VPS expenses. €50 in and €10 out per month were broad averages, not a salary or exact annual accounting. I saved the surplus and used my allowance for everyday expenses.',
-        nl: 'In het eerste jaar leverden CMS-verkoop en credits ongeveer €700 omzet op, tegenover €120 aan VPS-kosten. €50 inkomsten en €10 uitgaven per maand waren globale gemiddelden, geen salaris of exacte jaarrekening. Ik spaarde het overschot en gebruikte mijn zakgeld voor gewone uitgaven.',
-      },
-    },
   },
   {
     category: 'school',
@@ -77,8 +66,6 @@ export const timeline: TimelineEvent[] = [
     period: '2013–2017',
     location: 'Amstelveen',
     role: 'Sport, Services & Safety',
-    // The 2011 balance is not evidence of later financial circumstances.
-    finance: { debt: null, savings: null, yearlyIncome: null },
     summary: 'Studying Sport, Services & Safety at Scholengemeenschap Panta Rhei.',
     body: [
       'From 2013 to 2017, I attended Scholengemeenschap Panta Rhei in Amstelveen, studying Sport, Dienstverlening & Veiligheid.',

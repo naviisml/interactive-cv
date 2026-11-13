@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   advanceAction,
-  aircraftPose,
+  taxiPose,
   basketballPose,
   cameraCarPose,
   skillTerrain,
@@ -26,15 +26,13 @@ test('actions complete once at different frame rates and remain replayable', () 
   assert.equal(system.actions['get-e']?.completed, 1)
   assert.ok(system.trigger('get-e', 'departure'))
 })
-test('aircraft taxis along the runway before climbing and leaving the scene', () => {
-  const parked = aircraftPose(0),
-    taxi = aircraftPose(1),
-    flight = aircraftPose(5)
-  assert.equal(parked.y, taxi.y)
-  assert.ok(taxi.x > parked.x)
-  assert.ok(flight.x > 800)
-  assert.ok(flight.y < -200)
-  assert.ok(flight.scale < taxi.scale)
+test('airport taxi waits for boarding, drives away and fades out', () => {
+  assert.equal(taxiPose(0).x, taxiPose(2).x)
+  assert.ok(taxiPose(1).passengerAlpha > taxiPose(2.2).passengerAlpha)
+  assert.equal(taxiPose(2.5).passengerAlpha, 0)
+  assert.ok(taxiPose(6).x > taxiPose(4).x)
+  assert.ok(taxiPose(6).alpha < taxiPose(4).alpha)
+  assert.equal(taxiPose(7).alpha, 0)
 })
 test('basketball clears the rim and falls through the hoop before the return bounce', () => {
   assert.deepEqual(basketballPose(0), { x: 14, y: -40 })
@@ -100,9 +98,9 @@ test('holding then releasing a ball or vehicle affects success instead of auto-p
   assert.equal(game.beginCharge('get-e'), true)
   game.tick(0.2, false)
   game.releaseCharge('get-e', 'departure')
-  assert.equal(game.actions['get-e']?.outcome, 'retry')
+  assert.equal(game.actions['get-e']?.outcome, 'success')
   game.tick(10, false)
-  assert.equal(game.actions['get-e']?.successes, 0)
+  assert.equal(game.actions['get-e']?.successes, 1)
 
   assert.equal(game.beginCharge('appjection'), true)
   game.tick(1.5, false)
@@ -131,4 +129,30 @@ test('every workbench post stands on its flat physics deck, including the outer 
         `${deck.id}: foot ${foot} must not float above a ramp`,
       )
     }
+})
+
+test('automatic pickup and ticket sequences run once, then allow manual replay', () => {
+  for (const [id, action] of [['get-e', 'departure'], ['appjection', 'camera']] as const) {
+    const game = new ActivitySystem()
+    assert.equal(game.autoPlayOnce(id, action), true)
+    assert.equal(game.autoPlayOnce(id, action), false)
+    game.tick(10, true)
+    assert.equal(game.actions[id]?.age, 0)
+    game.tick(10, false)
+    assert.equal(game.actions[id]?.completed, 1)
+    assert.equal(game.actions[id]?.outcome, id === 'appjection' ? 'ticket' : 'success')
+    assert.equal(game.autoPlayOnce(id, action), false)
+    assert.equal(game.trigger(id, action, .7), true)
+  }
+})
+test('aiming changes the shot arc without charging over time', () => {
+  const game = new ActivitySystem()
+  game.beginCharge('court', 'arc')
+  game.tick(1.5, false)
+  assert.equal(game.charges.court?.power, .65)
+  const low = basketballPose(.55, .2), high = basketballPose(.55, .9)
+  assert.ok(high.y < low.y - 40)
+  game.charges.court!.power = .7
+  game.releaseCharge('court', 'basketball')
+  assert.equal(game.actions.court?.power, .7)
 })

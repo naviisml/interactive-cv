@@ -1,4 +1,4 @@
-import { Container, Graphics, Rectangle } from 'pixi.js'
+import { Assets, Sprite, Texture, Container, Graphics, Rectangle } from 'pixi.js'
 import type { TimelineEvent } from '../../../content/timeline'
 import { buildings, type BuildingKind } from '../../../content/buildings'
 import { rect, label } from '../drawing'
@@ -30,6 +30,20 @@ export class BuildingSprite extends Container {
       // available in the building interior and the accessible reading mode.
       const title = label(this.facade, event.title, 0, signY + 10, 23, 0xf2e8cb, 490)
       title.anchor.x = 0.5
+    }
+    if (event.id === 'fletcher' || event.id === 'get-e') {
+      const y = event.id === 'fletcher' ? -261 : -163
+      rect(this.facade, -126, y + 3, 252, 37, 0xf7f5e9)
+      void Assets.load<Texture>(`/companies/${event.id}.png`)
+        .then((texture) => {
+          if (this.destroyed) return
+          const logo = new Sprite(texture)
+          logo.anchor.set(0.5)
+          logo.scale.set(Math.min(220 / texture.width, 28 / texture.height))
+          logo.position.set(0, y + 21)
+          this.facade.addChild(logo)
+        })
+        .catch(() => {})
     }
     const edge =
       this.kind === 'airport'
@@ -278,6 +292,20 @@ export class BuildingSprite extends Container {
         this.lights
           .rect(pane.x + 2, pane.y + 2, pane.w - 4, pane.h - 4)
           .fill({ color: powered ? 0xffdd90 : 0x244b40, alpha: powered ? 0.6 : 0.62 })
+    }
+    if (powered) {
+      for (const x of [-290, 290]) {
+        this.lights
+          .rect(x - 2, -95, 4, 95)
+          .fill(0x54745d)
+          .circle(x, -96, 9)
+          .fill(0xffe4a3)
+          .circle(x, -96, 30)
+          .fill({ color: 0xffdf94, alpha: 0.13 })
+          .ellipse(x, -2, 35, 7)
+          .fill({ color: 0xffdf94, alpha: 0.18 })
+      }
+      this.lights.rect(-35, -97, 70, 4).fill(0xffe4a3)
     }
     if (open > 0) this.lights.rect(-30, -87, 60, 85).fill({ color: 0xeee0aa, alpha: open * 0.22 })
   }
