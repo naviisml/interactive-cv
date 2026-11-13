@@ -206,6 +206,13 @@ export class WorldRenderer {
     const selected = frame.visit.phase === 'outside' && !frame.paused
       ? selectWorldCue(candidates)
       : undefined
+    // Highlight the actual door geometry, not merely the tooltip marker.
+    for (const [id, sprite] of this.scenes)
+      if (sprite instanceof BuildingSprite) {
+        const key = id + ':door'
+        sprite.setEntranceHighlight(positions.get(key)?.near ?? false,
+          selected === key, frame.time, this.reduced)
+      }
     const picked = selected ? this.cues.get(selected) : undefined
     this.currentCue = picked ? { entry: picked.entry, action: picked.node.spec.action } : undefined
     const nl = this.model.locale === 'nl'
