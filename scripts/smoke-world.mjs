@@ -640,6 +640,64 @@ async function visualAuditScenario() {
     await page.close()
   }
 }
+async function mobileArchiveScenario(label, width, height) {
+  const page = await browser.newPage({
+    viewport: { width, height },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+  })
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  try {
+    await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
+    await page.locator('canvas[data-renderer="pixi"]').waitFor({ state: 'visible' })
+    await page.locator('.journey-footer')
+      .getByRole('button', { name: 'Company & projects', exact: true }).click()
+    await waitForArrival(page, 'navel-development')
+    await page.locator('.canvas-accessibility')
+      .getByRole('button', { name: 'Explore my projects', exact: true }).click()
+    const archive = page.locator('.archive-shell')
+    await archive.waitFor({ state: 'visible', timeout: 20000 })
+    const bounds = await archive.boundingBox()
+    const world = await page.locator('.world').boundingBox()
+    assert.ok(bounds && world, 'project archive fits within the world')
+    assert.ok(Math.abs(bounds.width - world.width) < 2)
+    assert.ok(Math.abs(bounds.height - world.height) < 2)
+    assert.equal(await archive.locator('.archive-file').count(), 7)
+    await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
+    await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
+    await archive.locator('.archive-document h1').getByText('Navel Cloud').waitFor()
+    const list = archive.locator('.archive-projects')
+    const active = archive.locator('.archive-file.is-active')
+    const listBox = await list.boundingBox()
+    const activeBox = await active.boundingBox()
+    assert.ok(listBox && activeBox && activeBox.x >= listBox.x - 3 &&
+      activeBox.x + activeBox.width <= listBox.x + listBox.width + 3,
+      'mobile file index keeps the selected project in view')
+    await archive.locator('.artifact').getByRole('button', { name: /Traefik/ }).click()
+    await archive.locator('.artifact-info').getByText(/Routing traffic/).waitFor()
+    await archive.locator('.archive-main-scroll').evaluate((el) => {
+      el.scrollTop = el.scrollHeight
+    })
+    await archive.locator('.archive-story h2').waitFor({ state: 'visible' })
+    await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      'project archive does not create horizontal document overflow')
+    await archive.getByRole('button', { name: 'Return to world', exact: true }).click()
+    await archive.waitFor({ state: 'hidden' })
+    assert.ok(await page.locator('.movement-controls').count() || await page.locator('.world').isVisible())
+    assert.deepEqual(errors, [])
+    console.log(`PASS_${label}: interactive project archive, mobile scroll and return`)
+  } catch (error) {
+    failures++
+    console.error(`FAIL_${label}: ${error.stack || error}`)
+    await page.screenshot({ path: `test-results/world/${label}-archive-failure.png` }).catch(() => {})
+  } finally {
+    await page.close()
+  }
+}
+
 async function readingModeScenario() {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   const errors = []
@@ -741,6 +799,8 @@ try {
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
+  await mobileArchiveScenario('mobile', 390, 844)
+  await mobileArchiveScenario('compact', 375, 667)
   await visualAuditScenario()
   await graphicsFailureScenario()
 } finally {
