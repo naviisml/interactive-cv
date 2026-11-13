@@ -205,7 +205,13 @@ function toggleView() {
   background: #e7eadf;
   border-color: #b6c5b7;
 }
-.header-icon-toggle[aria-pressed='false'] { color: #82938a; }
+.header-icon-toggle[aria-pressed='true'] {
+  background: #e5eadf;
+  border-color: #b9c9b8;
+  color: #2f5a42;
+}
+.header-tooltip-toggle[aria-pressed='false'] { color: #83938a; }
+.header-view-toggle[aria-pressed='false'] { color: #345747; }
 .header-icon-toggle:focus-visible, .language-switch select:focus-visible {
   outline: 2px solid #456d57;
   outline-offset: 2px;
