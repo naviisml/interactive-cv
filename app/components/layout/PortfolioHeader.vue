@@ -1,11 +1,29 @@
 <script setup lang="ts">
-import { Menu, X, List, Map } from '@lucide/vue'
+import { Menu, X, List, Map, MessageSquareText, MessageSquareOff, ChevronDown } from '@lucide/vue'
+import { financialSnapshot } from '~/game/core/financialSnapshot'
 import type { TimelineEvent } from '~/content/timeline'
 import { levels, type LevelId } from '~/content/journey'
-defineProps<{ active: LevelId; financeIndex: number; financeEvents: readonly TimelineEvent[]; contextTitle?: string; listMode: boolean }>()
+const props = defineProps<{
+  active: LevelId
+  financeIndex: number
+  financeEvents: readonly TimelineEvent[]
+  contextTitle?: string
+  listMode: boolean
+  tooltipsEnabled: boolean
+}>()
+const hasFinances = computed(() => {
+  const { debt, savings, yearlyIncome } = financialSnapshot(props.financeEvents, props.financeIndex)
+  return debt !== null || savings !== null || yearlyIncome !== null
+})
+const financeCounter = ref<{ open: () => void }>()
+function openFinanceHelp() {
+  menuOpen.value = false
+  financeCounter.value?.open()
+}
 const emit = defineEmits<{
   navigate: [id: LevelId]
   toggleList: []
+  toggleTooltips: [enabled: boolean]
   moneyToggle: [open: boolean]
 }>()
 const { t, locale, setLocale } = useI18n()
@@ -85,43 +103,112 @@ function toggleView() {
         >
           {{ t('nav.' + level.id) }}
         </button>
-        <button class="view-toggle" @click="toggleView">
-          <component :is="listMode ? Map : List" :size="15" aria-hidden="true" /><span>{{
-            t(listMode ? 'nav.world' : 'nav.list')
-          }}</span>
+        <button v-if="!hasFinances" class="finance-help-link" @click="openFinanceHelp">
+          {{ t('finance.about') }}
         </button>
       </nav>
     </div>
-    <div class="header-finances">
-      <label class="language-switch"
-        ><span class="sr-only">{{ t('nav.language') }}</span
-        ><select
+    <div class="header-actions">
+      <label class="language-switch">
+        <span class="sr-only">{{ t('nav.language') }}</span>
+        <select
           :value="locale"
+          :aria-label="t('nav.language')"
           @change="setLocale(($event.target as HTMLSelectElement).value as 'en' | 'nl')"
         >
           <option value="en">EN</option>
           <option value="nl">NL</option>
-        </select></label
-      ><MoneyCounter
-        :index="financeIndex" :events="financeEvents"
-        :context-title="contextTitle"
-        @toggle="emit('moneyToggle', $event)"
-      />
+        </select>
+        <ChevronDown :size="13" aria-hidden="true" />
+      </label>
+      <button
+        class="header-icon-toggle"
+        type="button"
+        :aria-label="t(listMode ? 'nav.world' : 'nav.list')"
+        :title="t(listMode ? 'nav.world' : 'nav.list')"
+        :aria-pressed="listMode"
+        @click="toggleView"
+      >
+        <component :is="listMode ? Map : List" :size="19" aria-hidden="true" />
+      </button>
+      <button
+        class="header-icon-toggle"
+        type="button"
+        :aria-label="locale === 'nl' ? 'Tooltips boven interacties' : 'Tooltips above interactions'"
+        :title="locale === 'nl' ? 'Tooltips boven interacties' : 'Tooltips above interactions'"
+        :aria-pressed="tooltipsEnabled"
+        @click="emit('toggleTooltips', !tooltipsEnabled)"
+      >
+        <component :is="tooltipsEnabled ? MessageSquareText : MessageSquareOff" :size="19" aria-hidden="true" />
+      </button>
     </div>
+    <MoneyCounter
+      ref="financeCounter"
+      :index="financeIndex"
+      :events="financeEvents"
+      :show-summary="hasFinances"
+      :context-title="contextTitle"
+      @toggle="emit('moneyToggle', $event)"
+    />
   </header>
 </template>
 <style scoped>
-.header-finances {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+.language-switch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 53px;
+  height: 44px;
 }
 .language-switch select {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  text-align-last: center;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px 0 0;
+  margin: 0;
   border: 0;
+  border-radius: 5px;
   background: transparent;
   color: #345747;
-  font: 600 12px 'Space Grotesk';
-  min-height: 44px;
+  font: 600 13px/1 'Space Grotesk', sans-serif;
+  cursor: pointer;
+}
+.language-switch > svg {
+  position: absolute;
+  right: 5px;
+  pointer-events: none;
+  color: #345747;
+}
+.header-icon-toggle {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #345747;
+}
+.header-icon-toggle:hover, .header-icon-toggle:focus-visible {
+  background: #e7eadf;
+  border-color: #b6c5b7;
+}
+.header-icon-toggle[aria-pressed='false'] { color: #82938a; }
+.header-icon-toggle:focus-visible, .language-switch select:focus-visible {
+  outline: 2px solid #456d57;
+  outline-offset: 2px;
 }
 .sr-only {
   position: absolute;
@@ -130,22 +217,12 @@ function toggleView() {
   overflow: hidden;
   clip-path: inset(50%);
 }
-@media (max-width: 900px) {
-  .header-finances {
-    display: contents;
-  }
-  .language-switch {
-    position: absolute;
-    right: 105px;
-    top: 8px;
-  }
-}
 
 .portfolio-header {
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 28px;
   min-height: 86px;
@@ -192,15 +269,6 @@ function toggleView() {
   right: 10px;
   background: var(--level-color);
 }
-.portfolio-menu > .view-toggle {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: 10px;
-  padding-inline: 12px;
-  border: 1px solid #cdd4c5;
-  background: #f4f2e9;
-}
 .menu-toggle {
   display: none;
 }
@@ -226,7 +294,8 @@ function toggleView() {
   .portfolio-header {
     min-height: 0;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px 36px;
+    grid-template-rows: 44px;
+    column-gap: 8px;
     column-gap: 10px;
     row-gap: 6px;
     padding: 8px 4% 10px;
@@ -241,6 +310,14 @@ function toggleView() {
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
+    z-index: 2;
+  }
+  .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    margin-right: 79px;
+    gap: 1px;
   }
   .menu-toggle {
     display: flex;
@@ -279,6 +356,7 @@ function toggleView() {
     right: auto;
     width: 22px;
   }
+  .portfolio-header:has(.money-counter) { grid-template-rows: 44px 36px; }
   .portfolio-header :deep(.money-counter) {
     justify-self: stretch;
     grid-column: 1/-1;
@@ -334,5 +412,10 @@ function toggleView() {
   .portfolio-header :deep(.debt-balance strong) {
     font-size: 11px;
   }
+  .header-actions { margin-right: 45px; gap: 0; }
+  .language-switch { width: 43px; }
+  .language-switch select { font-size: 12px; padding-right: 12px; }
+  .header-icon-toggle { width: 38px; flex-basis: 38px; }
+  .menu-toggle span { display: none; }
 }
 </style>
