@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { skillGroups } from '~/content/skills'
-import { circuitConnected } from '~/game/core/learningActivities'
+import { circuitConnected, pipelineSteps, type PipelineStep } from '~/game/core/learningActivities'
 import { buildingActions } from '~/game/core/sceneActivities'
 import type { ActivitySystem } from '~/game/engine/ActivitySystem'
 import type { WorldModel, WorldFrame } from '~/game/rendering/types'
@@ -52,6 +52,10 @@ function activateSkills(index: number) {
       skillGroups[index]!.title[locale.value === 'nl' ? 'nl' : 'en'],
       props.activities.exploredSkills.length,
     )
+}
+function runPipelineStep(step: PipelineStep) {
+  activateSkills(0)
+  props.activities.playPipelineStep(step)
 }
 function adjustWeb(action: 'theme' | 'data') {
   activateSkills(1)
@@ -167,6 +171,9 @@ onBeforeUnmount(() => {
         {{ t('scene.' + currentAction) }}
       </button>
       <template v-if="activeId === 'skills-road'">
+        <button v-for="step in pipelineSteps" :key="step" @click="runPipelineStep(step)">
+          Pipeline: {{ step }}
+        </button>
         <button
           v-for="(group, index) in skillGroups"
           :key="group.id"

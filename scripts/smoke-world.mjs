@@ -105,6 +105,10 @@ async function scenario(label, width, height, mobile) {
     assert.ok(
       (await firstCode.locator('iframe').getAttribute('srcdoc')).includes("default-src 'none'"),
     )
+    if (mobile) {
+      await firstCode.getByRole('button', { name: 'Live preview', exact: true }).click()
+      assert.equal(await firstCode.locator('.lab-workbench.mobile-preview').count(), 1)
+    }
     await page.frameLocator('iframe[title="Editable HTML preview"]').locator('body').waitFor()
     assert.equal(
       await page
@@ -127,19 +131,23 @@ async function scenario(label, width, height, mobile) {
       remotePreviewRequests++
       return route.abort()
     })
+    if (mobile) await firstCode.getByRole('button', { name: 'Edit code' }).click()
     await firstCode.getByRole('button', { name: 'index.html' }).click()
     await firstCode
       .getByRole('textbox', { name: 'HTML editor' })
       .fill(
         '<h1>Sandbox check</h1><img src="https://preview-test.invalid/asset.png"><script>parent.document.body.dataset.previewEscaped="yes"</script>',
       )
+    if (mobile) await firstCode.getByRole('button', { name: 'Live preview', exact: true }).click()
     await page
       .frameLocator('iframe[title="Editable HTML preview"]')
       .getByRole('heading', { name: 'Sandbox check' })
       .waitFor()
     assert.equal(await page.locator('body').getAttribute('data-preview-escaped'), null)
     assert.equal(remotePreviewRequests, 0, 'preview may not fetch remote resources')
+    if (mobile) await firstCode.getByRole('button', { name: 'Edit code' }).click()
     await firstCode.getByRole('button', { name: 'Reset', exact: true }).click()
+    if (mobile) await firstCode.getByRole('button', { name: 'Live preview', exact: true }).click()
     await page
       .frameLocator('iframe[title="Editable HTML preview"]')
       .getByRole('heading', { name: 'RetroNet', exact: true })
@@ -238,6 +246,20 @@ async function scenario(label, width, height, mobile) {
       () => Number(document.querySelector('canvas')?.dataset.skillCount) === 18,
     )
     assert.equal(await page.getByRole('dialog').count(), 0, 'skills remain in the world')
+    const invalidStage = page.getByRole('button', { name: 'Pipeline: build', exact: true })
+    await invalidStage.focus()
+    await invalidStage.click()
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'error',
+    )
+    for (const step of ['commit', 'test', 'build', 'deploy']) {
+      const stage = page.getByRole('button', { name: 'Pipeline: ' + step, exact: true })
+      await stage.focus()
+      await stage.click()
+    }
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.pipeline || '{}').status === 'success',
+    )
     const theme = page.getByRole('button', { name: 'Change CSS theme', exact: true })
     await theme.focus()
     await page.keyboard.press('Space')

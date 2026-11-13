@@ -66,6 +66,22 @@ test('skills activation powers a whole category and remains stable after revisit
   assert.equal(state.exploredSkills.length, 5)
 })
 
+test('tooling pipeline requires the ordered four stages and remains replayable', () => {
+  const game = new ActivitySystem()
+  assert.equal(game.playPipelineStep('build'), false)
+  assert.equal(game.pipeline.status, 'error')
+  assert.equal(game.pipeline.errors, 1)
+  for (const step of ['commit', 'test', 'build', 'deploy'] as const)
+    assert.equal(game.playPipelineStep(step), true)
+  assert.equal(game.pipeline.status, 'success')
+  assert.equal(game.pipeline.completed, 4)
+  assert.ok(game.activatedStations.includes('tooling'))
+  assert.equal(game.playPipelineStep('commit'), true)
+  assert.equal(game.pipeline.completed, 1)
+  game.tick(5, true)
+  assert.equal(game.pipeline.completed, 1, 'pausing does not discard authored workflow progress')
+})
+
 test('adding workers reverses queue growth instead of only changing an animation', () => {
   const game = new ActivitySystem()
   game.activateSkillGroup(2)

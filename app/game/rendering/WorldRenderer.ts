@@ -339,6 +339,7 @@ export class WorldRenderer {
           ]),
         ),
       )
+      this.app.canvas.dataset.pipeline = JSON.stringify(this.activities.pipeline)
       this.app.canvas.dataset.workerQueue = JSON.stringify(this.activities.cloud)
       this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
       this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)

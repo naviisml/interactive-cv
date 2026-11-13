@@ -73,3 +73,27 @@ export function advanceQueue(queue: WorkerQueue, dt: number) {
   queue.queued = Math.min(80, Math.max(0, queue.queued + incoming - handled))
   queue.processed += handled
 }
+
+/** A real four-stage delivery pipeline. Invalid order fails and resets the run. */
+export const pipelineSteps = ['commit', 'test', 'build', 'deploy'] as const
+export type PipelineStep = (typeof pipelineSteps)[number]
+export interface PipelineState {
+  completed: number
+  errors: number
+  status: 'idle' | 'running' | 'error' | 'success'
+}
+export function advancePipeline(state: PipelineState, step: PipelineStep): boolean {
+  if (state.status === 'success') {
+    state.completed = 0
+    state.status = 'idle'
+  }
+  if (pipelineSteps[state.completed] !== step) {
+    state.completed = 0
+    state.errors++
+    state.status = 'error'
+    return false
+  }
+  state.completed++
+  state.status = state.completed === pipelineSteps.length ? 'success' : 'running'
+  return true
+}

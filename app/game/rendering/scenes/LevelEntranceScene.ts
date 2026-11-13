@@ -31,37 +31,54 @@ export class LevelEntranceScene extends Container {
         [131, front],
       ] as const) {
         const g = ground(offset)
-        rect(root, offset - 15, g - 18, 32, 18, 0x7f9279)
-        rect(root, offset - 10, -235, 18, g + 217, 0x345b48)
-        rect(root, offset - 7, -235, 4, g + 217, 0x7b9678)
-        rect(root, offset - 14, -239, 28, 9, 0xb8b08a)
-        const lamp = new Graphics().circle(offset, -190, 5).fill(0xe7d397)
+        // Carved timber columns, raised plinths and warm brass fittings.
+        rect(root, offset - 19, g - 12, 40, 12, 0x748974)
+        rect(root, offset - 15, g - 17, 32, 6, 0x9ba98a)
+        rect(root, offset - 12, -238, 24, g + 221, 0x365d4c)
+        rect(root, offset - 9, -237, 5, g + 217, 0x83a18b)
+        rect(root, offset + 6, -237, 3, g + 217, 0x274a3b)
+        rect(root, offset - 16, -242, 34, 8, 0xd1be8e)
+        rect(root, offset - 14, -181, 28, 3, 0xb79e6c)
+        const lamp = new Graphics()
+          .circle(offset, -180, 10)
+          .fill({ color: 0xf1d69d, alpha: 0.22 })
+          .circle(offset, -180, 5)
+          .fill(0xf0ddaa)
         root.addChild(lamp)
         this.lamps.push({ node: lamp, x })
       }
+      // A refined beam and hanging wayfinding plate instead of a solid billboard.
       back.addChild(
         new Graphics()
-          .poly([-130, -248, 126, -248, 151, -234, -105, -234])
-          .fill(0x8ba080)
-          .poly([-105, -234, 151, -234, 151, -224, -105, -224])
-          .fill(0x355a48),
+          .roundRect(-129, -255, 266, 16, 4)
+          .fill(0x345c4a)
+          .roundRect(-124, -253, 256, 5, 2)
+          .fill(0xa8b99c)
+          .rect(-121, -241, 248, 2)
+          .fill(accent),
       )
-      rect(back, -125, -248, 250, 3, accent)
-      // A small suspended banner belongs to the arch, rather than a billboard above it.
-      rect(back, -80, -228, 2, 13, 0x6e8267)
-      rect(back, 90, -228, 2, 13, 0x6e8267)
-      rect(back, -94, -215, 200, 49, 0x254b3d)
-      rect(back, -94, -215, 4, 49, accent)
-      const number = label(back, `LEVEL ${index + 1}`, 6, -209, 10, 0xe0d5ad, 180)
+      rect(back, -65, -238, 2, 15, 0xa98c65)
+      rect(back, 73, -238, 2, 15, 0xa98c65)
+      back.addChild(
+        new Graphics()
+          .roundRect(-78, -223, 163, 55, 5)
+          .fill(0xf2ead8)
+          .stroke({ width: 2, color: 0x3a614c })
+          .roundRect(-73, -218, 153, 45, 3)
+          .stroke({ width: 1, color: accent }),
+      )
+      const chapter = model.locale === 'nl' ? 'HOOFDSTUK' : 'CHAPTER'
+      const number = label(back, `0${index + 1}  /  ${index === 0 ? 'START' : chapter}`, 3, -216, 9, 0x66816e, 147)
       number.anchor.x = 0.5
+      const displayTitle = model.levelTitles[level.id] ?? level.title
       const title = label(
         back,
-        model.levelTitles[level.id] ?? level.title,
-        6,
-        -193,
-        16,
-        0xf0e8c9,
-        180,
+        displayTitle,
+        3,
+        -198,
+        displayTitle.length > 15 ? 12 : 17,
+        0x24483d,
+        150,
       )
       title.anchor.x = 0.5
       back.addChild(

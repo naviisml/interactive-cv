@@ -46,7 +46,7 @@ const sceneHints: Record<string, [string, string]> = {
 }
 </script>
 <template>
-  <header class="world-caption">
+  <header class="world-caption" :class="{ 'is-intro': current.id === 'first-lines' }">
     <p v-if="current.id === 'first-lines'" class="identity-banner">
       <strong>Navarone Ismail</strong>
       <span>{{
@@ -85,7 +85,6 @@ const sceneHints: Record<string, [string, string]> = {
     <p
       v-if="sceneHints[current.id] && !running"
       class="scene-hint"
-      :class="{ 'sr-only': current.id !== 'first-lines' && current.id !== 'navel-development' }"
     >
       {{ sceneHints[current.id]?.[locale === 'nl' ? 0 : 1] }}
     </p>
@@ -105,26 +104,23 @@ const sceneHints: Record<string, [string, string]> = {
 
 <style scoped>
 .identity-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
+  display: grid;
+  justify-items: start;
+  gap: 9px;
   width: fit-content;
-  margin: 0 0 13px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #6b8b7580;
-  font:
-    600 11px 'Space Grotesk',
-    sans-serif;
-  color: #2b5345;
+  max-width: 100%;
+  margin: 0 0 clamp(16px, 3vw, 28px);
+  color: #244b3e;
 }
 .identity-banner strong {
-  text-transform: uppercase;
-  letter-spacing: 1.15px;
+  font: 700 clamp(32px, 5vw, 66px)/.98 'Space Grotesk', sans-serif;
+  letter-spacing: -.06em;
+  text-wrap: balance;
 }
 .identity-banner span {
-  font-weight: 500;
-  color: #4c6a59;
+  font: 600 clamp(12px, 1.2vw, 15px)/1.5 'DM Sans', sans-serif;
+  color: #446c58;
+  letter-spacing: .012em;
 }
 .sr-only {
   position: absolute;
@@ -136,20 +132,33 @@ const sceneHints: Record<string, [string, string]> = {
   white-space: nowrap;
 }
 .scene-hint {
+  width: fit-content;
+  max-width: 100%;
   font-size: 12px;
-  font-weight: 500;
-  margin-top: 10px;
-  padding-left: 12px;
-  border-left: 2px solid #66836b;
-  color: #365f4b;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  padding: 7px 12px;
+  border: 1px solid #acbca3;
+  border-left: 3px solid #4e785d;
+  border-radius: 0 5px 5px 0;
+  background: #f5f2e9de;
+  color: #294e3e;
+  box-shadow: 0 3px 14px #1f483816;
 }
 @media (max-width: 700px) {
-  .scene-hint {
-    font-size: 12px;
-    max-width: 290px;
-  }
+  .identity-banner { gap: 6px; margin-bottom: 17px; }
+  .identity-banner strong { font-size: clamp(29px, 8.5vw, 39px); }
+  .identity-banner span { font-size: 12px; }
+  .scene-hint { font-size: 11px; max-width: 325px; margin-top: 9px; padding: 6px 10px; }
 }
 
+@media (max-width: 700px) and (max-height: 740px) {
+  .world-caption.is-intro .identity-banner { gap: 3px; margin-bottom: 8px; }
+  .world-caption.is-intro .identity-banner strong { font-size: 26px; }
+  .world-caption.is-intro .caption-summary { display: none; }
+  .world-caption.is-intro .scene-hint { margin-top: 6px; }
+}
 @media (pointer: coarse) {
   .caption-enter kbd {
     display: none;
