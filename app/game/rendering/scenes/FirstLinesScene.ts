@@ -4,6 +4,7 @@ import { label, rect } from '../drawing'
 /** A readable CRT and desk, drawn in the same coordinate system as its hit area. */
 export class FirstLinesScene extends Container {
   private pixels = new Graphics()
+  private screenGlow = new Graphics()
   constructor(open: () => void) {
     super()
     // Desk feet sit on y=0. The actual screen is the target.
@@ -30,11 +31,22 @@ export class FirstLinesScene extends Container {
     caption.anchor.x = 0.5
     const hint = label(this, 'HTML + CSS', 153, -198, 11, 0x4a6d56, 210)
     hint.anchor.x = 0.5
-    this.addChild(this.pixels)
+    this.screenGlow.eventMode = 'none'
+    this.addChild(this.pixels, this.screenGlow)
     const screen = new Container()
     tapTarget(screen, open, new Rectangle(82, -181, 140, 105))
     screen.cursor = 'pointer'
     this.addChild(screen)
+  }
+  setInteractionGlow(active: boolean, time: number, reduced: boolean) {
+    this.screenGlow.clear()
+    if (!active) return
+    const alpha = reduced ? 0.7 : 0.54 + Math.sin(time / 480) * 0.16
+    this.screenGlow
+      .roundRect(85, -180, 131, 91, 4)
+      .stroke({ color: 0xffe0a2, width: 3, alpha })
+      .rect(98, -168, 104, 65)
+      .fill({ color: 0xf6d38b, alpha: 0.045 })
   }
   update(time: number, reduced: boolean) {
     this.pixels.clear()
