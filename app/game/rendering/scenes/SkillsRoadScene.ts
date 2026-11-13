@@ -1,6 +1,7 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture, Text } from 'pixi.js'
 import { skillLogos, skillGroups } from '../../../content/skills'
 import { skillDecks } from '../../core/sceneActivities'
+import { pipelineSteps } from '../../core/learningActivities'
 import { tapTarget } from '../interactions'
 import { terrainHeight, type TerrainPoint } from '../../core/physics'
 import { label, rect } from '../drawing'
@@ -15,6 +16,7 @@ export class SkillsRoadScene extends Container {
     machine: Graphics
     statusBackdrop: Graphics
     status: Text
+    pipelineControls: Graphics[]
     logos: Container[]
   }[] = []
   constructor(
@@ -50,6 +52,27 @@ export class SkillsRoadScene extends Container {
       node.addChild(statusBackdrop)
       const status = label(node, '', 0, -240, 12, 0x274c3e, 276)
       status.anchor.x = 0.5
+      const pipelineControls: Graphics[] = []
+      if (i === 0) {
+        pipelineSteps.forEach((step, index) => {
+          const control = new Container()
+          control.position.set(-101 + index * 67, -104)
+          const background = new Graphics()
+          control.addChild(background)
+          const text = label(control, step.toUpperCase(), 0, 3, 9, 0xf8f4df, 62)
+          text.anchor.x = 0.5
+          tapTarget(
+            control,
+            () => {
+              this.activate(0)
+              this.activity.playPipelineStep(step)
+            },
+            new Rectangle(-32, -5, 64, 29),
+          )
+          node.addChild(control)
+          pipelineControls.push(background)
+        })
+      }
       // Original CV logos hang above the machine and feed into it on activation.
       const logos = group.ids.map((id, j) => {
         const logo = skillLogos.find((l) => l.id === id)!,
@@ -108,7 +131,7 @@ export class SkillsRoadScene extends Container {
           node.addChild(rack)
         }
       this.addChild(node)
-      this.stations.push({ node, x, machine, statusBackdrop, status, logos })
+      this.stations.push({ node, x, machine, statusBackdrop, status, pipelineControls, logos })
     })
   }
   activate(index: number) {
@@ -133,7 +156,7 @@ export class SkillsRoadScene extends Container {
       const action = this.activity.actions['skill-' + group.id]
       if (near && onGround && !frame.navigating && !frame.paused && !action) this.activate(i)
       const active = !!action
-      const p = action ? Math.min(1, action.age / 2) : 0
+      const p = i === 0 ? this.activity.pipeline.completed / pipelineSteps.length : action ? Math.min(1, action.age / 2) : 0
       if (p === 1) this.activity.completeStation(group.id)
       machine.clear()
       statusBackdrop
@@ -166,6 +189,25 @@ export class SkillsRoadScene extends Container {
         : nl
           ? 'Loop over de lichtplaat om te starten.'
           : 'Walk over the light plate to start.'
+      if (i === 0) {
+        const pipeline = this.activity.pipeline
+        status.text =
+          pipeline.status === 'success'
+            ? nl ? 'Pipeline geslaagd. Klaar voor productie.' : 'Pipeline passed. Deployed to production.'
+            : pipeline.status === 'error'
+              ? nl ? 'Verkeerde volgorde. Start opnieuw met Commit.' : 'Wrong order. Restart at Commit.'
+              : active
+                ? nl ? 'Kies Commit → Test → Build → Deploy.' : 'Select Commit → Test → Build → Deploy.'
+                : nl ? 'Loop over de lichtplaat om te starten.' : 'Walk over the light plate to start.'
+        station.pipelineControls.forEach((control, step) => {
+          const passed = pipeline.completed > step
+          control
+            .clear()
+            .roundRect(-31, -5, 62, 28, 4)
+            .fill(passed ? 0x5b8066 : 0x315b4c)
+            .stroke({ width: 1.5, color: passed ? 0xcbdba9 : 0xb0c09e })
+        })
+      }
       if (i === 2 && active)
         status.text = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activity.cloud.queued)} · ${this.activity.cloud.workers}/3 workers · ${nl ? 'tik op rack' : 'tap rack'}`
       // Conveyor and package: the commit really travels through build/test/deploy.
