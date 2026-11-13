@@ -1,7 +1,7 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
 import { AircraftSprite } from '../sprites/AircraftSprite'
 import { rect, label } from '../drawing'
-import { tapTarget } from '../interactions'
+import { tapTarget, holdTarget } from '../interactions'
 import {
   buildingActions,
   aircraftPose,
@@ -74,7 +74,7 @@ export class BuildingActivityScene extends Container {
         .lineTo(0, 10)
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
-      tapTarget(this.ball, start, new Rectangle(-38, -38, 76, 76))
+      holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88))
       rect(this, 166, -198, 68, 28, 0x29483f)
       this.status.visible = true
       this.status.position.set(200, -191)
@@ -85,8 +85,10 @@ export class BuildingActivityScene extends Container {
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
       this.plane = new AircraftSprite()
       this.object.addChild(this.plane)
-      tapTarget(this.plane, start, new Rectangle(-110, -40, 220, 90))
-      this.status.position.set(390, -98)
+      holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90))
+      this.status.visible = true
+      this.status.position.set(42, -180)
+      this.status.style.fontSize = 12
     } else if (this.action === 'camera') {
       rect(this, -280, -12, 620, 20, 0x5b7368)
       for (let x = -260; x < 320; x += 72) rect(this, x, -3, 35, 2, 0xc4c6a5)
@@ -108,9 +110,11 @@ export class BuildingActivityScene extends Container {
       rect(car, 66, -31, 10, 5, 0xe5d69b)
       this.car = car
       this.object.addChild(car)
-      tapTarget(car, start, new Rectangle(-78, -62, 160, 65))
+      holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76))
 
-      this.status.position.set(410, -92)
+      this.status.visible = true
+      this.status.position.set(42, -180)
+      this.status.style.fontSize = 12
     } else if (this.action === 'luggage') {
       rect(this, 146, -52, 73, 7, 0xb8a275)
       for (const x of [151, 209]) rect(this, x, -45, 5, 45, 0x526a52)
@@ -185,56 +189,70 @@ export class BuildingActivityScene extends Container {
       age = record?.age ?? 0,
       nl = this.locale === 'nl'
     this.overlay.clear()
-    const player = frame.motion.x - entryX
-    if (
-      !frame.paused &&
-      !frame.navigating &&
-      this.action === 'basketball' &&
-      Math.abs(player + 90) < 25 &&
-      frame.motion.vx > 15 &&
-      !running
-    )
-      this.state.trigger(this.id, this.action)
+    const charge = this.state.charges[this.id]
+    const charging = !!charge?.holding
+    if (charging && !frame.paused) {
+      this.overlay
+        .roundRect(-112, -204, 224, 14, 5)
+        .fill(0x294d42)
+        .roundRect(-109, -201, charge.power * 218, 8, 3)
+        .fill(charge.power >= 0.8 ? 0xc78167 : 0xe1c98e)
+      if (this.action === 'basketball') {
+        this.overlay
+          .rect(-112 + 218 * 0.52, -204, 2, 14)
+          .fill(0xd7e8ae)
+          .rect(-112 + 218 * 0.78, -204, 2, 14)
+          .fill(0xd7e8ae)
+      }
+    }
     if (this.ball) {
-      const p = running ? basketballPose(age) : { x: -90, y: -10 }
+      const p = running ? basketballPose(age, record?.power) : { x: -90, y: -10 }
       this.ball.position.set(p.x, p.y)
       this.ball.rotation = running ? age * 5 : 0
-      this.status.text = `${nl ? 'Raak' : 'Baskets'}: ${record?.completed ?? 0}`
+      this.status.text = charging
+        ? (nl ? 'Houd vast… laat los in de groene zone' : 'Hold… release in the target zone')
+        : running
+          ? (nl ? 'Schot onderweg…' : 'Shot in flight…')
+          : record?.completed
+            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : (nl ? 'Gemist · probeer opnieuw' : 'Missed · try again')}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
+            : (nl ? 'Houd de bal vast om te mikken' : 'Hold the ball to aim and release')
     } else if (this.plane) {
-      const p = running ? aircraftPose(age) : { x: 130, y: -22, angle: 0, scale: 1 }
+      const success = record?.outcome === 'success'
+      const p = running
+        ? (success
+            ? aircraftPose(age)
+            : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 })
+        : { x: 130, y: -22, angle: 0, scale: 1 }
       this.plane.position.set(p.x, p.y)
       this.plane.angle = reduced ? 0 : p.angle
       this.plane.scale.set(p.scale * 0.95)
       this.plane.visible = true
-      this.status.text = running
-        ? age < 1.4
-          ? nl
-            ? 'Taxiën…'
-            : 'Taxiing…'
-          : nl
-            ? 'Opgestegen!'
-            : 'Airborne!'
-        : record?.completed
-          ? nl
-            ? 'Vertrokken · tik voor nog een vlucht'
-            : 'Departed · tap for another flight'
-          : captions.departure[nl ? 0 : 1]
+      this.status.text = charging
+        ? `${nl ? 'Motorvermogen' : 'Engine power'}: ${Math.round(charge.power * 100)}% — ${nl ? 'houd ingedrukt' : 'keep holding'}`
+        : running
+          ? (success
+              ? (age < 1.4 ? (nl ? 'Versnelt over de baan…' : 'Accelerating down the runway…') : (nl ? 'Opgestegen!' : 'Airborne!'))
+              : (nl ? 'Niet genoeg snelheid om op te stijgen' : 'Not enough speed for take-off'))
+          : record?.completed
+            ? (success ? (nl ? 'Vlucht geslaagd · opnieuw?' : 'Take-off successful · retry?') : (nl ? 'Te weinig vermogen · opnieuw?' : 'Too little power · retry?'))
+            : (nl ? 'Houd vliegtuig vast om vermogen op te bouwen' : 'Press and hold the plane to build speed')
     } else if (this.car) {
-      const p = running ? cameraCarPose(age) : { x: -150, flash: false }
+      const speed = Math.round(20 + (record?.power ?? 0.38) * 110)
+      const p = running ? cameraCarPose(age, speed) : { x: -150, flash: false }
       this.car.position.set(p.x, -5)
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
-      this.status.text = running
-        ? p.flash
-          ? '⚡ 62 km/h'
-          : nl
-            ? 'Camera-test…'
-            : 'Camera test…'
-        : record?.completed
-          ? nl
-            ? 'Vastgelegd · nog een rit?'
-            : 'Captured · another drive?'
-          : captions.camera[nl ? 0 : 1]
+      this.status.text = charging
+        ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(20 + charge.power * 110)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
+        : running
+          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : (nl ? 'Passage…' : 'Passing camera…')}`
+          : record?.completed
+            ? (record.outcome === 'success'
+                ? (nl ? 'Binnen de limiet · opnieuw?' : 'Within the limit · retry?')
+                : record.outcome === 'ticket'
+                  ? (nl ? 'Te hard gereden · probeer opnieuw' : 'Too fast · try again')
+                  : (nl ? 'Te langzaam · houd langer vast' : 'Too slow · press longer'))
+            : (nl ? 'Houd de auto vast, laat los voor 50 km/h' : 'Press and hold the car, release near 50 km/h')
     } else if (this.cart) {
       this.cart.position.set(running ? 210 - Math.min(1, age / 3) * 210 : 210, 0)
       this.cart.alpha = running && age > 3 ? Math.max(0, 1 - (age - 3)) : 1
