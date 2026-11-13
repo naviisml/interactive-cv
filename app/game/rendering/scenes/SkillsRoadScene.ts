@@ -158,17 +158,14 @@ export class SkillsRoadScene extends Container {
     for (const [i, station] of this.stations.entries()) {
       station.glow.clear()
       if (i !== index) continue
-      const alpha = reduced ? 0.65 : 0.51 + Math.sin(time / 520) * 0.15
-      station.glow
-        .moveTo(-160, -265)
-        .lineTo(160, -265)
-        .moveTo(-147, -257)
-        .lineTo(-147, 0)
-        .moveTo(150, -257)
-        .lineTo(150, 0)
-        .moveTo(-137, -65)
-        .lineTo(137, -65)
-        .stroke({ color: 0xf8dc9d, width: 2.8, alpha })
+      const pulse = reduced ? 0.5 : (1 + Math.sin(time / 520)) * 0.5
+      const drawFrame = () => station.glow
+        .moveTo(-160, -265).lineTo(160, -265)
+        .moveTo(-147, -257).lineTo(-147, 0)
+        .moveTo(150, -257).lineTo(150, 0)
+        .moveTo(-137, -65).lineTo(137, -65)
+      drawFrame().stroke({ color: 0xf8dc9d, width: 10, alpha: 0.10 + pulse * 0.1 })
+      drawFrame().stroke({ color: 0xffe9b3, width: 3, alpha: 0.68 + pulse * 0.21 })
     }
   }
   update(frame: WorldFrame, ground: number, reduced: boolean, terrain: TerrainPoint[]) {

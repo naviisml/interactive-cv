@@ -4,7 +4,7 @@ import data from '~/content/finance-support.json'
 import type { TimelineEvent } from '~/content/timeline'
 import { financialSnapshot } from '~/game/core/financialSnapshot'
 const { t, locale } = useI18n()
-const props = defineProps<{ index: number; events: readonly TimelineEvent[]; contextTitle?: string }>()
+const props = defineProps<{ index: number; events: readonly TimelineEvent[]; contextTitle?: string; showSummary?: boolean }>()
 const emit = defineEmits<{ toggle: [open: boolean] }>()
 const dialog = ref<HTMLDialogElement>()
 const selectedCountry = ref('NL')
@@ -57,9 +57,11 @@ const incomeLabel = computed(() =>
     : t('finance.income'),
 )
 function open() {
-  dialog.value?.showModal()
+  if (!dialog.value || dialog.value.open) return
+  dialog.value.showModal()
   emit('toggle', true)
 }
+defineExpose({ open })
 function close() {
   dialog.value?.close()
 }
@@ -90,7 +92,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <div class="money-counter">
+  <div v-if="showSummary !== false" class="money-counter">
     <div class="debt-balance">
       <span>{{ featuredLabel }}</span><strong>{{ featuredAmount }}</strong>
     </div>

@@ -118,10 +118,15 @@ export class SchoolActivityScene extends Container {
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.boardGlow.clear()
     if (!active) return
-    const alpha = reduced ? 0.65 : 0.57 + Math.sin(time / 510) * 0.13
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 540)) * 0.5
+    const travel = reduced ? 0 : (time / 19) % 253
     this.boardGlow
       .roundRect(44, -238, 278, 174, 3)
-      .stroke({ color: 0xf8d990, width: 3, alpha })
+      .stroke({ color: 0xf8d893, width: 13, alpha: 0.1 + pulse * 0.12 })
+      .roundRect(44, -238, 278, 174, 3)
+      .stroke({ color: 0xffeab6, width: 3, alpha: 0.67 + pulse * 0.24 })
+    if (!reduced) this.boardGlow.rect(49 + travel, -242, 22, 5)
+      .fill({ color: 0xffffd6, alpha: 0.4 + pulse * 0.3 })
   }
   command(command: RoverCommand) {
     this.state.editRover(command)

@@ -41,12 +41,17 @@ export class FirstLinesScene extends Container {
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.screenGlow.clear()
     if (!active) return
-    const alpha = reduced ? 0.7 : 0.54 + Math.sin(time / 480) * 0.16
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 470)) * 0.5
+    const gleam = reduced ? 0 : (time / 28) % 115
     this.screenGlow
       .roundRect(85, -180, 131, 91, 4)
-      .stroke({ color: 0xffe0a2, width: 3, alpha })
+      .stroke({ color: 0xffd99e, width: 11, alpha: 0.10 + pulse * 0.11 })
+      .roundRect(85, -180, 131, 91, 4)
+      .stroke({ color: 0xffe9bc, width: 3, alpha: 0.67 + pulse * 0.27 })
       .rect(98, -168, 104, 65)
-      .fill({ color: 0xf6d38b, alpha: 0.045 })
+      .fill({ color: 0xffe2a6, alpha: 0.028 + pulse * 0.045 })
+    if (!reduced) this.screenGlow.rect(90 + gleam, -179, 16, 3)
+      .fill({ color: 0xffffdf, alpha: 0.48 + pulse * 0.3 })
   }
   update(time: number, reduced: boolean) {
     this.pixels.clear()

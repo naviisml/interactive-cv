@@ -145,6 +145,15 @@ function getWorldFrame() {
 // A direct, shareable, no-canvas entry point for recruiters and low-power devices.
 const router = useRouter()
 const listMode = useState<boolean>('journey-list-mode', () => false)
+const tooltipsEnabled = useState<boolean>('journey-tooltips-enabled', () => true)
+function setTooltips(enabled: boolean) {
+  tooltipsEnabled.value = enabled
+  try {
+    localStorage.setItem('navel:tooltips-enabled', String(enabled))
+  } catch {
+    // Settings still work for the current session when storage is unavailable.
+  }
+}
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
@@ -448,6 +457,12 @@ function interact(event: KeyboardEvent) {
 let worldDisposed = false
 onNuxtReady(async () => {
   if (worldDisposed) return
+  try {
+    const saved = localStorage.getItem('navel:tooltips-enabled')
+    if (saved === 'true' || saved === 'false') tooltipsEnabled.value = saved === 'true'
+  } catch {
+    // Storage is optional.
+  }
   // A static export shares one SSR payload across query strings. Resolve the
   // reading-mode URL before mounting Pixi, rather than reusing its world payload.
   if (
@@ -497,7 +512,9 @@ onBeforeUnmount(() => {
       :list-mode="listMode"
       @navigate="navigateLevel"
       @toggle-list="toggleList"
-      @money-toggle="moneyOpen = $event"
+      :tooltips-enabled="tooltipsEnabled"
+    @toggle-tooltips="setTooltips"
+    @money-toggle="moneyOpen = $event"
     />
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories">
       <button
@@ -534,6 +551,7 @@ onBeforeUnmount(() => {
             @availability="rendererUnavailable = !$event"
             :model="rendererModel"
             :active-id="current.id"
+            :show-tooltips="tooltipsEnabled"
             :get-frame="getWorldFrame"
             :subscribe="subscribe"
             :activities="activities"
