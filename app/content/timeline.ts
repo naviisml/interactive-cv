@@ -57,7 +57,7 @@ export const timeline: TimelineEvent[] = [
       'We also sold in-game credits purchased by phone or text. Hosting the VPS cost money, so I put the surplus aside rather than spending it.',
     ],
     finance: {
-      featured: 'savings',
+      featured: 'debt',
       debt: 0,
       context: {
         en: 'In the first year, CMS sales and credits generated approximately €700 in revenue against €120 of VPS expenses. €50 in and €10 out per month were broad averages, not a salary or exact annual accounting. I saved the surplus and used my allowance for everyday expenses.',
