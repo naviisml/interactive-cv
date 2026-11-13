@@ -10,6 +10,7 @@ import { SkillsRoadScene } from './scenes/SkillsRoadScene'
 import { BuildingSprite } from './sprites/BuildingSprite'
 import { LevelEntranceScene } from './scenes/LevelEntranceScene'
 import { isBuilding } from '../../content/buildings'
+import { circuitConnected } from '../core/learningActivities'
 import { doorOpenness } from '../core/buildingVisit'
 
 import { CharacterSprite } from './sprites/CharacterSprite'
@@ -32,6 +33,17 @@ export class WorldRenderer {
   private observer?: ResizeObserver
   private disposed = false
   private reduced = false
+  private motionQuery?: MediaQueryList
+  private motionPreference = () => {
+    this.reduced = this.motionQuery?.matches ?? false
+    this.dirty = true
+  }
+  private dirty = true
+  private frozen = false
+  private cancelCharges = () => this.activities.cancelCharges()
+  private visibilityChanged = () => {
+    if (document.hidden) this.cancelCharges()
+  }
   private previous = 0
   private lastReadout = -1000
   private zoom = 1
@@ -61,6 +73,8 @@ export class WorldRenderer {
       return
     }
     this.host.appendChild(this.app.canvas)
+    window.addEventListener('blur', this.cancelCharges)
+    document.addEventListener('visibilitychange', this.visibilityChanged)
     this.app.canvas.setAttribute('aria-label', 'Playable portfolio world')
     this.app.canvas.dataset.renderer = 'pixi'
     this.app.renderer.events.autoPreventDefault = false
@@ -78,13 +92,18 @@ export class WorldRenderer {
     this.gates.build(this.model)
     await this.character.load()
     if (this.disposed) return
-    this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-    this.observer = new ResizeObserver(() =>
-      this.app.renderer.resize(this.host.clientWidth, this.host.clientHeight),
-    )
+    this.motionQuery = matchMedia('(prefers-reduced-motion: reduce)')
+    this.motionPreference()
+    this.motionQuery.addEventListener('change', this.motionPreference)
+    this.observer = new ResizeObserver(() => {
+      this.app.renderer.resize(this.host.clientWidth, this.host.clientHeight)
+      this.dirty = true
+    })
     this.observer.observe(this.host)
   }
   setModel(model: WorldModel) {
+    this.activities.cancelCharges()
+    this.dirty = true
     this.model = model
     this.terrain.build(model)
     this.gates.build(model)
@@ -105,7 +124,6 @@ export class WorldRenderer {
         this.activities,
         (name, count) => this.callbacks.skill(name, count),
         this.model.locale,
-        (index) => this.callbacks.openWorkshop(index),
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact') return new CampsiteScene(this.model.locale)
@@ -113,6 +131,16 @@ export class WorldRenderer {
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
+    if (frame.paused) this.activities.cancelCharges()
+    // Keep drawing entry/exit animations, but retain the GPU frame behind a
+    // stationary dialog. A resize, locale or motion preference invalidates it.
+    const freeze = frame.paused && ['outside', 'inside'].includes(frame.visit.phase)
+    if (freeze && this.frozen && !this.dirty) {
+      this.previous = frame.time
+      return
+    }
+    this.frozen = freeze
+    this.dirty = false
     this.presentationProgress = frame.presentation.progress
     this.presentationActive = frame.presentation.active
     const width = this.app.screen.width,
@@ -127,20 +155,46 @@ export class WorldRenderer {
         Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
         !frame.navigating)
     const campView = frame.activeId === 'contact' && width < 700
-    const targetZoom = computerView
-      ? Math.min(frame.scale, (width - 24) / 820)
-      : campView
-        ? Math.min(frame.scale, (width - 24) / 800)
-        : isBuilding(frame.activeId)
-          ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
-          : frame.scale
+    const closeView =
+      width < 700 &&
+      (isBuilding(frame.activeId) ||
+        frame.activeId === 'skills-road' ||
+        frame.activeId === 'first-lines')
+    const firstEntry = this.model.entries.find((entry) => entry.event.id === 'first-lines')
+    const introView =
+      frame.activeId === 'first-lines' && frame.motion.x < (firstEntry?.x ?? 780) - 250
+    const portraitAnchor = introView
+      ? 0.22
+      : frame.activeId === 'skills-road'
+        ? 0.5
+        : ['roc-hilversum', 'coding-college'].includes(frame.activeId)
+          ? 0.18
+          : 0.32
+    const targetZoom = introView
+      ? 0.82
+      : closeView
+        ? Math.max(
+            0.78,
+            Math.min(
+              isBuilding(frame.activeId) ? 0.9 : 1.1,
+              (height - frame.groundInset - 148) / 300,
+            ),
+          )
+        : computerView
+          ? Math.min(frame.scale, (width - 24) / 675)
+          : campView
+            ? Math.min(frame.scale, (width - 24) / 800)
+            : isBuilding(frame.activeId)
+              ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
+              : frame.scale
     const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : Math.max(
           0,
           Math.min(
             this.model.width - width / targetZoom,
-            frame.motion.x - (width / targetZoom) * (campView ? 0.65 : width < 700 ? 0.5 : 0.38),
+            frame.motion.x -
+              (width / targetZoom) * (campView ? 0.65 : closeView ? portraitAnchor : 0.38),
           ),
         )
     if (!this.initialized) {
@@ -153,6 +207,7 @@ export class WorldRenderer {
     this.viewCamera += (targetCamera - this.viewCamera) * ease
     this.atmosphere.resize(width, base)
     this.atmosphere.update(frame, this.reduced)
+    this.gates.update(frame, this.reduced)
     this.world.scale.set(this.zoom)
     this.world.position.set(-this.viewCamera * this.zoom, base + frame.cameraY * this.zoom)
     const visible = this.model.entries.filter(
@@ -223,12 +278,20 @@ export class WorldRenderer {
               : 0,
           ),
           this.reduced,
-          width < 700,
+          entry.event.id === 'roc-hilversum'
+            ? circuitConnected(this.activities.circuit)
+            : entry.event.id === 'coding-college' && this.activities.rover.status === 'success',
         )
     }
     for (const [id, activity] of this.activitiesByScene) {
       const entry = this.model.entries.find((e) => e.event.id === id)
-      if (entry) activity.update(frame, entry.x, this.reduced)
+      if (entry)
+        activity.update(
+          frame,
+          entry.x,
+          this.reduced,
+          terrainHeight(entry.x, this.model.geometry.terrain),
+        )
     }
     for (const scene of this.scenes.values())
       if (scene instanceof CampsiteScene) scene.update(frame, this.reduced)
@@ -240,8 +303,25 @@ export class WorldRenderer {
       this.model,
     )
     this.app.render()
-    if (frame.time - this.lastReadout >= 100) {
+    if (freeze || frame.time - this.lastReadout >= 100) {
       this.lastReadout = frame.time
+      this.app.canvas.dataset.viewScale = this.zoom.toFixed(4)
+      this.app.canvas.dataset.viewCamera = this.viewCamera.toFixed(2)
+      this.app.canvas.dataset.entryPositions = JSON.stringify(
+        Object.fromEntries(
+          this.model.entries.map((entry) => [
+            entry.event.id,
+            {
+              x: entry.x,
+              ground:
+                base +
+                (frame.cameraY - terrainHeight(entry.x, this.model.geometry.terrain)) * this.zoom,
+            },
+          ]),
+        ),
+      )
+      this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
+      this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
@@ -249,18 +329,33 @@ export class WorldRenderer {
         Object.fromEntries(
           Object.entries(this.activities.actions).map(([id, s]) => [
             id,
-            { age: s.age, running: s.running, completed: s.completed },
+            {
+              age: s.age,
+              running: s.running,
+              completed: s.completed,
+              outcome: s.outcome,
+              successes: s.successes,
+            },
           ]),
         ),
       )
+      this.app.canvas.dataset.workerQueue = JSON.stringify(this.activities.cloud)
+      this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
+      this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
+      this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.visit = frame.visit.phase
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)
     }
   }
   destroy() {
+    if (this.disposed) return
     this.disposed = true
+    this.activities.cancelCharges()
+    window.removeEventListener('blur', this.cancelCharges)
+    document.removeEventListener('visibilitychange', this.visibilityChanged)
     this.observer?.disconnect()
+    this.motionQuery?.removeEventListener('change', this.motionPreference)
     if (this.app.renderer) this.app.destroy(true, { children: true })
   }
 }

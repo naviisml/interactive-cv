@@ -1,4 +1,6 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
+import { SCHOOL_LAB_OFFSET } from '../../core/learningActivities'
+import { SchoolActivityScene } from './SchoolActivityScene'
 import { AircraftSprite } from '../sprites/AircraftSprite'
 import { rect, label } from '../drawing'
 import { tapTarget, holdTarget } from '../interactions'
@@ -24,11 +26,13 @@ export class BuildingActivityScene extends Container {
   private overlay = new Graphics()
   private status: Text
   private statusPanel = new Graphics()
+  private net?: Graphics
+  private score?: Text
   private ball?: Graphics
   private plane?: AircraftSprite
   private car?: Container
   private cart?: Container
-  private tiles: Graphics[] = []
+  private school?: SchoolActivityScene
   private action: SceneAction
   constructor(
     private id: string,
@@ -38,8 +42,11 @@ export class BuildingActivityScene extends Container {
     super()
     this.action = buildingActions[id]!
     // Action feedback lives above the architecture, never across its signs.
-    this.status = label(this, '', 0, -341, 12, 0x274b3d, 278)
+    this.status = label(this, '', 155, -278, 14, 0x274b3d, 258)
     this.status.anchor.x = 0.5
+    const feedbackY = this.action === 'luggage' ? -150 : this.action === 'departure' ? -245 : -278
+    this.status.y = feedbackY
+    this.statusPanel.y = feedbackY + 278
     this.status.visible = false
     const start = () => state.trigger(id, this.action)
     if (this.action === 'basketball') {
@@ -65,6 +72,11 @@ export class BuildingActivityScene extends Container {
           .lineTo(217, -126)
           .stroke({ width: 1, color: 0xdbe0bd }),
       )
+      this.net = new Graphics()
+      this.addChild(this.net)
+      rect(this, 168, -202, 83, 30, 0x244638)
+      this.score = label(this, '00', 210, -198, 19, 0xf2d995, 70)
+      this.score.anchor.x = 0.5
       this.ball = new Graphics()
         .circle(0, 0, 10)
         .fill(0xc58d59)
@@ -75,21 +87,29 @@ export class BuildingActivityScene extends Container {
         .lineTo(0, 10)
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
-      holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88))
-
-
-
-
-
+      holdTarget(
+        this.ball,
+        () => {
+          const started = state.beginCharge(id)
+          if (started) state.charges[id]!.origin = { x: this.ball!.x, y: this.ball!.y }
+          return started
+        },
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-44, -44, 88, 88),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'departure') {
       rect(this, -260, -4, 590, 15, 0x71897a)
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
       this.plane = new AircraftSprite()
       this.object.addChild(this.plane)
-      holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90))
-
-
-
+      holdTarget(
+        this.plane,
+        () => state.beginCharge(id),
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-110, -40, 220, 90),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'camera') {
       rect(this, -280, -12, 620, 20, 0x5b7368)
       for (let x = -260; x < 320; x += 72) rect(this, x, -3, 35, 2, 0xc4c6a5)
@@ -111,10 +131,13 @@ export class BuildingActivityScene extends Container {
       rect(car, 66, -31, 10, 5, 0xe5d69b)
       this.car = car
       this.object.addChild(car)
-      holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76))
-
-
-
+      holdTarget(
+        car,
+        () => state.beginCharge(id),
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-86, -66, 175, 76),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'luggage') {
       rect(this, 146, -52, 73, 7, 0xb8a275)
       for (const x of [151, 209]) rect(this, x, -45, 5, 45, 0x526a52)
@@ -132,52 +155,14 @@ export class BuildingActivityScene extends Container {
       rect(this.cart, 3, -43, 22, 28, 0x7d9783)
       for (const x of [-22, 23]) this.cart.addChild(new Graphics().circle(x, -5, 5).fill(0x35584a))
       this.object.addChild(this.cart)
-
     } else {
-      rect(this, 107, -103, 126, 69, 0x243e39)
-      rect(this, 113, -97, 114, 55, 0x18352e)
-      rect(this, 161, -34, 16, 25, 0x758e73)
-      rect(this, 98, -10, 143, 7, 0xb9b38b)
-      label(
-        this,
-        this.action === 'compile' ? '> make project' : 'POWER / LINK',
-        120,
-        -88,
-        9,
-        0xc9d9ac,
-        105,
-      )
-      if (this.action !== 'compile') {
-        rect(this, 237, -94, 4, 86, 0x7d8a6d)
-        this.addChild(
-          new Graphics().poly([225, -96, 251, -96, 246, -116, 230, -116]).fill(0xa9af83),
-        )
-      }
-      for (let i = 0; i < 3; i++) {
-        const tile = new Graphics()
-        tile.position.set(121 + i * 33, -66)
-        this.tiles.push(tile)
-        this.addChild(tile)
-      }
-      const terminal = new Container()
-      tapTarget(
-        terminal,
-        () => {
-          const values = state.switches[id] ?? [0, 0, 0]
-          const next = values.findIndex((value) => !value)
-          if (next < 0) {
-            state.switches[id] = [0, 0, 0]
-            return
-          }
-          if (state.toggle(id, next)) start()
-        },
-        new Rectangle(98, -108, 145, 108),
-      )
-      this.addChild(terminal)
+      this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale)
+      this.school.x = SCHOOL_LAB_OFFSET
+      this.addChild(this.school)
     }
     this.addChild(this.object, this.overlay, this.statusPanel, this.status)
   }
-  update(frame: WorldFrame, entryX: number, reduced: boolean) {
+  update(frame: WorldFrame, entryX: number, reduced: boolean, ground = 0) {
     const record = this.state.actions[this.id],
       running = record?.running ?? false,
       age = record?.age ?? 0,
@@ -195,39 +180,75 @@ export class BuildingActivityScene extends Container {
     if (showStatus) {
       // The label reads like an architectural annotation, not a second HUD.
       this.statusPanel
-        .roundRect(-152, -351, 308, 61, 7)
+        .roundRect(18, -288, 280, 64, 5)
         .fill({ color: 0x19392f, alpha: 0.17 })
-        .roundRect(-156, -355, 308, 61, 7)
+        .roundRect(14, -292, 280, 64, 5)
         .fill({ color: 0xf4f0df, alpha: 0.97 })
         .stroke({ width: 1.5, color: 0x8da78f, alpha: 0.9 })
       if (charging) {
         this.statusPanel
-          .roundRect(-142, -306, 280, 5, 2)
+          .roundRect(28, -241, 250, 5, 2)
           .fill(0xc4ceba)
-          .roundRect(-142, -306, 280 * charge.power, 5, 2)
+          .roundRect(28, -241, 250 * charge.power, 5, 2)
           .fill(charge.power >= 0.8 ? 0xb97758 : 0x4d8a66)
         if (this.action === 'basketball')
           for (const threshold of [0.52, 0.78])
-            this.statusPanel.rect(-142 + 280 * threshold, -309, 2, 11).fill(0x24483a)
+            this.statusPanel.rect(28 + 250 * threshold, -244, 2, 11).fill(0x24483a)
       }
     }
     if (this.ball) {
-      const p = running ? basketballPose(age, record?.power) : { x: -90, y: -10 }
+      const pickup = charging ? Math.min(1, (charge.power * 1.75) / 0.18) : 0
+      const p = running
+        ? basketballPose(age, record?.power, record?.origin)
+        : {
+            x: 65 + (frame.motion.x - entryX + frame.facing * 14 - 65) * pickup,
+            y: -10 + (frame.motion.y + ground - (frame.motion.grounded ? 40 : 75) + 10) * pickup,
+          }
+      if (charging) charge.origin = { x: p.x, y: p.y }
       this.ball.position.set(p.x, p.y)
       this.ball.rotation = running ? age * 5 : 0
+      this.score!.text = String(record?.successes ?? 0).padStart(2, '0')
+      const swish =
+        running && age > 1.1 && age < 1.6 && record?.outcome === 'success' && !reduced
+          ? Math.sin((age - 1.1) * Math.PI * 6) * 3
+          : 0
+      this.net!.clear()
+      for (let i = 0; i < 6; i++) {
+        const x = 182 + i * 7
+        this.net!.moveTo(x, -126)
+          .lineTo(190 + i * 3 + swish, -104)
+          .stroke({ width: 1.3, color: 0xe8e5c5 })
+      }
+      this.net!.moveTo(187, -114)
+        .lineTo(214 + swish, -114)
+        .stroke({ width: 1, color: 0xe8e5c5 })
+      if (charging)
+        for (let i = 0; i < 16; i++) {
+          const aim = basketballPose((i / 16) * 1.1, charge.power, charge.origin)
+          this.overlay.circle(aim.x, aim.y, 1.6).fill({
+            color: charge.power >= 0.52 && charge.power <= 0.78 ? 0xe4dda7 : 0xc4c9b1,
+            alpha: 0.65,
+          })
+        }
       this.status.text = charging
-        ? (nl ? 'Houd vast… laat los in de groene zone' : 'Hold… release in the target zone')
+        ? nl
+          ? 'Houd vast… laat los in de groene zone'
+          : 'Hold… release in the target zone'
         : running
-          ? (nl ? 'Schot onderweg…' : 'Shot in flight…')
+          ? nl
+            ? 'Schot onderweg…'
+            : 'Shot in flight…'
           : record?.completed
-            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : (nl ? 'Gemist · probeer opnieuw' : 'Missed · try again')}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
-            : (nl ? 'Houd de bal vast om te mikken' : 'Hold the ball to aim and release')
+            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : nl ? 'Gemist · probeer opnieuw' : 'Missed · try again'}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
+            : nl
+              ? 'Houd de bal vast om te mikken'
+              : 'Hold the ball to aim and release'
     } else if (this.plane) {
       const success = record?.outcome === 'success'
       const p = running
-        ? (success
-            ? aircraftPose(age)
-            : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 })
+        ? success
+          ? aircraftPose(age)
+          : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 }
         : { x: 130, y: -22, angle: 0, scale: 1 }
       this.plane.position.set(p.x, p.y)
       this.plane.angle = reduced ? 0 : p.angle
@@ -236,29 +257,53 @@ export class BuildingActivityScene extends Container {
       this.status.text = charging
         ? `${nl ? 'Motorvermogen' : 'Engine power'}: ${Math.round(charge.power * 100)}% — ${nl ? 'houd ingedrukt' : 'keep holding'}`
         : running
-          ? (success
-              ? (age < 1.4 ? (nl ? 'Versnelt over de baan…' : 'Accelerating down the runway…') : (nl ? 'Opgestegen!' : 'Airborne!'))
-              : (nl ? 'Niet genoeg snelheid om op te stijgen' : 'Not enough speed for take-off'))
+          ? success
+            ? age < 1.4
+              ? nl
+                ? 'Versnelt over de baan…'
+                : 'Accelerating down the runway…'
+              : nl
+                ? 'Opgestegen!'
+                : 'Airborne!'
+            : nl
+              ? 'Niet genoeg snelheid om op te stijgen'
+              : 'Not enough speed for take-off'
           : record?.completed
-            ? (success ? (nl ? 'Vlucht geslaagd · opnieuw?' : 'Take-off successful · retry?') : (nl ? 'Te weinig vermogen · opnieuw?' : 'Too little power · retry?'))
-            : (nl ? 'Houd vliegtuig vast om vermogen op te bouwen' : 'Press and hold the plane to build speed')
+            ? success
+              ? nl
+                ? 'Vlucht geslaagd · opnieuw?'
+                : 'Take-off successful · retry?'
+              : nl
+                ? 'Te weinig vermogen · opnieuw?'
+                : 'Too little power · retry?'
+            : nl
+              ? 'Houd vliegtuig vast om vermogen op te bouwen'
+              : 'Press and hold the plane to build speed'
     } else if (this.car) {
       const speed = Math.round(10 + (record?.power ?? 0.38) * 80)
-      const p = running ? cameraCarPose(age, speed) : { x: -150, flash: false }
+      const p = running ? cameraCarPose(age, speed) : { x: 70, flash: false }
       this.car.position.set(p.x, -5)
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
       this.status.text = charging
         ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(10 + charge.power * 80)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
         : running
-          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : (nl ? 'Passage…' : 'Passing camera…')}`
+          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : nl ? 'Passage…' : 'Passing camera…'}`
           : record?.completed
-            ? (record.outcome === 'success'
-                ? (nl ? 'Binnen de limiet · opnieuw?' : 'Within the limit · retry?')
-                : record.outcome === 'ticket'
-                  ? (nl ? 'Te hard gereden · probeer opnieuw' : 'Too fast · try again')
-                  : (nl ? 'Te langzaam · houd langer vast' : 'Too slow · press longer'))
-            : (nl ? 'Houd de auto vast, laat los voor 50 km/h' : 'Press and hold the car, release near 50 km/h')
+            ? record.outcome === 'success'
+              ? nl
+                ? 'Binnen de limiet · opnieuw?'
+                : 'Within the limit · retry?'
+              : record.outcome === 'ticket'
+                ? nl
+                  ? 'Te hard gereden · probeer opnieuw'
+                  : 'Too fast · try again'
+                : nl
+                  ? 'Te langzaam · houd langer vast'
+                  : 'Too slow · press longer'
+            : nl
+              ? 'Houd de auto vast, laat los voor 50 km/h'
+              : 'Press and hold the car, release near 50 km/h'
     } else if (this.cart) {
       this.cart.position.set(running ? 210 - Math.min(1, age / 3) * 210 : 210, 0)
       this.cart.alpha = running && age > 3 ? Math.max(0, 1 - (age - 3)) : 1
@@ -272,31 +317,9 @@ export class BuildingActivityScene extends Container {
             : 'Delivered · ring again'
           : captions.luggage[nl ? 0 : 1]
     } else {
-      const values = this.state.switches[this.id] ?? [0, 0, 0]
-      this.tiles.forEach((tile, i) =>
-        tile
-          .clear()
-          .rect(0, 0, 22, 12)
-          .fill(values[i] ? 0x819e67 : 0x52746a)
-          .stroke({ width: 2, color: values[i] ? 0xd7d7a0 : 0x8ea68e }),
-      )
-      if (this.action === 'circuit') {
-        values.forEach((value, i) => {
-          this.overlay
-            .moveTo(127 + i * 33, -58)
-            .lineTo(127 + i * 33, -47)
-            .lineTo(215, -47)
-            .stroke({ width: 2, color: value ? 0xe7d48d : 0x486b5c })
-        })
-        this.overlay.rect(231, -111, 14, 13).fill(values.every(Boolean) ? 0xffe4a4 : 0x6e8971)
-      }
-      this.status.text = values.every(Boolean)
-        ? '> running_'
-        : values[1]
-          ? '> tests: OK'
-          : values[0]
-            ? '> build: OK'
-            : '> ready_'
+      this.status.visible = false
+      this.statusPanel.clear()
+      this.school?.update(frame, reduced)
     }
   }
 }

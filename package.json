@@ -13,7 +13,9 @@
     "format": "prettier --write app art scripts tests i18n nuxt.config.ts",
     "format:check": "prettier --check app art scripts tests i18n nuxt.config.ts",
     "art:export": "node scripts/art/export-scenes.mjs",
-    "art:skills": "node scripts/art/prepare-skills.mjs"
+    "art:skills": "node scripts/art/prepare-skills.mjs",
+    "serve:generated": "serve .output/public --listen tcp://127.0.0.1:3000",
+    "test:browser": "node scripts/smoke-world.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.72.0",
@@ -24,7 +26,9 @@
     "vue-router": "5.4.0"
   },
   "devDependencies": {
+    "playwright": "1.65.0",
     "prettier": "^3.10.1",
+    "serve": "14.2.8",
     "sharp": "^0.34.5",
     "typescript": "^5.9.0",
     "vue-tsc": "^3.1.0"

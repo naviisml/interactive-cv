@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,15 +32,14 @@ jobs:
         env:
           VISUAL_LOG: '1'
         run: |
-          npm install --no-save --package-lock=false playwright
-          npm run dev -- --host 127.0.0.1 > /tmp/portfolio-nuxt.log 2>&1 &
+          npm run serve:generated > /tmp/portfolio-static.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
           for i in {1..40}; do
             if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
             sleep 2
           done
-          node scripts/smoke-world.mjs
+          npm run test:browser
 
 
       - uses: actions/upload-artifact@v4

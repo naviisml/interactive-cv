@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { countryNames, helpText } from '~/content/locales/finance-nl'
 import data from '~/content/finance-support.json'
-import { timeline } from '~/content/timeline'
+import type { TimelineEvent } from '~/content/timeline'
 import { financialSnapshot } from '~/game/core/financialSnapshot'
 const { t, locale } = useI18n()
-const props = defineProps<{ index: number; contextTitle?: string }>()
+const props = defineProps<{ index: number; events: readonly TimelineEvent[]; contextTitle?: string }>()
 const emit = defineEmits<{ toggle: [open: boolean] }>()
 const dialog = ref<HTMLDialogElement>()
 const selectedCountry = ref('NL')
@@ -31,10 +31,10 @@ const displayCountries = computed(() =>
   ),
 )
 const snapshot = computed(() =>
-  financialSnapshot(timeline, props.index),
+  financialSnapshot(props.events, props.index),
 )
 const eventContext = computed(() => {
-  const text = timeline[props.index]?.finance?.context
+  const text = props.events[props.index]?.finance?.context
   return text?.[locale.value === 'nl' ? 'nl' : 'en'] ?? ''
 })
 const featuredLabel = computed(() =>
@@ -127,7 +127,7 @@ onBeforeUnmount(() => {
           <h2 id="debt-title">{{ t('finance.title') }}</h2>
           <p>{{ t('finance.intro') }}</p>
           <div class="debt-chapter">
-            <span>{{ contextTitle || timeline[index]?.title }}</span>
+            <span>{{ contextTitle || events[index]?.title }}</span>
             <dl>
               <div>
                 <dt>{{ t('finance.debt') }}</dt>

@@ -15,6 +15,7 @@ export interface ActionState {
   completed: number
   /** Power recorded at release. All three motor/ball activities are controllable. */
   power?: number
+  origin?: { x: number; y: number }
   outcome?: 'success' | 'retry' | 'ticket'
   successes?: number
 }
@@ -27,7 +28,9 @@ export function advanceAction(state: ActionState, dt: number): ActionState {
     age,
     running: !finished,
     completed: state.completed + Number(finished),
-    successes: (state.successes ?? 0) + Number(finished && state.outcome !== 'retry' && state.outcome !== 'ticket'),
+    successes:
+      (state.successes ?? 0) +
+      Number(finished && state.outcome !== 'retry' && state.outcome !== 'ticket'),
   }
 }
 export function aircraftPose(age: number) {
@@ -42,30 +45,50 @@ export function aircraftPose(age: number) {
 }
 export function cameraCarPose(age: number, speed = 62) {
   // The chosen speed changes when the car reaches the actual camera, not just its label.
-  const x = -280 + age * 155 * (0.4 + speed / 100)
+  const x = 70 + age * 110 * (0.4 + speed / 100)
   return { x, flash: speed > 50 && x >= 125 && x < 180 }
 }
-export function basketballPose(age: number, power = 0.65) {
-  const deviation = (power - 0.65) * 360
+export const basketballCourt = { hoopX: 200, hoopY: -130, rimRadius: 20, ballRadius: 10 }
+export function basketballLandingX(power: number) {
+  return basketballCourt.hoopX + (power - 0.65) * (10 / 0.13)
+}
+export function basketballScores(power: number) {
+  return (
+    Math.abs(basketballLandingX(power) - basketballCourt.hoopX) <=
+    basketballCourt.rimRadius - basketballCourt.ballRadius + 1e-8
+  )
+}
+export function basketballPose(age: number, power = 0.65, origin = { x: 14, y: -40 }) {
+  const end = basketballLandingX(power)
   if (age <= 1.1) {
     const t = age / 1.1
-    return { x: -90 + (290 + deviation) * t, y: -10 - 120 * t - (80 + deviation * 0.2) * 4 * t * (1 - t) }
+    return {
+      x: origin.x + (end - origin.x) * t,
+      y: origin.y + (-130 - origin.y) * t - 76 * Math.sin(t * Math.PI),
+    }
   }
-  if (age <= 1.5) return { x: 200 + deviation, y: -130 + (age - 1.1) * 115 }
+  if (!basketballScores(power)) {
+    const bounce = Math.min(1, (age - 1.1) / 1.1)
+    return {
+      x: end + Math.sign(power - 0.65) * bounce * 105,
+      y: -130 + bounce * 120 - 62 * Math.sin(bounce * Math.PI),
+    }
+  }
+  if (age <= 1.5) return { x: end, y: -130 + (age - 1.1) * 115 }
   const t = Math.min(1, (age - 1.5) / 0.7)
-  return { x: 200 + deviation + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
+  return { x: end + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
 }
 export const skillDecks = [
-  { id: 'tooling-bench', offset: -530, width: 190, height: 35 },
-  { id: 'web-bridge', offset: -80, width: 210, height: 66 },
-  { id: 'cloud-deck', offset: 365, width: 190, height: 43 },
-] as const
+  { id: 'tooling-bench', center: -440, height: 35 },
+  { id: 'web-bridge', center: 0, height: 66 },
+  { id: 'cloud-deck', center: 440, height: 43 },
+].map((deck) => ({ ...deck, offset: deck.center - 155, width: 310 }))
 export function skillTerrain(
   terrain: { x: number; height: number }[],
   center: number,
   ground: number,
 ) {
-  const inside = [{ x: center - 650, height: ground }]
+  const inside = [{ x: center - 710, height: ground }]
   for (const deck of skillDecks)
     inside.push(
       { x: center + deck.offset - 65, height: ground },
@@ -73,11 +96,11 @@ export function skillTerrain(
       { x: center + deck.offset + deck.width, height: ground + deck.height },
       { x: center + deck.offset + deck.width + 55, height: ground },
     )
-  inside.push({ x: center + 650, height: ground })
+  inside.push({ x: center + 710, height: ground })
   return [
-    ...terrain.filter((p) => p.x < center - 650),
+    ...terrain.filter((p) => p.x < center - 710),
     ...inside,
-    ...terrain.filter((p) => p.x > center + 650),
+    ...terrain.filter((p) => p.x > center + 710),
   ].sort((a, b) => a.x - b.x)
 }
 

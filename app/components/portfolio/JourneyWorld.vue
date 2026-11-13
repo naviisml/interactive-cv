@@ -5,7 +5,7 @@ import { useJourney } from '~/game/engine/useJourney'
 import { useWorldViewport } from '~/game/engine/useWorldViewport'
 import { companySlides } from '~/content/company'
 import { ActivitySystem } from '~/game/engine/ActivitySystem'
-import { timeline as cvTimeline, hasDetails, type TimelineFilter } from '~/content/timeline'
+import { hasDetails, type TimelineFilter } from '~/content/timeline'
 import { journeyEvents, levelForEvent, firstInLevel, type LevelId } from '~/content/journey'
 import { sceneryTransition } from '~/game/core/sceneryTransition'
 import { readingProgress } from '~/game/core/readingProgress'
@@ -24,6 +24,8 @@ const entries = computed(() =>
 )
 const filters = ['all', 'work', 'projects', 'school', 'skills'] as const
 const sceneChanging = ref(false)
+const worldReady = ref(false)
+const rendererUnavailable = ref(false)
 const detailIndex = ref<number | null>(null),
   pendingDetailIndex = ref<number | null>(null)
 const detailEvent = computed(() =>
@@ -31,22 +33,17 @@ const detailEvent = computed(() =>
 )
 const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
-const workshopIndex = ref<number | null>(null)
 let interactionOpener: HTMLElement | undefined
-function rememberInteractionFocus() {
-  const active = document.activeElement
-  interactionOpener = active instanceof HTMLElement && active !== document.body
-    ? active : undefined
-}
 async function restoreInteractionFocus() {
   await nextTick()
   if (interactionOpener?.isConnected) interactionOpener.focus({ preventScroll: true })
   else worldRoot.value?.focus({ preventScroll: true })
   interactionOpener = undefined
 }
-function openFirstComputer() {
+function openFirstComputer(event?: MouseEvent) {
   if (listMode.value || firstCodeOpen.value) return
-  rememberInteractionFocus()
+  interactionOpener =
+    event?.currentTarget instanceof HTMLElement ? event.currentTarget : worldRoot.value
   stop()
   firstCodeOpen.value = true
 }
@@ -61,25 +58,10 @@ const journey = useJourney(trackIndices, view)
 const buildingVisit = useBuildingVisit(journey)
 const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
-const completedWorkshops = ref<string[]>([])
-function openWorkshop(index: number) {
-  if (listMode.value || workshopIndex.value !== null) return
-  rememberInteractionFocus()
-  stop()
-  workshopIndex.value = index
-}
-async function closeWorkshop() {
-  workshopIndex.value = null
-  await restoreInteractionFocus()
-}
-function finishWorkshop(id: string) {
-  activities.completeWorkshop(id)
-  completedWorkshops.value = [...activities.completedWorkshops]
-}
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
-  current.value.category === 'skills'
-    ? t(exploredSkill.value.name ? 'activity.skillFound' : 'activity.skillsHint', {
+  current.value.category === 'skills' && exploredSkill.value.name
+    ? t('activity.skillFound', {
         name: exploredSkill.value.name,
         count: exploredSkill.value.count,
         total: 18,
@@ -160,19 +142,19 @@ function getWorldFrame() {
   }
 }
 // A direct, shareable, no-canvas entry point for recruiters and low-power devices.
-const route = useRoute()
-const listMode = useState<boolean>('journey-list-mode', () => route.query.view === 'list')
+const router = useRouter()
+const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, rendererUnavailable],
   () => {
     paused.value =
       listMode.value ||
+      rendererUnavailable.value ||
       detailIndex.value !== null ||
       moneyOpen.value ||
       firstCodeOpen.value ||
-      workshopIndex.value !== null ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -181,8 +163,7 @@ async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
   if (isBuilding(timeline.value[index]!.id)) {
-    if (listMode.value) listMode.value = false
-    buildingVisit.enter(index)
+    enterBuilding(index, event)
     return
   }
   if (!hasDetails(timeline.value[index]!)) return
@@ -241,21 +222,35 @@ const enterable = computed(
 )
 const current = computed(() => timeline.value[nearestIndex.value]!)
 const nearFirstComputer = computed(
-  () => current.value.id === 'first-lines' &&
-    Math.abs(motion.x - (eventPosition(nearestIndex.value) - 90)) < 210,
+  () =>
+    current.value.id === 'first-lines' &&
+    Math.abs(motion.x - (eventPosition(nearestIndex.value) + 140)) < 210,
 )
-const nearbyWorkshop = computed(() => {
-  if (current.value.id !== 'skills-road') return null
-  const offset = motion.x - eventPosition(nearestIndex.value)
-  const positions = [-440, 0, 440]
-  const closest = positions.reduce((best, x, index) =>
-    Math.abs(offset - x) < Math.abs(offset - positions[best]!) ? index : best, 0)
-  return Math.abs(offset - positions[closest]!) < 220 ? closest : null
-})
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
-const financeIndex = computed(() =>
-  cvTimeline.findIndex((event) => event.id === timeline.value[activeIndex.value]?.id),
+// Financial metadata follows the same ordered scenes as the active list/world,
+// including authored skills/contact scenes that have no separate CV record.
+const financeIndex = computed(() => activeIndex.value)
+const worldPanelOpen = computed(
+  () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value,
 )
+let buildingOpener: HTMLElement | undefined
+function enterBuilding(index: number, event?: MouseEvent) {
+  buildingOpener =
+    event?.currentTarget instanceof HTMLElement ? event.currentTarget : worldRoot.value
+  if (listMode.value) listMode.value = false
+  buildingVisit.enter(index)
+}
+watch(
+  () => visit.phase,
+  async (phase, previous) => {
+    if (phase !== 'outside' || previous !== 'closing') return
+    await nextTick()
+    if (buildingOpener?.isConnected) buildingOpener.focus({ preventScroll: true })
+    else worldRoot.value?.focus({ preventScroll: true })
+    buildingOpener = undefined
+  },
+)
+
 watch(destination, (value) => {
   if (value || pendingDetailIndex.value === null) return
   const index = pendingDetailIndex.value
@@ -276,6 +271,8 @@ let gesture:
   { id: number; startX: number; startY: number; lastX: number; horizontal: boolean } | undefined
 function gestureStart(event: PointerEvent) {
   if (
+    activities.charging ||
+    paused.value ||
     event.pointerType !== 'pen' ||
     !event.isPrimary ||
     (event.target as HTMLElement)?.closest(
@@ -319,6 +316,7 @@ function gestureEnd(event: PointerEvent) {
 let touchGesture:
   { id: number; startX: number; startY: number; lastX: number; axis: SwipeAxis } | undefined
 function touchStart(event: TouchEvent) {
+  if (activities.charging || paused.value) return
   touchGesture = undefined
   endScrollTravel()
   if (
@@ -336,6 +334,11 @@ function touchStart(event: TouchEvent) {
   }
 }
 function touchMove(event: TouchEvent) {
+  if (activities.charging) {
+    if (event.cancelable) event.preventDefault()
+    touchGesture = undefined
+    return
+  }
   if (!touchGesture) return
   if (event.touches.length !== 1) {
     touchEnd()
@@ -382,7 +385,7 @@ watch(
   { flush: 'post' },
 )
 function wheelTravel(event: WheelEvent) {
-  if (event.ctrlKey || paused.value) return
+  if (event.ctrlKey || paused.value || activities.charging) return
   const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
   event.preventDefault()
   scrollByDistance(delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1), 'wheel')
@@ -437,6 +440,7 @@ function navigateTimeline(index: number) {
   else goTo(index)
 }
 function interact(event: KeyboardEvent) {
+  if (paused.value || event.defaultPrevented || event.repeat) return
   if (
     !listMode.value &&
     detailIndex.value === null &&
@@ -444,11 +448,21 @@ function interact(event: KeyboardEvent) {
     event.key.toLowerCase() === 'e' &&
     nearby.value &&
     isBuilding(nearby.value.id) &&
-    !(event.target as HTMLElement)?.closest('button,a,input')
+    !(event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]')
   )
     openDetail(nearestIndex.value)
 }
-onMounted(async () => {
+let worldDisposed = false
+onNuxtReady(async () => {
+  if (worldDisposed) return
+  // A static export shares one SSR payload across query strings. Resolve the
+  // reading-mode URL before mounting Pixi, rather than reusing its world payload.
+  if (
+    router.currentRoute.value.query.view === 'list' ||
+    new URLSearchParams(window.location.search).get('view') === 'list'
+  )
+    listMode.value = true
+  worldReady.value = true
   if (
     !listMode.value &&
     (document.activeElement === document.body ||
@@ -456,7 +470,12 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
+    listMode.value ||
+    rendererUnavailable.value ||
+    detailIndex.value !== null ||
+    moneyOpen.value ||
+    firstCodeOpen.value ||
+    buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -466,6 +485,7 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
+  worldDisposed = true
   detachTouch(worldRoot.value)
   window.removeEventListener('keydown', interact)
   window.removeEventListener('scroll', queueListUpdate)
@@ -476,6 +496,8 @@ onBeforeUnmount(() => {
 <template>
   <main class="journey-shell" :class="{ 'is-list': listMode, 'scene-changing': sceneChanging }">
     <PortfolioHeader
+      :inert="worldPanelOpen"
+      :finance-events="timeline"
       :active="activeLevel.id"
       :finance-index="financeIndex"
       :context-title="timeline[activeIndex]?.title"
@@ -511,9 +533,11 @@ onBeforeUnmount(() => {
       @wheel="wheelTravel"
       :aria-label="t('common.worldLabel')"
     >
-      <div class="world-scene" :inert="!!detailEvent || visit.phase === 'inside' || firstCodeOpen || workshopIndex !== null">
+      <div class="world-scene" :inert="worldPanelOpen">
         <ClientOnly
           ><GameCanvas
+            v-if="worldReady"
+            @availability="rendererUnavailable = !$event"
             :model="rendererModel"
             :active-id="current.id"
             :get-frame="getWorldFrame"
@@ -525,47 +549,41 @@ onBeforeUnmount(() => {
             @start-computer="startPresentation"
             @read-fallback="toggleList"
             @open-first-computer="openFirstComputer"
-            @open-workshop="openWorkshop"
         /></ClientOnly>
-        <ChapterCaption
-          :current="current"
-          :running="running"
-          :destination-title="destinationTitle"
-          :feedback="skillFeedback"
-          :enterable="enterable"
-          @enter="buildingVisit.enter(nearestIndex)"
-          @details="openDetail(nearestIndex, $event)"
-          @cancel="stop"
-        />
-        <button
-          v-if="nearFirstComputer && !running && !firstCodeOpen"
-          class="first-code-launch is-first-code"
-          @click="openFirstComputer"
-        >
-          {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
-        </button>
-        <button
-          v-if="nearbyWorkshop !== null && !running && workshopIndex === null"
-          class="first-code-launch"
-          @click="openWorkshop(nearbyWorkshop!)"
-        >
-          {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
-        </button>
-        <CompanyControls
-          v-if="presentation.active"
-          :progress="presentation.progress"
-          :slides="rendererModel.slides"
-          @seek="seekPresentation"
-          @exit="exitPresentation"
-        />
-        <MovementControls
-          :near-ladder="!!nearLadder"
-          :paused="paused"
-          @direction="touchDirection = $event"
-          @vertical="touchVertical = $event"
-          @sprint="touchSprint = $event"
-          @jump="jump"
-        />
+        <div class="world-chrome" :inert="rendererUnavailable">
+          <ChapterCaption
+            :current="current"
+            :running="running"
+            :destination-title="destinationTitle"
+            :feedback="skillFeedback"
+            :enterable="enterable"
+            @enter="enterBuilding(nearestIndex, $event)"
+            @details="openDetail(nearestIndex, $event)"
+            @cancel="stop"
+          />
+          <button
+            v-if="nearFirstComputer && !running && !firstCodeOpen"
+            class="first-code-launch is-first-code"
+            @click="openFirstComputer"
+          >
+            {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+          </button>
+          <CompanyControls
+            v-if="presentation.active"
+            :progress="presentation.progress"
+            :slides="rendererModel.slides"
+            @seek="seekPresentation"
+            @exit="exitPresentation"
+          />
+          <MovementControls
+            :near-ladder="!!nearLadder"
+            :paused="paused"
+            @direction="touchDirection = $event"
+            @vertical="touchVertical = $event"
+            @sprint="touchSprint = $event"
+            @jump="jump"
+          />
+        </div>
       </div>
       <BuildingInterior
         v-if="visit.phase === 'inside' && visitEvent"
@@ -574,13 +592,6 @@ onBeforeUnmount(() => {
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
       <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
-      <SkillWorkshop
-        v-if="workshopIndex !== null"
-        :initial-group="workshopIndex"
-        :completed="completedWorkshops"
-        @complete="finishWorkshop"
-        @close="closeWorkshop"
-      />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
@@ -596,6 +607,7 @@ onBeforeUnmount(() => {
       />
     </section>
     <JourneyTimeline
+      :inert="worldPanelOpen"
       :entries="entries"
       :active="activeIndex"
       :progress="displayProgress"
@@ -608,6 +620,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .first-code-launch {
   position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
   top: 168px;
   right: clamp(18px, 3vw, 48px);
   z-index: 7;
@@ -617,13 +633,30 @@ onBeforeUnmount(() => {
   background: #365f4c;
   border: 1px solid #c6cea6;
   border-radius: 6px;
-  box-shadow: 0 5px 20px #25473a26, 0 3px 0 #25473a44;
-  font: 600 12px 'Space Grotesk', sans-serif;
+  box-shadow:
+    0 5px 20px #25473a26,
+    0 3px 0 #25473a44;
+  font:
+    600 12px 'Space Grotesk',
+    sans-serif;
 }
-.first-code-launch:hover { background: #284c3f; }
-.first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
+.first-code-launch:hover {
+  background: #284c3f;
+}
+.first-code-launch:focus-visible {
+  clip-path: none;
+  width: auto;
+  height: auto;
+  outline: 3px solid #e1bc7f;
+}
 @media (max-width: 700px) {
-  .first-code-launch { top: 138px; right: 16px; max-width: 185px; }
-  .first-code-launch.is-first-code { top: 233px; }
+  .first-code-launch {
+    top: 138px;
+    right: 16px;
+    max-width: 185px;
+  }
+  .first-code-launch.is-first-code {
+    top: 233px;
+  }
 }
 </style>

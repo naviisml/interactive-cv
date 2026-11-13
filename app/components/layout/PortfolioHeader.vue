@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Menu, X, List, Map } from '@lucide/vue'
+import type { TimelineEvent } from '~/content/timeline'
 import { levels, type LevelId } from '~/content/journey'
-defineProps<{ active: LevelId; financeIndex: number; contextTitle?: string; listMode: boolean }>()
+defineProps<{ active: LevelId; financeIndex: number; financeEvents: readonly TimelineEvent[]; contextTitle?: string; listMode: boolean }>()
 const emit = defineEmits<{
   navigate: [id: LevelId]
   toggleList: []
@@ -10,12 +11,40 @@ const emit = defineEmits<{
 const { t, locale, setLocale } = useI18n()
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement>()
+// The first outside gesture only dismisses the menu. Capture it before Pixi
+// or an underlying DOM button can treat it as a second, unrelated action.
+let dismissingPointer = false
 function dismissMenu(event: PointerEvent) {
-  if (menuOpen.value && !menuRoot.value?.contains(event.target as Node))
-    menuOpen.value = false
+  dismissingPointer = false
+  if (!menuOpen.value || menuRoot.value?.contains(event.target as Node)) return
+  menuOpen.value = false
+  dismissingPointer = true
+  event.preventDefault()
+  event.stopImmediatePropagation()
 }
-onMounted(() => document.addEventListener('pointerdown', dismissMenu))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', dismissMenu))
+function consumeDismissalClick(event: MouseEvent) {
+  if (!dismissingPointer) return
+  dismissingPointer = false
+  if (event.detail === 0) return
+  event.preventDefault()
+  event.stopImmediatePropagation()
+}
+function focusLeavesMenu(event: FocusEvent) {
+  if (!menuRoot.value?.contains(event.relatedTarget as Node | null)) menuOpen.value = false
+}
+function escapeMenu(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || !menuOpen.value) return
+  menuOpen.value = false
+  menuRoot.value?.querySelector<HTMLButtonElement>('.menu-toggle')?.focus()
+}
+onMounted(() => {
+  document.addEventListener('pointerdown', dismissMenu, true)
+  document.addEventListener('click', consumeDismissalClick, true)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', dismissMenu, true)
+  document.removeEventListener('click', consumeDismissalClick, true)
+})
 function navigate(id: LevelId) {
   menuOpen.value = false
   emit('navigate', id)
@@ -26,9 +55,9 @@ function toggleView() {
 }
 </script>
 <template>
-  <header class="portfolio-header" @keydown.esc="menuOpen = false">
+  <header class="portfolio-header" @keydown="escapeMenu">
     <NuxtLink class="wordmark" to="/" aria-label="Navi home">navi<span>®</span></NuxtLink>
-    <div ref="menuRoot" class="header-menu">
+    <div ref="menuRoot" class="header-menu" @focusout="focusLeavesMenu">
       <button
         class="menu-toggle"
         :aria-expanded="menuOpen"
@@ -74,7 +103,7 @@ function toggleView() {
           <option value="nl">NL</option>
         </select></label
       ><MoneyCounter
-        :index="financeIndex"
+        :index="financeIndex" :events="financeEvents"
         :context-title="contextTitle"
         @toggle="emit('moneyToggle', $event)"
       />

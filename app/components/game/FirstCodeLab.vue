@@ -1,17 +1,23 @@
 <script setup lang="ts">
+import { codePreviewDocument } from '~/game/core/codePreview'
 import { Code2, RotateCcw, X } from '@lucide/vue'
 
 const emit = defineEmits<{ close: [] }>()
 const { locale } = useI18n()
 const initialHtml = '<main class="retro"><h1>RetroNet</h1><p>My first website</p><button>Enter the community</button></main>'
 const initialCss = 'body { font-family: Arial, sans-serif; background: #d7e2d3; }\n.retro { max-width: 360px; margin: 35px auto; padding: 24px; background: white; border: 3px solid #43694f; }\nh1 { color: #43694f; }\nbutton { background: #43694f; color: white; padding: 10px 15px; border: 0; }'
-const html = ref(initialHtml)
-const css = ref(initialCss)
+const html = useState('first-code-html', () => initialHtml)
+const css = useState('first-code-css', () => initialCss)
 const tab = ref<'html' | 'css'>('html')
 const dialog = ref<HTMLElement>()
-const preview = computed(
-  () => '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css.value + '</style></head><body>' + html.value + '</body></html>',
-)
+const preview = ref(codePreviewDocument(html.value, css.value))
+let previewTimer: ReturnType<typeof setTimeout> | undefined
+watch([html, css], () => {
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(() => { preview.value = codePreviewDocument(html.value, css.value) }, 180)
+})
+onBeforeUnmount(() => clearTimeout(previewTimer))
+
 function reset() {
   html.value = initialHtml
   css.value = initialCss
@@ -99,7 +105,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
         </div>
       </div>
       <footer>
-        <p>{{ locale === 'nl' ? 'De preview draait in een afgesloten sandbox: scripts worden niet uitgevoerd.' : 'The preview is sandboxed: scripts are not executed.' }}</p>
+        <p>{{ locale === 'nl' ? 'Alleen HTML en CSS. Je wijzigingen blijven in dit voorbeeld.' : 'HTML and CSS only. Your changes stay in this preview.' }}</p>
         <button @click="emit('close')">{{ locale === 'nl' ? 'Terug naar de reis' : 'Back to the journey' }}</button>
       </footer>
     </div>
@@ -130,7 +136,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   border: 2px solid #8daa92;
   box-shadow: 0 20px 80px #0c211f80;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
 }
 .lab-header, .lab-heading, .editor-toolbar, .editor-toolbar > div, footer {
@@ -145,11 +151,11 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   border-bottom: 1px solid #517866;
 }
 .lab-heading { gap: 10px; font: 600 12px 'Space Grotesk'; letter-spacing: .04em; }
-.code-close { display: grid; place-items: center; min-width: 42px; min-height: 42px; }
+.code-close { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 .lab-intro { flex-shrink: 0; padding: 16px 22px; }
 .lab-intro h2 { font: 500 clamp(22px, 3vw, 33px) 'Space Grotesk'; margin: 0 0 6px; }
 .lab-intro p { font-size: 13px; line-height: 1.6; max-width: 750px; color: #bed0be; }
-.lab-workbench { display: grid; grid-template-columns: 1fr 1fr; min-height: 290px; flex: 0 0 auto; border-block: 1px solid #547565; }
+.lab-workbench { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; border-block: 1px solid #547565; }
 .lab-editor, .lab-preview { display: flex; flex-direction: column; min-width: 0; }
 .lab-editor { border-right: 1px solid #547565; }
 .editor-toolbar, .preview-toolbar {
@@ -158,7 +164,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   font: 11px 'Space Grotesk';
 }
 .editor-toolbar { justify-content: space-between; }
-.editor-toolbar button { min-height: 40px; padding: 8px 13px; }
+.editor-toolbar button { min-height: 44px; padding: 8px 13px; }
 .editor-toolbar button[aria-pressed='true'] { background: #d9e1cd; color: #284739; }
 .reset-button { display: flex; align-items: center; gap: 5px; }
 .editor-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -180,7 +186,7 @@ textarea {
 iframe { border: 0; width: 100%; flex: 1; min-height: 245px; background: #fff; }
 footer { flex-shrink: 0; padding: 11px 16px; justify-content: space-between; gap: 20px; }
 footer p { color: #b4c9b7; font-size: 11px; line-height: 1.5; margin: 0; }
-footer button { white-space: nowrap; background: #dbe4cb; color: #254639; padding: 10px 14px; font: 12px 'Space Grotesk'; }
+footer button { min-height: 44px; white-space: nowrap; background: #dbe4cb; color: #254639; padding: 10px 14px; font: 12px 'Space Grotesk'; }
 button:focus-visible, textarea:focus-visible { outline: 3px solid #e8cc90; outline-offset: -3px; }
 @media(max-width: 680px) {
   .first-code-lab { padding: 8px; }
@@ -191,6 +197,8 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid #e8cc90; outli
   .lab-editor { border-right: 0; border-bottom: 1px solid #547565; }
   textarea { min-height: 130px; max-height: 180px; }
   iframe { flex: none; display: block; height: 210px; min-height: 210px; }
+  .lab-intro { padding: 12px 16px; }
+  .lab-intro p { font-size: 12px; line-height: 1.5; margin-bottom: 0; }
   footer { align-items: flex-start; flex-direction: column; gap: 10px; }
 }
 </style>

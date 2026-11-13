@@ -1,3 +1,4 @@
+import { SCHOOL_LAB_OFFSET } from '../core/learningActivities'
 import { COMPUTER_WATCH_OFFSET, COMPANY_STORY_DISTANCE } from '~/content/company'
 import { stepPresentation } from '../core/presentation'
 import { journeyLayout, currentSlot } from '../core/journeyLayout'
@@ -7,7 +8,7 @@ import { journeyEvents as timeline } from '~/content/journey'
 import { createWorld } from '~/game/core/world'
 import { advanceDestination, navigationDuration, type JourneyDestination } from '../core/navigation'
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from '../core/swipeTravel'
-import { skillTerrain } from '../core/sceneActivities'
+import { skillTerrain, skillDecks } from '../core/sceneActivities'
 import {
   stepMotion,
   cameraTarget,
@@ -142,19 +143,22 @@ export function useJourney(
     jumpQueued = false
     motion.vx = 0
   }
-  function goTo(index: number) {
+  function goTo(index: number, exactX?: number) {
     if (timeline[index]?.id !== 'navel-development') presentation.started = false
     if (!trackIndices.value.includes(index)) return
     stop()
     const toX =
+      exactX ??
       eventPosition(index) +
-      (timeline[index]?.id === 'navel-development'
-        ? COMPUTER_WATCH_OFFSET
-        : timeline[index]?.id === 'contact'
-          ? 65
-          : timeline[index]?.id === 'skills-road'
-            ? -(timeline[index]?.span ?? 3000) / 2 + 250
-            : 0)
+        (timeline[index]?.id === 'navel-development'
+          ? COMPUTER_WATCH_OFFSET
+          : timeline[index]?.id === 'contact'
+            ? 65
+            : ['roc-hilversum', 'coding-college'].includes(timeline[index]?.id ?? '')
+              ? SCHOOL_LAB_OFFSET
+              : timeline[index]?.id === 'skills-road'
+                ? skillDecks[0]!.center
+                : 0)
     if (Math.abs(toX - motion.x) < 2) return
     destination.value = {
       index,
@@ -205,6 +209,7 @@ export function useJourney(
     )
       return
     const key = e.key.toLowerCase()
+    if (key === ' ' && (e.target as HTMLElement)?.closest('.canvas-accessibility')) return
     if (key === 'shift') {
       sprintHeld.value = true
       return
