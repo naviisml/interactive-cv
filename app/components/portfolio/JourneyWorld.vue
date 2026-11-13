@@ -33,7 +33,6 @@ const detailEvent = computed(() =>
 )
 const moneyOpen = ref(false)
 const firstCodeOpen = ref(false)
-const workshopIndex = ref<number | null>(null)
 let interactionOpener: HTMLElement | undefined
 function rememberInteractionFocus() {
   const active = document.activeElement
@@ -63,21 +62,6 @@ const journey = useJourney(trackIndices, view)
 const buildingVisit = useBuildingVisit(journey)
 const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
-const completedWorkshops = ref<string[]>([])
-function openWorkshop(index: number) {
-  if (listMode.value || workshopIndex.value !== null) return
-  rememberInteractionFocus()
-  stop()
-  workshopIndex.value = index
-}
-async function closeWorkshop() {
-  workshopIndex.value = null
-  await restoreInteractionFocus()
-}
-function finishWorkshop(id: string) {
-  activities.completeWorkshop(id)
-  completedWorkshops.value = [...activities.completedWorkshops]
-}
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
   current.value.category === 'skills'
@@ -162,12 +146,11 @@ function getWorldFrame() {
   }
 }
 // A direct, shareable, no-canvas entry point for recruiters and low-power devices.
-const route = useRoute()
-const listMode = useState<boolean>('journey-list-mode', () => route.query.view === 'list')
+const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, workshopIndex, rendererUnavailable],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking, firstCodeOpen, rendererUnavailable],
   () => {
     paused.value =
       listMode.value ||
@@ -175,7 +158,6 @@ watch(
       detailIndex.value !== null ||
       moneyOpen.value ||
       firstCodeOpen.value ||
-      workshopIndex.value !== null ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -246,21 +228,13 @@ const enterable = computed(
 const current = computed(() => timeline.value[nearestIndex.value]!)
 const nearFirstComputer = computed(
   () => current.value.id === 'first-lines' &&
-    Math.abs(motion.x - (eventPosition(nearestIndex.value) - 90)) < 210,
+    Math.abs(motion.x - (eventPosition(nearestIndex.value) + 140)) < 210,
 )
-const nearbyWorkshop = computed(() => {
-  if (current.value.id !== 'skills-road') return null
-  const offset = motion.x - eventPosition(nearestIndex.value)
-  const positions = [-440, 0, 440]
-  const closest = positions.reduce((best, x, index) =>
-    Math.abs(offset - x) < Math.abs(offset - positions[best]!) ? index : best, 0)
-  return Math.abs(offset - positions[closest]!) < 220 ? closest : null
-})
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 // Financial metadata follows the same ordered scenes as the active list/world,
 // including authored skills/contact scenes that have no separate CV record.
 const financeIndex = computed(() => activeIndex.value)
-const worldPanelOpen = computed(() => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value || workshopIndex.value !== null)
+const worldPanelOpen = computed(() => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value)
 let buildingOpener: HTMLElement | undefined
 watch(() => visit.phase, async (phase, previous) => {
   if (phase !== 'outside' || previous !== 'leaving') return
@@ -481,7 +455,7 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || rendererUnavailable.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || workshopIndex.value !== null || buildingVisit.blocking.value
+    listMode.value || rendererUnavailable.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -554,7 +528,6 @@ onBeforeUnmount(() => {
             @start-computer="startPresentation"
             @read-fallback="toggleList"
             @open-first-computer="openFirstComputer"
-            @open-workshop="openWorkshop"
         /></ClientOnly>
         <div class="world-chrome" :inert="rendererUnavailable">
         <ChapterCaption
@@ -573,13 +546,6 @@ onBeforeUnmount(() => {
           @click="openFirstComputer"
         >
           {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
-        </button>
-        <button
-          v-if="nearbyWorkshop !== null && !running && workshopIndex === null"
-          class="first-code-launch"
-          @click="openWorkshop(nearbyWorkshop!)"
-        >
-          {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
         </button>
         <CompanyControls
           v-if="presentation.active"
@@ -605,13 +571,6 @@ onBeforeUnmount(() => {
       />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
       <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
-      <SkillWorkshop
-        v-if="workshopIndex !== null"
-        :initial-group="workshopIndex"
-        :completed="completedWorkshops"
-        @complete="finishWorkshop"
-        @close="closeWorkshop"
-      />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
       <ReadingList
@@ -640,6 +599,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .first-code-launch {
   position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
   top: 168px;
   right: clamp(18px, 3vw, 48px);
   z-index: 7;
@@ -653,7 +616,7 @@ onBeforeUnmount(() => {
   font: 600 12px 'Space Grotesk', sans-serif;
 }
 .first-code-launch:hover { background: #284c3f; }
-.first-code-launch:focus-visible { outline: 3px solid #e1bc7f; }
+.first-code-launch:focus-visible { clip-path: none; width: auto; height: auto; outline: 3px solid #e1bc7f; }
 @media (max-width: 700px) {
   .first-code-launch { top: 138px; right: 16px; max-width: 185px; }
   .first-code-launch.is-first-code { top: 233px; }

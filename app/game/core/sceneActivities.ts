@@ -45,15 +45,22 @@ export function cameraCarPose(age: number, speed = 62) {
   const x = -280 + age * 155 * (0.4 + speed / 100)
   return { x, flash: speed > 50 && x >= 125 && x < 180 }
 }
+export const basketballCourt = { hoopX: 200, hoopY: -130, rimRadius: 20, ballRadius: 10 }
+export function basketballLandingX(power: number) {
+  return basketballCourt.hoopX + (power - 0.65) * (10 / 0.13)
+}
+export function basketballScores(power: number) {
+  return Math.abs(basketballLandingX(power) - basketballCourt.hoopX) <= basketballCourt.rimRadius - basketballCourt.ballRadius + 1e-8
+}
 export function basketballPose(age: number, power = 0.65) {
-  const deviation = (power - 0.65) * 360
+  const end = basketballLandingX(power)
   if (age <= 1.1) {
     const t = age / 1.1
-    return { x: -90 + (290 + deviation) * t, y: -10 - 120 * t - (80 + deviation * 0.2) * 4 * t * (1 - t) }
+    return { x: 16 + (end - 16) * t, y: -64 - 66 * t - 76 * Math.sin(t * Math.PI) }
   }
-  if (age <= 1.5) return { x: 200 + deviation, y: -130 + (age - 1.1) * 115 }
+  if (age <= 1.5) return { x: end, y: -130 + (age - 1.1) * 115 }
   const t = Math.min(1, (age - 1.5) / 0.7)
-  return { x: 200 + deviation + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
+  return { x: end + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
 }
 export const skillDecks = [
   { id: 'tooling-bench', offset: -530, width: 190, height: 35 },

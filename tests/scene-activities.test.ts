@@ -36,7 +36,7 @@ test('aircraft taxis along the runway before climbing and leaving the scene', ()
   assert.ok(flight.scale < taxi.scale)
 })
 test('basketball clears the rim and falls through the hoop before the return bounce', () => {
-  assert.deepEqual(basketballPose(0), { x: -90, y: -10 })
+  assert.deepEqual(basketballPose(0), { x: 16, y: -64 })
   assert.deepEqual(basketballPose(1.1), { x: 200, y: -130 })
   assert.ok(basketballPose(0.55).y < -130)
   assert.ok(basketballPose(1.4).y > -130)

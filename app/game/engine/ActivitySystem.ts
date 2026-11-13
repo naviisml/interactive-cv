@@ -1,10 +1,21 @@
-import { advanceAction, type SceneAction, type ActionState } from '../core/sceneActivities.ts'
+import { skillGroups } from '../../content/skills.ts'
+import { circuitSeed, tickRover, type RoverState } from '../core/learningActivities.ts'
+import { basketballScores, advanceAction, type SceneAction, type ActionState } from '../core/sceneActivities.ts'
 /** Scene state survives culling and locale changes. Renderers never own the score. */
 export class ActivitySystem {
+  circuit = [...circuitSeed]
+  rover: RoverState = { commands: [], age: 0, status: 'idle' }
   exploredSkills: string[] = []
   completedWorkshops: string[] = []
   completeWorkshop(id: string) {
     if (!this.completedWorkshops.includes(id)) this.completedWorkshops.push(id)
+  }
+  activateSkillGroup(index: number) {
+    const group = skillGroups[index]
+    if (!group) return false
+    if (!this.trigger('skill-' + group.id, 'compile')) return false
+    for (const id of group.ids) if (!this.exploredSkills.includes(id)) this.exploredSkills.push(id)
+    return true
   }
   actions: Record<string, ActionState> = {}
   switches: Record<string, number[]> = {}
@@ -26,7 +37,7 @@ export class ActivitySystem {
     const strength = Math.max(0, Math.min(1, power ?? 0.65))
     const outcome =
       action === 'basketball'
-        ? strength >= 0.52 && strength <= 0.78
+        ? basketballScores(strength)
           ? 'success'
           : 'retry'
         : action === 'departure'
@@ -68,6 +79,7 @@ export class ActivitySystem {
       this.cancelCharges()
       return
     }
+    tickRover(this.rover, dt)
     for (const [id, charge] of Object.entries(this.charges))
       if (charge.holding) charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
     for (const [id, state] of Object.entries(this.actions))

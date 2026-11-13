@@ -123,7 +123,6 @@ export class WorldRenderer {
         this.activities,
         (name, count) => this.callbacks.skill(name, count),
         this.model.locale,
-        (index) => this.callbacks.openWorkshop(index),
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact') return new CampsiteScene(this.model.locale)
@@ -155,7 +154,10 @@ export class WorldRenderer {
         Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
         !frame.navigating)
     const campView = frame.activeId === 'contact' && width < 700
-    const targetZoom = computerView
+    const closeView = width < 700 && (isBuilding(frame.activeId) || frame.activeId === 'skills-road' || frame.activeId === 'first-lines')
+    const targetZoom = closeView
+      ? Math.max(0.78, Math.min(isBuilding(frame.activeId) ? 0.9 : 1.1, (height - frame.groundInset - 148) / 300))
+      : computerView
       ? Math.min(frame.scale, (width - 24) / 820)
       : campView
         ? Math.min(frame.scale, (width - 24) / 800)
@@ -168,7 +170,7 @@ export class WorldRenderer {
           0,
           Math.min(
             this.model.width - width / targetZoom,
-            frame.motion.x - (width / targetZoom) * (campView ? 0.65 : width < 700 ? 0.5 : 0.38),
+            frame.motion.x - (width / targetZoom) * (campView ? 0.65 : closeView ? 0.12 : 0.38),
           ),
         )
     if (!this.initialized) {
@@ -181,6 +183,7 @@ export class WorldRenderer {
     this.viewCamera += (targetCamera - this.viewCamera) * ease
     this.atmosphere.resize(width, base)
     this.atmosphere.update(frame, this.reduced)
+    this.gates.update(frame, this.reduced)
     this.world.scale.set(this.zoom)
     this.world.position.set(-this.viewCamera * this.zoom, base + frame.cameraY * this.zoom)
     const visible = this.model.entries.filter(
@@ -270,6 +273,9 @@ export class WorldRenderer {
     this.app.render()
     if (freeze || frame.time - this.lastReadout >= 100) {
       this.lastReadout = frame.time
+      this.app.canvas.dataset.viewScale = this.zoom.toFixed(4)
+      this.app.canvas.dataset.viewCamera = this.viewCamera.toFixed(2)
+      this.app.canvas.dataset.entryPositions = JSON.stringify(Object.fromEntries(this.model.entries.map(entry => [entry.event.id, { x: entry.x, ground: base + (frame.cameraY - terrainHeight(entry.x, this.model.geometry.terrain)) * this.zoom }])))
       this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
       this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
@@ -283,6 +289,8 @@ export class WorldRenderer {
           ]),
         ),
       )
+      this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
+      this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.visit = frame.visit.phase
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)

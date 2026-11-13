@@ -15,12 +15,12 @@ const sceneHints: Record<string, [string, string]> = {
   'navel-development': ['Open het scherm om mijn projecten te bekijken.', 'Select the project screen to explore my work.'],
   'panta-rhei': ['Houd de bal vast en laat los om te schieten.', 'Hold the ball and release to shoot.'],
   'roc-hilversum': [
-    'Tik op de werkbank om de verbinding te maken.',
-    'Tap the workstation to connect the circuit.',
+    'Draai de kabels en breng de campus tot leven.',
+    'Rotate the wires to power the campus.',
   ],
   'coding-college': [
-    'Tik op de computer: bouwen, testen, uitvoeren.',
-    'Tap the computer: build, test, run.',
+    'Programmeer de rover. Spring over de gaten.',
+    'Program the rover. Jump across the gaps.',
   ],
   fletcher: [
     'Tik op de bel bij de ingang voor de bagage.',

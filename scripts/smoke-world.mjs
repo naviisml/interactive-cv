@@ -9,6 +9,25 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
 })
 let failures = 0
+async function tapWorld(page, canvas, id, x, y, touch) {
+  await page.waitForTimeout(120)
+  const point = await canvas.evaluate(
+    (el, { id, x, y }) => {
+      const entry = JSON.parse(el.dataset.entryPositions)[id],
+        scale = Number(el.dataset.viewScale),
+        camera = Number(el.dataset.viewCamera)
+      return { x: (entry.x + x - camera) * scale, y: entry.ground + y * scale }
+    },
+    { id, x, y },
+  )
+  const bounds = await canvas.boundingBox()
+  assert.ok(
+    bounds && point.x > 0 && point.x < bounds.width && point.y > 0 && point.y < bounds.height,
+    `${id} interaction is reachable in the viewport: ${JSON.stringify(point)}`,
+  )
+  if (touch) await canvas.tap({ position: point })
+  else await canvas.click({ position: point })
+}
 async function scenario(label, width, height, mobile) {
   const page = await browser.newPage({
     viewport: { width, height },
@@ -42,7 +61,7 @@ async function scenario(label, width, height, mobile) {
       .click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     const openFirst = page.getByRole('button', { name: /Open the first computer/i })
-    await openFirst.click()
+    await tapWorld(page, canvas, 'first-lines', 150, -140, mobile)
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
     await firstCode.waitFor({ state: 'visible' })
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
@@ -110,24 +129,37 @@ async function scenario(label, width, height, mobile) {
     await page.evaluate(() => {
       window.__closeTrace = []
       for (const type of ['pointerdown', 'pointerup', 'click', 'focusin']) {
-        document.addEventListener(type, (event) => {
-          window.__closeTrace.push({ type, target: event.target.outerHTML?.slice(0, 170), prevented: event.defaultPrevented, time: performance.now() })
-        }, true)
+        document.addEventListener(
+          type,
+          (event) => {
+            window.__closeTrace.push({
+              type,
+              target: event.target.outerHTML?.slice(0, 170),
+              prevented: event.defaultPrevented,
+              time: performance.now(),
+            })
+          },
+          true,
+        )
       }
     })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
-    await page.waitForFunction(() =>
-      document.activeElement?.textContent?.includes('Open the first computer'),
+    await page.waitForFunction(
+      () =>
+        document.activeElement?.matches('.world') ||
+        document.activeElement?.textContent?.includes('Open the first computer'),
     )
     assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
-    await openFirst.click()
+    await openFirst.focus()
+    await page.keyboard.press('Enter')
     await firstCode.getByRole('button', { name: 'style.css' }).click()
     await firstCode
       .getByRole('textbox', { name: 'CSS editor' })
       .fill('body { background: lavender; }')
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
-    await openFirst.click()
+    await openFirst.focus()
+    await page.keyboard.press('Enter')
     await firstCode.getByRole('button', { name: 'style.css' }).click()
     assert.equal(
       await firstCode.getByRole('textbox', { name: 'CSS editor' }).inputValue(),
@@ -160,29 +192,26 @@ async function scenario(label, width, height, mobile) {
       )
     }
 
-    // Skills are now task-driven, not simply collected logos.
-    const skillsLaunch = page.getByRole('button', { name: 'Skills', exact: true })
+    // The machines are part of the road, with no detached skills modal.
     if (mobile) await page.locator('.menu-toggle').click()
-    await skillsLaunch.click()
+    await page.getByRole('button', { name: 'Skills', exact: true }).click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
-    await page.getByRole('button', { name: 'Open the workstations' }).click()
-    const workshop = page.getByRole('dialog', { name: 'Build something that works.' })
-    await workshop.waitFor({ state: 'visible' })
-    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
-    assert.equal(await page.locator('.portfolio-header').evaluate((element) => element.inert), true)
-    assert.equal(await page.locator('.journey-footer').evaluate((element) => element.inert), true)
-    for (const step of ['commit', 'test', 'build', 'deploy']) {
-      await workshop.getByRole('button', { name: '+ ' + step }).click()
+    for (const name of [
+      'Activate Tooling',
+      'Activate Web development',
+      'Activate Systems & cloud',
+    ]) {
+      const action = page.getByRole('button', { name, exact: true })
+      await action.focus()
+      await action.click()
+      await page.waitForTimeout(300)
     }
-    await workshop.getByRole('button', { name: 'Run pipeline' }).click()
-    await workshop.getByText('Success. You completed this workstation.').waitFor()
-    await page.screenshot({ path: `test-results/world/${label}-skills-workshop.png` })
-    await workshop.getByRole('button', { name: 'Continue the journey' }).click()
-    await workshop.waitFor({ state: 'hidden' })
-    await page.waitForFunction(() =>
-      document.activeElement?.textContent?.includes('Open the workstations'),
+    await page.waitForFunction(
+      () => Number(document.querySelector('canvas')?.dataset.skillCount) === 18,
     )
-    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
+    assert.equal(await page.getByRole('dialog').count(), 0, 'skills remain in the world')
+    await page.waitForTimeout(2700)
+    await page.screenshot({ path: `test-results/world/${label}-skills-road.png` })
 
     if (!mobile) {
       const before = Number(await canvas.getAttribute('data-player-x'))
@@ -301,6 +330,49 @@ async function scenario(label, width, height, mobile) {
         'no duplicate project chapters',
       )
     }
+    // Real in-world circuit rotations and an executed rover program.
+    await page
+      .locator('.journey-footer')
+      .getByRole('button', { name: /ROC Hilversum/ })
+      .click()
+    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await page.waitForTimeout(500)
+    for (const [index, turns] of [
+      [0, 3],
+      [2, 1],
+      [3, 3],
+      [5, 3],
+    ]) {
+      for (let n = 0; n < turns; n++)
+        await tapWorld(
+          page,
+          canvas,
+          'roc-hilversum',
+          100 + (index % 3) * 60,
+          -145 + Math.floor(index / 3) * 47,
+          mobile,
+        )
+    }
+    await page.waitForFunction(
+      () => document.querySelector('canvas')?.dataset.circuit === '[0,0,0,0,0,1]',
+    )
+    await page.screenshot({ path: `test-results/world/${label}-circuit-powered.png` })
+    await page
+      .locator('.journey-footer')
+      .getByRole('button', { name: /Codam Coding College/ })
+      .click()
+    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await page.waitForTimeout(500)
+    for (const x of [87, 147, 87, 147, 87, 265])
+      await tapWorld(page, canvas, 'coding-college', x, -96, mobile)
+    await page.waitForFunction(
+      () =>
+        JSON.parse(document.querySelector('canvas')?.dataset.rover || '{}').status === 'success',
+      {},
+      { timeout: 8000 },
+    )
+    await page.screenshot({ path: `test-results/world/${label}-rover-arrived.png` })
+
     // Retain real responsive renders for visual review, not just layout assertions.
     for (const [name, title] of [
       ['school', /Panta Rhei/],
@@ -332,7 +404,10 @@ async function scenario(label, width, height, mobile) {
   } catch (error) {
     failures++
     console.error(`FAIL_${label}: ${error.stack || error}`)
-    console.error('DIAGNOSTICS', await page.evaluate(() => ({ url: location.href, trace: window.__closeTrace?.slice(-25) })))
+    console.error(
+      'DIAGNOSTICS',
+      await page.evaluate(() => ({ url: location.href, trace: window.__closeTrace?.slice(-25) })),
+    )
   } finally {
     await page.screenshot({ path: `test-results/world/${label}-final.png` }).catch(() => {})
     await page.close()
@@ -340,6 +415,8 @@ async function scenario(label, width, height, mobile) {
 }
 async function readingModeScenario() {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
   try {
     await page.addInitScript(() => {
       window.__webglContexts = 0
@@ -369,7 +446,14 @@ async function readingModeScenario() {
   } catch (error) {
     failures++
     console.error(`FAIL_reading_mode: ${error.stack || error}`)
-    console.error('READING_DIAGNOSTICS', await page.evaluate(() => ({ url: location.href, text: document.body.innerText.slice(0, 1200) })))
+    console.error('READING_ERRORS', errors)
+    console.error(
+      'READING_DIAGNOSTICS',
+      await page.evaluate(() => ({
+        url: location.href,
+        text: document.body.innerText.slice(0, 1200),
+      })),
+    )
     await page.screenshot({ path: 'test-results/world/reading-mode-failure.png' })
   } finally {
     await page.close()
@@ -381,7 +465,7 @@ async function graphicsFailureScenario() {
   try {
     page.on('pageerror', (error) => errors.push(error.message))
     await page.route('**/world/textures/earth.png', (route) => route.abort())
-    await page.route('**/world/scenes/first-lines.svg', (route) => route.abort())
+    await page.route('**/skills/docker.png', (route) => route.abort())
     await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('canvas[data-renderer="pixi"]').waitFor()
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
