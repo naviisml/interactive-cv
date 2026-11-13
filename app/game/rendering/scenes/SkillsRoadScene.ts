@@ -159,13 +159,14 @@ export class SkillsRoadScene extends Container {
       const p = i === 0 ? this.activity.pipeline.completed / pipelineSteps.length : action ? Math.min(1, action.age / 2) : 0
       if (p === 1) this.activity.completeStation(group.id)
       machine.clear()
+      const pipelineFailed = i === 0 && this.activity.pipeline.status === 'error'
       statusBackdrop
         .clear()
         .roundRect(-143, -253, 286, 33, 4)
-        .fill(active ? 0xe7ecd8 : 0xf3eddc)
-        .stroke({ color: active ? 0x60836d : 0x9daa91, width: 1.5 })
+        .fill(pipelineFailed ? 0xf1dcd1 : active ? 0xe7ecd8 : 0xf3eddc)
+        .stroke({ color: pipelineFailed ? 0xa36f58 : active ? 0x60836d : 0x9daa91, width: 1.5 })
         .rect(-143, -253, 4, 33)
-        .fill(active ? 0x527e66 : 0xb79c6a)
+        .fill(pipelineFailed ? 0xb17b5d : active ? 0x527e66 : 0xb79c6a)
       status.text = active
         ? i === 0
           ? p < 1
