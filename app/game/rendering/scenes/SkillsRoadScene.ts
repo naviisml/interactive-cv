@@ -52,6 +52,10 @@ export class SkillsRoadScene extends Container {
       node.addChild(statusBackdrop)
       const status = label(node, '', 0, -240, 12, 0x274c3e, 276)
       status.anchor.x = 0.5
+      // The nearest object now owns a world-anchored tooltip. No permanent
+      // status banner should obscure tool icons or machine controls.
+      statusBackdrop.visible = false
+      status.visible = false
       const pipelineControls: Graphics[] = []
       if (i === 0) {
         pipelineSteps.forEach((step, index) => {
