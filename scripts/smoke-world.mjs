@@ -352,6 +352,20 @@ async function scenario(label, width, height, mobile) {
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
       )
       await page.waitForFunction(
+        () => {
+          const canvas = document.querySelector('canvas')
+          return JSON.parse(canvas?.dataset.usedCues || '[]').includes('fletcher:door') &&
+            canvas?.dataset.cue !== 'fletcher:door'
+        },
+      )
+      // The first-use prompt disappears, but the physical doorway remains clickable.
+      await tapWorld(page, canvas, 'fletcher', 0, -44, false)
+      await page.getByRole('dialog').waitFor({ state: 'visible' })
+      await page.locator('.room-exit').click()
+      await page.waitForFunction(
+        () => document.querySelector('canvas')?.dataset.visit === 'outside',
+      )
+      await page.waitForFunction(
         () => document.activeElement?.matches('.world'),
       )
       const doorX = Number(await canvas.getAttribute('data-player-x'))
@@ -564,7 +578,12 @@ async function visualAuditScenario() {
         }
         await page.keyboard.press('e')
         await page.waitForFunction(
-          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.running,
+          () => {
+            const el = document.querySelector('canvas')
+            return !!JSON.parse(el?.dataset.actions || '{}').fletcher?.running &&
+              JSON.parse(el?.dataset.usedCues || '[]').includes('fletcher:bell') &&
+              el?.dataset.cue !== 'fletcher:bell'
+          },
         )
         await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
         await page.waitForFunction(
