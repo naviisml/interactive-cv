@@ -31,6 +31,35 @@ async function scenario(label, width, height, mobile) {
     assert.ok(Math.abs(header.y + header.height - stage.y) < 3)
     assert.ok(Math.abs(stage.y + stage.height - footer.y) < 3)
     assert.ok(footer.y + footer.height < height + 3)
+    // The opening monitor is a genuine, accessible editable workstation.
+    const openFirst = page.getByRole('button', { name: /Open the first computer/i })
+    await openFirst.click()
+    const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
+    await firstCode.waitFor({ state: 'visible' })
+    await firstCode.getByRole('button', { name: 'style.css' }).click()
+    await firstCode.getByRole('textbox', { name: 'CSS editor' }).fill('body { background: lavender; }')
+    assert.ok(
+      (await firstCode.locator('iframe').getAttribute('srcdoc')).includes('background: lavender'),
+      'HTML/CSS preview follows editor changes',
+    )
+    await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
+    await firstCode.waitFor({ state: 'hidden' })
+
+    // Skills are now task-driven, not simply collected logos.
+    const skillsLaunch = page.getByRole('button', { name: 'Skills', exact: true })
+    await skillsLaunch.click()
+    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+    await page.getByRole('button', { name: 'Open the workstations' }).click()
+    const workshop = page.getByRole('dialog', { name: 'Build something that works.' })
+    await workshop.waitFor({ state: 'visible' })
+    for (const step of ['commit', 'test', 'build', 'deploy']) {
+      await workshop.getByRole('button', { name: '+ ' + step }).click()
+    }
+    await workshop.getByRole('button', { name: 'Run pipeline' }).click()
+    await workshop.getByText('Success. You completed this workstation.').waitFor()
+    await workshop.getByRole('button', { name: 'Continue the journey' }).click()
+    await workshop.waitFor({ state: 'hidden' })
+
     if (!mobile) {
       const before = Number(await canvas.getAttribute('data-player-x'))
       await page.keyboard.down('ArrowRight')
@@ -151,7 +180,7 @@ async function scenario(label, width, height, mobile) {
       if (!(await stop.count())) continue
       await stop.click()
       await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
-      if (mobile) await page.locator('.world-caption h1').tap()
+      if (mobile) await canvas.tap({ position: { x: 180, y: 200 } })
       await page.waitForTimeout(350)
       await page.screenshot({ path: `test-results/world/${label}-${name}.png` })
     }
