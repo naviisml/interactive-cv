@@ -285,7 +285,13 @@ export class WorldRenderer {
     }
     for (const [id, activity] of this.activitiesByScene) {
       const entry = this.model.entries.find((e) => e.event.id === id)
-      if (entry) activity.update(frame, entry.x, this.reduced)
+      if (entry)
+        activity.update(
+          frame,
+          entry.x,
+          this.reduced,
+          terrainHeight(entry.x, this.model.geometry.terrain),
+        )
     }
     for (const scene of this.scenes.values())
       if (scene instanceof CampsiteScene) scene.update(frame, this.reduced)

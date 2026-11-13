@@ -30,7 +30,8 @@ export class ActivitySystem {
     return true
   }
   actions: Record<string, ActionState> = {}
-  charges: Record<string, { holding: boolean; power: number }> = {}
+  charges: Record<string, { holding: boolean; power: number; origin?: { x: number; y: number } }> =
+    {}
   get charging() {
     return Object.values(this.charges).some((charge) => charge.holding)
   }
@@ -82,7 +83,9 @@ export class ActivitySystem {
     const charge = this.charges[id]
     if (!charge?.holding) return false
     charge.holding = false
-    return this.trigger(id, action, charge.power)
+    const started = this.trigger(id, action, charge.power)
+    if (started && charge.origin) this.actions[id]!.origin = { ...charge.origin }
+    return started
   }
 
   tick(dt: number, paused: boolean) {

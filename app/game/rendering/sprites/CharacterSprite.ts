@@ -47,7 +47,7 @@ export class CharacterSprite extends Container {
       this.frames[
         spriteFrame(
           clipAction,
-          clipAction === 'idle' || clipAction === 'enter'
+          clipAction === 'idle' || clipAction === 'enter' || frame.navigating
             ? (frame.time / 1000) * characterClips[clipAction].fps
             : frame.animationFrame,
         )

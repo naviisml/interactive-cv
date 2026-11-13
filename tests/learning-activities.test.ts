@@ -79,3 +79,20 @@ test('adding workers reverses queue growth instead of only changing an animation
   game.tick(10, true)
   assert.equal(game.cloud.queued, frozen)
 })
+
+test('a released ball starts at the held position, including a jump, and keeps that origin', () => {
+  const origin = { x: 93, y: -112 }
+  assert.deepEqual(basketballPose(0, 0.65, origin), origin)
+  assert.deepEqual(basketballPose(1.1, 0.65, origin), { x: 200, y: -130 })
+  const game = new ActivitySystem()
+  game.beginCharge('court')
+  game.charges.court!.origin = origin
+  game.tick(1.1, false)
+  game.releaseCharge('court', 'basketball')
+  origin.x = 120
+  assert.equal(
+    game.actions.court?.origin?.x,
+    93,
+    'the shot retains its release point after the player moves',
+  )
+})

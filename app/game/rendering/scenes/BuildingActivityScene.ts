@@ -89,7 +89,11 @@ export class BuildingActivityScene extends Container {
       this.object.addChild(this.ball)
       holdTarget(
         this.ball,
-        () => state.beginCharge(id),
+        () => {
+          const started = state.beginCharge(id)
+          if (started) state.charges[id]!.origin = { x: this.ball!.x, y: this.ball!.y }
+          return started
+        },
         () => state.releaseCharge(id, this.action),
         new Rectangle(-44, -44, 88, 88),
         () => state.cancelCharge(id),
@@ -158,7 +162,7 @@ export class BuildingActivityScene extends Container {
     }
     this.addChild(this.object, this.overlay, this.statusPanel, this.status)
   }
-  update(frame: WorldFrame, entryX: number, reduced: boolean) {
+  update(frame: WorldFrame, entryX: number, reduced: boolean, ground = 0) {
     const record = this.state.actions[this.id],
       running = record?.running ?? false,
       age = record?.age ?? 0,
@@ -195,8 +199,12 @@ export class BuildingActivityScene extends Container {
     if (this.ball) {
       const pickup = charging ? Math.min(1, (charge.power * 1.75) / 0.18) : 0
       const p = running
-        ? basketballPose(age, record?.power)
-        : { x: 65 - 49 * pickup, y: -10 - 54 * pickup }
+        ? basketballPose(age, record?.power, record?.origin)
+        : {
+            x: 65 + (frame.motion.x - entryX + frame.facing * 14 - 65) * pickup,
+            y: -10 + (frame.motion.y + ground - (frame.motion.grounded ? 40 : 75) + 10) * pickup,
+          }
+      if (charging) charge.origin = { x: p.x, y: p.y }
       this.ball.position.set(p.x, p.y)
       this.ball.rotation = running ? age * 5 : 0
       this.score!.text = String(record?.successes ?? 0).padStart(2, '0')
@@ -216,7 +224,7 @@ export class BuildingActivityScene extends Container {
         .stroke({ width: 1, color: 0xe8e5c5 })
       if (charging)
         for (let i = 0; i < 16; i++) {
-          const aim = basketballPose((i / 16) * 1.1, charge.power)
+          const aim = basketballPose((i / 16) * 1.1, charge.power, charge.origin)
           this.overlay.circle(aim.x, aim.y, 1.6).fill({
             color: charge.power >= 0.52 && charge.power <= 0.78 ? 0xe4dda7 : 0xc4c9b1,
             alpha: 0.65,

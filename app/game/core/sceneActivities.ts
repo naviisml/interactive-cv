@@ -15,6 +15,7 @@ export interface ActionState {
   completed: number
   /** Power recorded at release. All three motor/ball activities are controllable. */
   power?: number
+  origin?: { x: number; y: number }
   outcome?: 'success' | 'retry' | 'ticket'
   successes?: number
 }
@@ -57,11 +58,14 @@ export function basketballScores(power: number) {
     basketballCourt.rimRadius - basketballCourt.ballRadius + 1e-8
   )
 }
-export function basketballPose(age: number, power = 0.65) {
+export function basketballPose(age: number, power = 0.65, origin = { x: 14, y: -40 }) {
   const end = basketballLandingX(power)
   if (age <= 1.1) {
     const t = age / 1.1
-    return { x: 16 + (end - 16) * t, y: -64 - 66 * t - 76 * Math.sin(t * Math.PI) }
+    return {
+      x: origin.x + (end - origin.x) * t,
+      y: origin.y + (-130 - origin.y) * t - 76 * Math.sin(t * Math.PI),
+    }
   }
   if (!basketballScores(power)) {
     const bounce = Math.min(1, (age - 1.1) / 1.1)

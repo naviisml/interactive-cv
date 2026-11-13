@@ -105,7 +105,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
         </div>
       </div>
       <footer>
-        <p>{{ locale === 'nl' ? 'De preview draait in een afgesloten sandbox: scripts en externe requests worden geblokkeerd.' : 'The preview is sandboxed: scripts and external requests are blocked.' }}</p>
+        <p>{{ locale === 'nl' ? 'Alleen HTML en CSS. Je wijzigingen blijven in dit voorbeeld.' : 'HTML and CSS only. Your changes stay in this preview.' }}</p>
         <button @click="emit('close')">{{ locale === 'nl' ? 'Terug naar de reis' : 'Back to the journey' }}</button>
       </footer>
     </div>
