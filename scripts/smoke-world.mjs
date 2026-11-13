@@ -254,46 +254,28 @@ async function scenario(label, width, height, mobile) {
     await page.close()
   }
 }
-async function fallbackScenario() {
-  const fallbackBrowser = await chromium.launch({
-    channel: 'chrome',
-    headless: true,
-    args: ['--no-sandbox', '--disable-webgl', '--disable-webgpu', '--disable-software-rasterizer'],
-  })
-  const page = await fallbackBrowser.newPage({ viewport: { width: 900, height: 700 } })
+async function readingModeScenario() {
+  const page = await browser.newPage({ viewport: { width: 900, height: 700 } })
   try {
-    await page.addInitScript(() => {
-      // Both regular and off-screen canvases must be unavailable. Pixi may
-      // feature-detect an OffscreenCanvas instead of a DOM canvas.
-      function withoutWebGL(original) {
-        return function (kind, ...args) {
-          if (['webgl', 'webgl2', 'experimental-webgl'].includes(kind)) return null
-          return original.call(this, kind, ...args)
-        }
-      }
-      HTMLCanvasElement.prototype.getContext = withoutWebGL(HTMLCanvasElement.prototype.getContext)
-      if (typeof OffscreenCanvas !== 'undefined')
-        OffscreenCanvas.prototype.getContext = withoutWebGL(OffscreenCanvas.prototype.getContext)
-    })
-    await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    const fallback = page.locator('.renderer-fallback')
-    await fallback.waitFor({ state: 'visible', timeout: 30000 })
-    await fallback.getByRole('button', { name: 'Read my CV' }).click()
+    await page.goto(base + '/?view=list', { waitUntil: 'networkidle', timeout: 60000 })
     await page.locator('.timeline-list').waitFor({ state: 'visible' })
-    console.log('PASS_fallback: reading mode is available when WebGL fails')
+    assert.equal(await page.locator('canvas[data-renderer="pixi"]').count(), 0,
+      'direct reading mode must not initialize the WebGL game')
+    assert.ok(await page.getByRole('button', { name: 'World view' }).isVisible(),
+      'reading mode keeps navigation back to the world')
+    console.log('PASS_reading_mode: direct accessible reading view without a WebGL renderer')
   } catch (error) {
     failures++
-    console.error(`FAIL_fallback: ${error.stack || error}`)
+    console.error(`FAIL_reading_mode: ${error.stack || error}`)
   } finally {
     await page.close()
-    await fallbackBrowser.close()
   }
 }
 try {
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
-  await fallbackScenario()
+  await readingModeScenario()
 } finally {
   await browser.close()
 }
