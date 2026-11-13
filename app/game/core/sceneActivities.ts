@@ -41,8 +41,9 @@ export function aircraftPose(age: number) {
   }
 }
 export function cameraCarPose(age: number, speed = 62) {
-  const x = -280 + age * 155
-  return { x, flash: speed > 50 && age >= 2.65 && age < 3.05 }
+  // The chosen speed changes when the car reaches the actual camera, not just its label.
+  const x = -280 + age * 155 * (0.4 + speed / 100)
+  return { x, flash: speed > 50 && x >= 125 && x < 180 }
 }
 export function basketballPose(age: number, power = 0.65) {
   const deviation = (power - 0.65) * 360
