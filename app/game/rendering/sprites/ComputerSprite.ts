@@ -7,6 +7,7 @@ export class ComputerSprite extends Container {
   private screen = new Container()
   private track = new Graphics()
   private lamp = new Graphics()
+  private bezelGlow = new Graphics()
   private last = ''
   constructor(
     private slides: ReturnType<typeof companySlides>,
@@ -45,8 +46,17 @@ export class ComputerSprite extends Container {
     )
     const mask = new Graphics().rect(-296, -350, 640, 211).fill(0xffffff)
     this.screen.mask = mask
-    this.addChild(this.screen, mask, this.track, this.lamp)
+    this.bezelGlow.eventMode = 'none'
+    this.addChild(this.screen, mask, this.track, this.lamp, this.bezelGlow)
     this.update(0, 1, false, 0, true)
+  }
+  setInteractionGlow(active: boolean, time: number, reduced: boolean) {
+    this.bezelGlow.clear()
+    if (!active) return
+    const alpha = reduced ? 0.67 : 0.55 + Math.sin(time / 490) * 0.14
+    this.bezelGlow
+      .roundRect(-313, -369, 675, 247, 9)
+      .stroke({ color: 0xf7d99a, width: 4, alpha })
   }
   update(progress: number, scale = 1, active = false, time = 0, reduced = false) {
     const compact = scale < 0.65,
