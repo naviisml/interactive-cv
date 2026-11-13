@@ -68,9 +68,9 @@ async function scenario(label, width, height, mobile) {
 
     if (mobile) {
       await page.locator('.menu-toggle').click()
-      // Use empty left-edge scenery; tapping the actual scene monitor would
-      // legitimately open the code editor and pause subsequent navigation.
-      await canvas.tap({ position: { x: 8, y: Math.min(320, Math.floor(stage.height * 0.68)) } })
+      // A click on header whitespace is outside the menu and cannot
+      // accidentally trigger an interactive object in the world.
+      await page.locator('.portfolio-header').click({ position: { x: 7, y: 7 } })
       assert.equal(
         await page.locator('.menu-toggle').getAttribute('aria-expanded'),
         'false',
