@@ -122,7 +122,7 @@ function toggleView() {
         <ChevronDown :size="13" aria-hidden="true" />
       </label>
       <button
-        class="header-icon-toggle"
+        class="header-icon-toggle header-view-toggle"
         type="button"
         :aria-label="t(listMode ? 'nav.world' : 'nav.list')"
         :title="t(listMode ? 'nav.world' : 'nav.list')"
@@ -132,7 +132,7 @@ function toggleView() {
         <component :is="listMode ? Map : List" :size="19" aria-hidden="true" />
       </button>
       <button
-        class="header-icon-toggle"
+        class="header-icon-toggle header-tooltip-toggle"
         type="button"
         :aria-label="locale === 'nl' ? 'Tooltips boven interacties' : 'Tooltips above interactions'"
         :title="locale === 'nl' ? 'Tooltips boven interacties' : 'Tooltips above interactions'"
