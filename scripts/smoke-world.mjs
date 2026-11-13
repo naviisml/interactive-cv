@@ -455,6 +455,8 @@ async function scenario(label, width, height, mobile) {
       .click()
     await waitForArrival(page, 'roc-hilversum')
     await page.waitForTimeout(500)
+    assert.equal(await page.locator('.money-counter').count(), 0,
+      'unshared debt, savings and annual income do not occupy the mobile header')
     for (const [index, turns] of [
       [0, 3],
       [2, 1],
