@@ -73,7 +73,10 @@
     "walk": "Blijf lopen of scrollen om te kijken. Met de knoppen kies je zelf een dia.",
     "previous": "Vorige dia",
     "next": "Volgende dia",
-    "continue": "Verder"
+    "continue": "Verder",
+    "invitationTitle": "De projecten van Navel Development",
+    "invitationBody": "Deze computer laat mijn eigen projecten en klantwerk zien. Start de presentatie; daarna loop of scroll je door de projecten.",
+    "start": "Bekijk mijn projecten"
   },
   "world": {
     "tutorial": "UITLEG",
@@ -110,5 +113,13 @@
     "education": "MIJN OPLEIDING",
     "workplace": "WERKERVARING",
     "explore": "Ontdek deze plek"
+  },
+  "scene": {
+    "basketball": "Gooi de basketbal",
+    "departure": "Laat het vliegtuig vertrekken",
+    "camera": "Start de rit langs de flitspaal",
+    "luggage": "Bel voor de bagage",
+    "circuit": "Verbind kabel",
+    "compile": "Activeer codeblok"
   }
 }

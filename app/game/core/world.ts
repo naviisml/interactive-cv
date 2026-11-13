@@ -4,16 +4,19 @@ import { terrainHeight, type WorldGeometry, type TerrainPoint } from './physics.
 // Terrain is the real walkable landscape, in pixels above the shared ground datum.
 // Event sites are level clearings. Ramps connect them; no mandatory jumps.
 const elevations = [40, 120, 60, 170, 105]
-export function createWorld(input: number | { x: number; span: number; course?: boolean }[]): {
+export function createWorld(
+  input: number | { x: number; span: number; course?: boolean; ending?: boolean }[],
+): {
   geometry: WorldGeometry
   width: number
 } {
-  const slots =
+  const slots: { x: number; span: number; course?: boolean; ending?: boolean }[] =
     typeof input === 'number'
       ? Array.from({ length: input }, (_, i) => ({ x: eventX(i), span: 920, course: true }))
       : input
   const count = slots.length
-  const WORLD_WIDTH = (slots.at(-1)?.x ?? 780) + (slots.at(-1)?.span ?? 920) / 2 + 300
+  const WORLD_WIDTH =
+    (slots.at(-1)?.x ?? 780) + (slots.at(-1)?.ending ? 550 : (slots.at(-1)?.span ?? 920) / 2 + 300)
   const terrain: TerrainPoint[] = [
     { x: 0, height: 0 },
     { x: 270, height: 0 },
@@ -22,10 +25,14 @@ export function createWorld(input: number | { x: number; span: number; course?: 
     const h = elevations[i % elevations.length]!
     const x = slots[i]!.x
     const half = slots[i]!.span / 2
-    terrain.push({ x: x - half + 180, height: h }, { x: x + half - 180, height: h })
+    terrain.push(
+      { x: x - half + 180, height: h },
+      { x: Math.min(x + half - 180, WORLD_WIDTH - 250), height: h },
+    )
     if (i < count - 1) terrain.push({ x: x + half + 80, height: Math.max(15, h - 35) })
   }
-  terrain.push({ x: WORLD_WIDTH - 220, height: 15 }, { x: WORLD_WIDTH, height: 15 })
+  const endHeight = elevations[(count - 1) % elevations.length] ?? 15
+  terrain.push({ x: WORLD_WIDTH - 220, height: endHeight }, { x: WORLD_WIDTH, height: endHeight })
   const worldGeometry: WorldGeometry = { terrain, platforms: [], ladders: [], slides: [] }
   for (let i = 0; i < count - 1; i++) {
     if (i % 4 !== 0 || slots[i]?.course === false) continue

@@ -23,7 +23,7 @@ npm run format:check
 | --- | --- |
 | `app/components/layout` | Navigation, finance placement and language selection |
 | `app/components/portfolio` | Journey shell and chapter dialog |
-| `app/components/game` | Canvas lifecycle, touch/keyboard hints, accessible puzzle and slideshow controls |
+| `app/components/game` | Canvas lifecycle, touch/keyboard hints, computer invitation, slideshow controls and building interiors |
 | `app/components/finance` | Money counters and support information |
 | `app/components/ui` | Shared UI components |
 | `app/content` | CV events, journey sections, logo manifest, company slides and finances |
@@ -32,8 +32,8 @@ npm run format:check
 | `app/game/engine` | Movement loop, viewport and persistent activity state |
 | `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
 | `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
-| `app/game/rendering/sprites` | Character atlas, scenery textures, logos, computer and company signs |
-| `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and interactive school/portal scenes |
+| `app/game/rendering/sprites` | Character atlas, scenery textures, aircraft, computer, character and building exteriors |
+| `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and building activities, campsite and layered level entrances |
 | `art/scenes` | Editable source artwork; never mounted in the runtime DOM |
 | `public/world/scenes` | Exported scenery textures |
 | `public/sprites` | Character atlas |
@@ -44,15 +44,15 @@ npm run format:check
 
 `useJourney` owns the single animation loop and physics. `GameCanvas.client.vue` loads PixiJS, subscribes to that loop and disposes its subscription, observer and GPU resources on unmount. PixiJS's own ticker is disabled. `WorldRenderer` reads one plain frame snapshot; Vue does not create a component per scenery object or receive per-frame character positions.
 
-Terrain, scenery, shadows, props and sprites share one world coordinate system. Company signs sample the ground at their post. Wide scenes declare a `span` so they stay current over their entire route. Only nearby chapter sprites are mounted. Scenery textures and logo textures use the shared asset cache. The continuous forest-to-city transition follows travelled distance and reverses with the player.
+Terrain, scenery, shadows, props and sprites share one world coordinate system. Building doorways and both depth planes of the level entrances share the terrain projection. Wide scenes declare a `span` so they stay current over their entire route. Only nearby chapter sprites are mounted. Scenery textures and logo textures use the shared asset cache. The continuous forest-to-city transition follows travelled distance and reverses with the player.
 
 ## Editing content
 
 Add CV entries in `app/content/timeline.ts`, their IDs to a section in `app/content/journey.ts`, and Dutch copy with the same ID in `app/content/locales/nl.ts`. Set `span` for a longer scene. `presentation: 'world'` removes its modal; short milestones are tooltips. `hasDetails` is the single modal eligibility rule.
 
-Skills are one continuous road, not Backend/Frontend/Infrastructure/Approach modals. `app/content/skills.ts` lists all 18 original Figma logos and their asset paths. `SkillLogoSprite` owns their proximity animation. Do not replace brand assets with text approximations.
+Skills are one continuous road, not Backend/Frontend/Infrastructure/Approach modals. `app/content/skills.ts` lists all 18 original Figma logos and their asset paths. `SkillsRoadScene` owns their grouped proximity animation and floor switches. The three raised stations use actual terrain from `skillTerrain`, not decorative fake platforms. Do not replace brand assets with text approximations.
 
-Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the slides from actual CV entries. At the viewing position, held walking or scrolling advances the slides while the character stays on the spot. Release to pause, reverse to rewind, or use the accessible previous/next/slide controls. At the end, walking continues along the route. Small screens show the larger title and summary rather than tiny body text.
+Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the slides from actual CV entries. Arriving at the viewing position shows a start screen and an invitation explaining the projects. The player must explicitly start, either on the screen or with the accessible button. Only after starting does held walking or scrolling advance the slides while the character stays on the spot. Release to pause, reverse to rewind, or use the accessible previous/next/slide controls. At the end, walking continues along the route. Small screens show the larger title and summary rather than tiny body text.
 
 `art/skills` retains the untouched Figma PNG originals. `npm run art:skills` makes small, aspect-preserving runtime textures so the road does not decode eighteen large source images on a phone. SVG logo files remain unchanged.
 
@@ -80,8 +80,16 @@ Tests cover movement at different frame rates, reverse supports, ladders, jumps,
 
 `app/content/buildings.ts` assigns the six school/employer facades. `BuildingSprite` draws grounded doors and facade signs. Door clicks, E and the accessible nearby entrance button all call `useBuildingVisit`. The visit state advances through approach → opening → entering → inside → leaving → closing. `buildingVisit.ts` controls door openness and actor visibility from that same state. `BuildingInterior` holds the localized story/tools boards and return door. Navigation cancels a visit; closing returns control at the exact doorway.
 
-`skillGroups` in `app/content/skills.ts` owns compact clusters and category labels. A discovery belongs to `ActivitySystem`, so culling or changing language does not reset it. `LevelEntranceScene` draws exactly one grounded arch for each section in the route.
+`skillGroups` in `app/content/skills.ts` owns compact clusters and category labels. A discovery belongs to `ActivitySystem`, so culling or changing language does not reset it. `LevelEntranceScene` draws exactly one depth-layered arch for each section. Its far plane is behind the actor; its near pillar is in the foreground so crossing it produces real occlusion.
 
 ### Character atlas
 
 Run `npm run sprites:generate` after editing `scripts/build-character.mjs`. This authors complete 48×96 pixel poses, a shared bottom-centre anchor, `public/sprites/navi.png`, the JSON atlas manifest, and `art/character/poses.png` for review. `characterClips` is the runtime clip table. Idle/walk/run/climb/jump/fall/slide/entry are wired into the game; crouch and dance are separate authored clips available for future input bindings. Add a clip to the generator and runtime table together; never stretch individual limbs at runtime. The alpha/baseline and clip isolation tests validate the actual atlas bytes.
+
+### Scene actions and ending
+
+`sceneActivities.ts` defines replayable action timing, the aircraft/car/basketball paths, and the collision terrain of the Skills stations. `ActivitySystem` persists their state across culling and locale switches, and freezes time when the world is paused. `BuildingActivityScene` provides a basketball court, electrical board, code board, hotel luggage bell, departing aircraft and camera test drive. These are world objects; equivalent keyboard/screen-reader controls appear only when focused. A finished action can be triggered again. Scores and switch values are not reset by the renderer.
+
+The contact stop is `CampsiteScene`: tent zip, lantern and fire are interactive. Its clearing stays level and bounds the world near the campsite. It never opens a finish overlay or locks movement.
+
+Only `FirstLines.vue` still uses authored SVG scenery. Its export is `public/world/scenes/first-lines.svg`; the superseded project/building textures and old football/portal/wire-grid simulation have been removed. The other scenes are reusable Pixi objects.

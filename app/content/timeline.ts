@@ -146,7 +146,7 @@ export const timeline: TimelineEvent[] = [
     landmark: 'school',
     accent: '#a9bfa0',
     period: '2021–2023',
-    role: 'Software Developer',
+    role: 'Software Development',
     location: 'Amsterdam',
     summary: 'Software Developer studies at Codam Coding College.',
     body: ['From 2021 to 2023, I studied Software Development at Codam Coding College.'],

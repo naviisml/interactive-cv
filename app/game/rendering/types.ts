@@ -21,7 +21,7 @@ export interface WorldFrame {
   urban: number
   technical: number
   activeId: string
-  presentation: { active: boolean; progress: number; center: number }
+  presentation: { active: boolean; started: boolean; progress: number; center: number }
   visit: BuildingVisit
   navigating: boolean
 }
@@ -36,6 +36,7 @@ export interface WorldModel {
 }
 
 export interface RendererCallbacks {
+  startComputer: () => void
   skill: (name: string, count: number) => void
   details: (index: number) => void
   seek: (progress: number) => void

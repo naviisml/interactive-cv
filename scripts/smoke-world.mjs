@@ -96,6 +96,15 @@ async function scenario(label, width, height, mobile) {
         'exit restores movement',
       )
       await page.getByRole('button', { name: 'Company & projects', exact: true }).click()
+      await page
+        .getByRole('button', { name: 'Explore my projects', exact: true })
+        .waitFor({ state: 'visible', timeout: 20000 })
+      assert.equal(
+        await page.locator('.company-controls').count(),
+        0,
+        'arriving does not silently start or capture walking',
+      )
+      await page.getByRole('button', { name: 'Explore my projects', exact: true }).click()
       await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
       assert.equal(
         await page.locator('.company-controls button[aria-pressed]').count(),

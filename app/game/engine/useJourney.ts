@@ -7,7 +7,7 @@ import { journeyEvents as timeline } from '~/content/journey'
 import { createWorld } from '~/game/core/world'
 import { advanceDestination, navigationDuration, type JourneyDestination } from '../core/navigation'
 import { addSwipeDistance, consumeSwipeDistance, SWIPE_TIMEOUT } from '../core/swipeTravel'
-import { portalPlatforms } from '../core/worldActivities'
+import { skillTerrain } from '../core/sceneActivities'
 import {
   stepMotion,
   cameraTarget,
@@ -27,32 +27,31 @@ export function useJourney(
     createWorld(
       slots.value.map((slot) => ({
         ...slot,
+        ending: timeline[slot.index]?.id === 'contact',
         course:
           timeline[slot.index]?.category !== 'skills' &&
           timeline[slot.index]?.id !== 'navel-development',
       })),
     ),
   )
-  const unlockedRoutes = useState<string[]>('journey-unlocked-routes', () => [])
   const worldGeometry = computed(() => {
     const geometry = scene.value.geometry
-    const additions = unlockedRoutes.value.flatMap((id) => {
-      const index = timeline.findIndex((event) => event.id === id),
-        slot = trackIndices.value.indexOf(index)
-      if (slot < 0) return []
-      const x = slots.value[slot]!.x,
-        ground = terrainHeight(x, geometry.terrain)
-      return portalPlatforms(x, ground)
-    })
-    return { ...geometry, platforms: [...geometry.platforms, ...additions] }
+    const skill = slots.value.find((slot) => timeline[slot.index]?.id === 'skills-road')
+    return skill
+      ? {
+          ...geometry,
+          terrain: skillTerrain(
+            geometry.terrain ?? [],
+            skill.x,
+            terrainHeight(skill.x, geometry.terrain),
+          ),
+        }
+      : geometry
   })
-  function unlockRoute(id: string) {
-    if (!unlockedRoutes.value.includes(id)) unlockedRoutes.value.push(id)
-  }
   const worldWidth = computed(() => scene.value.width)
   const eventPosition = (index: number) =>
     slots.value.find((slot) => slot.index === index)?.x ?? 780
-  const presentation = reactive({ active: false, progress: 0, center: 0 })
+  const presentation = reactive({ active: false, started: false, progress: 0, center: 0 })
   const seekPresentation = (progress: number) => {
     presentation.progress = Math.max(0, Math.min(1, progress))
   }
@@ -113,6 +112,19 @@ export function useJourney(
       Math.max(0, Math.min(1, (motion.x - 170) / ((slots.value.at(-1)?.x ?? 780) - 170))) * 100,
     ),
   )
+  function startPresentation() {
+    const index = timeline.findIndex((event) => event.id === 'navel-development')
+    if (index < 0) return
+    if (presentation.progress >= 1) presentation.progress = 0
+    presentation.started = true
+    goTo(index)
+  }
+  function exitPresentation() {
+    presentation.started = false
+    presentation.active = false
+    presentation.progress = 1
+    stop()
+  }
   function jump() {
     if (!paused.value) {
       destination.value = null
@@ -131,6 +143,7 @@ export function useJourney(
     motion.vx = 0
   }
   function goTo(index: number) {
+    if (timeline[index]?.id !== 'navel-development') presentation.started = false
     if (!trackIndices.value.includes(index)) return
     stop()
     const toX =
@@ -233,6 +246,7 @@ export function useJourney(
       const watchX = (company?.x ?? 0) + COMPUTER_WATCH_OFFSET
       const atComputer =
         company &&
+        presentation.started &&
         !destination.value &&
         Math.abs(motion.x - watchX) < Math.max(18, Math.abs(motion.vx) * dt + 4) &&
         motion.grounded &&
@@ -334,12 +348,13 @@ export function useJourney(
   })
   return {
     presentation,
+    startPresentation,
+    exitPresentation,
     seekPresentation,
     subscribe,
     sprinting,
     touchSprint,
     cameraY,
-    unlockRoute,
     trackIndices,
     worldGeometry,
     worldWidth,

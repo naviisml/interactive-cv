@@ -9,8 +9,6 @@ export class BuildingSprite extends Container {
   private left = new Container()
   private right = new Container()
   private lights = new Graphics()
-  private plane?: Container
-  private car?: Container
   readonly kind: BuildingKind
   constructor(event: TimelineEvent, enter: () => void, locale: string) {
     super()
@@ -19,13 +17,20 @@ export class BuildingSprite extends Container {
     else if (this.kind === 'airport') this.airport()
     else if (this.kind === 'mobility') this.mobility()
     else this.school()
-    const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -210
-    const title = label(this, event.title, 0, signY, 17, 0xf2e8cb, 490)
-    title.anchor.x = 0.5
-    const subtitle = label(this, event.role ?? event.chapter, 0, signY + 27, 10, 0xd1d8bb, 470)
-    subtitle.anchor.x = 0.5
-    const period = label(this, event.period ?? event.label, 0, signY + 44, 10, 0xc4cba9, 470)
-    period.anchor.x = 0.5
+    if (this.kind === 'codam') {
+      label(this, 'CODAM', -224, -212, 26, 0xf0e3c2, 190)
+      label(this, 'CODING COLLEGE', -224, -177, 9, 0xc1cbb4, 190)
+      label(this, event.role ?? 'Software Development', 104, -210, 10, 0xd8dec5, 136)
+      label(this, event.period ?? event.label, 104, -175, 10, 0xc9d0b8, 140)
+    } else {
+      const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
+      const title = label(this, event.title, 0, signY, 17, 0xf2e8cb, 490)
+      title.anchor.x = 0.5
+      const role = label(this, event.role ?? event.chapter, 0, signY + 27, 10, 0xd1d8bb, 470)
+      role.anchor.x = 0.5
+      const period = label(this, event.period ?? event.label, 0, signY + 44, 10, 0xc4cba9, 470)
+      period.anchor.x = 0.5
+    }
     // Dark threshold remains fixed; the two leaves actually retract into the wall.
     rect(this, -33, -92, 66, 92, 0x203e36)
     rect(this, -39, -99, 78, 7, 0xa6ad87)
@@ -110,31 +115,31 @@ export class BuildingSprite extends Container {
   private school() {
     const codam = this.kind === 'codam',
       college = this.kind === 'college'
-    this.masonry(-260, -230, 520, 230, codam ? 0x657d79 : college ? 0x9a8b70 : 0x9c7d66)
-    rect(this, -272, -238, 544, 10, 0xaaa787)
-    rect(this, -245, -219, 490, 68, codam ? 0x2c5552 : 0x426357)
-    for (const x of [-218, -145, 100, 173]) this.window(x, -125, 42, 72)
     if (codam) {
-      rect(this, -70, -148, 140, 10, 0xa9bb95)
-      for (const x of [-76, 70]) rect(this, x, -138, 6, 138, 0x8ba68c)
-      label(this, '{ 42 }', -21, -141, 12, 0xc6d8aa, 60)
-    } else if (!college) {
-      this.addChild(new Graphics().poly([-282, -238, 0, -272, 282, -238]).fill(0x536e5b))
-      rect(this, -12, -258, 24, 15, 0xd1c69c)
+      this.masonry(-250, -234, 183, 234, 0x8a7561)
+      rect(this, 67, -234, 183, 234, 0x456961)
+      rect(this, -68, -205, 136, 205, 0x6d9285)
+      for (const x of [-64, -4, 57]) rect(this, x, -200, 5, 200, 0xa8baa1)
+      rect(this, -67, -146, 134, 5, 0xa1b197)
+      for (const x of [-227, -151]) {
+        this.window(x, -126, 45, 70)
+      }
+      for (const x of [91, 169]) {
+        this.window(x, -126, 48, 70)
+      }
+      rect(this, -261, -242, 522, 10, 0xb3af8f)
+      rect(this, -238, -226, 160, 68, 0x3b5950)
     } else {
-      for (const x of [-260, 245]) rect(this, x, -230, 15, 230, 0xb8a787)
+      this.masonry(-260, -230, 520, 230, college ? 0x9a8b70 : 0x9c7d66)
+      rect(this, -272, -238, 544, 10, 0xaaa787)
+      rect(this, -245, -227, 490, 75, 0x426357)
+      for (const x of [-218, -145, 100, 173]) this.window(x, -125, 42, 72)
+      if (!college) {
+        this.addChild(new Graphics().poly([-282, -238, 0, -272, 282, -238]).fill(0x536e5b))
+        rect(this, -12, -258, 24, 15, 0xd1c69c)
+      } else for (const x of [-260, 245]) rect(this, x, -230, 15, 230, 0xb8a787)
     }
     rect(this, -270, -15, 540, 15, 0x78836a)
-    const type = label(
-      this,
-      codam ? 'CODAM' : college ? 'MBO' : '2013 → 2017',
-      0,
-      -35,
-      9,
-      0xd6d7b9,
-      150,
-    )
-    type.anchor.x = 0.5
   }
   private airport() {
     rect(this, -285, -178, 570, 178, 0x8ba497)
@@ -149,44 +154,18 @@ export class BuildingSprite extends Container {
     rect(this, -286, -275, 78, 28, 0x4b736d)
     rect(this, -281, -270, 68, 12, 0xb7cbbb)
     rect(this, -290, -280, 86, 6, 0xc3bc98)
-    this.plane = new Container()
-    const p = new Graphics()
-      .poly([
-        -105, 0, -58, -6, -37, -38, -22, -38, -32, -5, 49, -4, 81, -19, 94, -18, 85, -2, 105, 4, 97,
-        10, -35, 10, -52, 28, -65, 28, -59, 9, -105, 7,
-      ])
-      .fill(0xe5e2c8)
-      .poly([-35, -5, -15, -5, 12, 28, 0, 28])
-      .fill(0xa5b8a4)
-    this.plane.addChild(p)
-    this.plane.position.set(70, -229)
-    this.addChild(this.plane)
-    for (let x = -35; x < 72; x += 13) rect(this.plane, x, 0, 5, 3, 0x5a7f79)
     rect(this, -285, -12, 570, 12, 0x6b8274)
   }
   private mobility() {
-    rect(this, -255, -230, 510, 230, 0x7e9390)
-    rect(this, -264, -239, 528, 10, 0xb2b49a)
-    rect(this, -240, -219, 480, 68, 0x395f58)
-    this.window(-212, -122, 93, 67)
-    this.window(121, -122, 93, 67)
-    rect(this, -116, -137, 66, 103, 0x4d7068)
-    label(this, 'P', -98, -125, 35, 0xe2dbb6, 50)
-    rect(this, 167, -48, 36, 48, 0x415e54)
-    rect(this, 172, -42, 26, 17, 0xa8c6a1)
-    this.car = new Container()
-    rect(this.car, -70, -24, 139, 23, 0x47656a)
-    this.car.addChild(new Graphics().poly([-47, -24, -31, -47, 27, -47, 48, -24]).fill(0x536f72))
-    rect(this.car, -27, -42, 51, 16, 0xadc8b8)
-    for (const x of [-43, 44]) {
-      this.car.addChild(
-        new Graphics().circle(x, -2, 12).fill(0x2c423d).circle(x, -2, 5).fill(0x9dac91),
-      )
-    }
-    rect(this.car, 57, -21, 9, 5, 0xe3d59a)
-    this.car.position.set(205, -10)
-    this.addChild(this.car)
-    rect(this, -260, -12, 520, 12, 0x667c70)
+    this.masonry(-260, -243, 520, 243, 0x8a8472)
+    rect(this, -270, -251, 540, 10, 0xb9b598)
+    rect(this, -242, -229, 484, 74, 0x3f5f57)
+    for (const x of [-221, -151, 106, 176]) this.window(x, -123, 43, 80)
+    rect(this, -72, -145, 144, 8, 0xa7ad91)
+    for (const x of [-73, 67]) rect(this, x, -137, 6, 137, 0x6a8375)
+    rect(this, -265, -15, 530, 15, 0x657b6e)
+    // A quieter office facade; the traffic/camera story lives on the road beside it.
+    for (const x of [-254, 245]) rect(this, x, -242, 9, 230, 0x6e8276)
   }
   update(time: number, open: number, reduced: boolean) {
     this.left.x = -26 * open
@@ -194,6 +173,5 @@ export class BuildingSprite extends Container {
     this.left.alpha = this.right.alpha = 1 - open * 0.65
     this.lights.clear()
     if (open > 0) this.lights.rect(-30, -87, 60, 85).fill({ color: 0xeee0aa, alpha: open * 0.22 })
-    if (this.plane) this.plane.y = -229 + (reduced ? 0 : Math.sin(time / 1700) * 3)
   }
 }

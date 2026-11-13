@@ -63,6 +63,7 @@ export const levels: JourneyLevel[] = [
       {
         id: 'contact',
         category: 'contact',
+        span: 1800,
         label: 'THE NEXT CHAPTER',
         title: 'Let’s write it together.',
         chapter: 'Contact me',
@@ -82,7 +83,7 @@ export const journeyEvents = levels.flatMap((level) =>
   level.entries.map((event) => ({
     ...event,
     category: level.id === 'company' ? ('projects' as const) : event.category,
-    span: event.category === 'school' ? 1280 : level.id === 'work' ? 1500 : event.span,
+    span: event.category === 'school' ? 1680 : level.id === 'work' ? 1800 : event.span,
     level: level.id,
   })),
 )

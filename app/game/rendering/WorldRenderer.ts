@@ -1,5 +1,7 @@
 import { Application, Container, Rectangle } from 'pixi.js'
-import { SceneLife } from './scenes/SceneLife'
+import { BuildingActivityScene } from './scenes/BuildingActivityScene'
+import { CampsiteScene } from './scenes/CampsiteScene'
+import { FirstLinesScene } from './scenes/FirstLinesScene'
 import { FootstepScene } from './scenes/FootstepScene'
 import { tapTarget } from './interactions'
 import { AtmosphereScene } from './scenes/AtmosphereScene'
@@ -11,7 +13,6 @@ import { isBuilding } from '../../content/buildings'
 import { doorOpenness } from '../core/buildingVisit'
 
 import { CharacterSprite } from './sprites/CharacterSprite'
-import { ScenerySprite } from './sprites/ScenerySprite'
 import { ComputerSprite } from './sprites/ComputerSprite'
 
 import { terrainHeight, cameraTarget } from '../core/physics'
@@ -21,7 +22,7 @@ export class WorldRenderer {
   readonly app = new Application()
   private gates = new LevelEntranceScene()
   private dust = new FootstepScene()
-  private lives = new Map<string, SceneLife>()
+  private activitiesByScene = new Map<string, BuildingActivityScene>()
   private world = new Container()
   private scenery = new Container()
   private atmosphere = new AtmosphereScene()
@@ -37,6 +38,7 @@ export class WorldRenderer {
   private viewCamera = 0
   private initialized = false
   private presentationProgress = 0
+  private presentationActive = false
   constructor(
     private host: HTMLElement,
     private model: WorldModel,
@@ -64,7 +66,14 @@ export class WorldRenderer {
     this.app.renderer.events.autoPreventDefault = false
     this.app.canvas.style.touchAction = 'pan-y pinch-zoom'
     this.app.stage.addChild(this.atmosphere, this.world)
-    this.world.addChild(this.terrain, this.gates, this.scenery, this.dust, this.character)
+    this.world.addChild(
+      this.terrain,
+      this.gates,
+      this.scenery,
+      this.dust,
+      this.character,
+      this.gates.foreground,
+    )
     this.terrain.build(this.model)
     this.gates.build(this.model)
     await this.character.load()
@@ -81,7 +90,7 @@ export class WorldRenderer {
     this.gates.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
-    this.lives.clear()
+    this.activitiesByScene.clear()
   }
   private makeScene(entry: SceneEntry) {
     const id = entry.event.id
@@ -97,25 +106,31 @@ export class WorldRenderer {
         (name, count) => this.callbacks.skill(name, count),
         this.model.locale,
       )
-    if (id === 'navel-development') return new ComputerSprite(this.model.slides)
-    const sprite = new ScenerySprite()
-    void sprite.load(id)
-    return sprite
+    if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
+    if (id === 'contact') return new CampsiteScene(this.model.locale)
+    return new FirstLinesScene()
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
     this.presentationProgress = frame.presentation.progress
+    this.presentationActive = frame.presentation.active
     const width = this.app.screen.width,
       height = this.app.screen.height,
       base = height - frame.groundInset,
       dt = this.previous ? Math.min(0.2, (frame.time - this.previous) / 1000) : 0
     this.previous = frame.time
-    const targetZoom = frame.presentation.active
+    this.activities.tick(dt, frame.paused)
+    const computerView =
+      frame.presentation.active ||
+      (frame.activeId === 'navel-development' &&
+        Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
+        !frame.navigating)
+    const targetZoom = computerView
       ? Math.min(frame.scale, (width - 24) / 820)
       : isBuilding(frame.activeId)
         ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
         : frame.scale
-    const targetCamera = frame.presentation.active
+    const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : cameraTarget(frame.motion.x, width / targetZoom, this.model.width)
     if (!this.initialized) {
@@ -130,7 +145,6 @@ export class WorldRenderer {
     this.atmosphere.update(frame, this.reduced)
     this.world.scale.set(this.zoom)
     this.world.position.set(-this.viewCamera * this.zoom, base + frame.cameraY * this.zoom)
-    const entry = this.model.entries.find((entry) => entry.event.id === frame.activeId)
     const visible = this.model.entries.filter(
       (entry) =>
         entry.x + (entry.event.span ?? 920) / 2 > this.viewCamera - 400 &&
@@ -141,7 +155,7 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
-        this.lives.delete(id)
+        this.activitiesByScene.delete(id)
       }
     for (const entry of visible) {
       let node = this.scenes.get(entry.event.id)
@@ -151,36 +165,63 @@ export class WorldRenderer {
           tapTarget(
             node,
             () =>
-              this.callbacks.seek(
-                Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
-              ),
+              this.presentationActive
+                ? this.callbacks.seek(
+                    Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
+                  )
+                : this.callbacks.startComputer(),
             new Rectangle(-296, -354, 662, 244),
           )
-        if (
-          !(node instanceof SkillsRoadScene) &&
-          !(node instanceof BuildingSprite) &&
-          !(node instanceof ComputerSprite)
-        ) {
-          const life = new SceneLife(entry.event.id)
-          this.lives.set(entry.event.id, life)
-          node.addChild(life)
+        if (node instanceof BuildingSprite) {
+          const activity = new BuildingActivityScene(
+            entry.event.id,
+            this.activities,
+            this.model.locale,
+          )
+          node.addChild(activity)
+          this.activitiesByScene.set(entry.event.id, activity)
         }
         this.scenes.set(entry.event.id, node)
         this.scenery.addChild(node)
       }
       node.position.set(entry.x, -terrainHeight(entry.x, this.model.geometry.terrain))
       if (node instanceof SkillsRoadScene)
-        node.update(frame, terrainHeight(entry.x, this.model.geometry.terrain), this.reduced)
-      if (node instanceof ComputerSprite) node.update(frame.presentation.progress, this.zoom)
+        node.update(
+          frame,
+          terrainHeight(entry.x, this.model.geometry.terrain),
+          this.reduced,
+          this.model.geometry.terrain ?? [],
+        )
+      if (node instanceof ComputerSprite)
+        node.update(
+          frame.presentation.progress,
+          this.zoom,
+          frame.presentation.active,
+          frame.time,
+          this.reduced,
+        )
       if (node instanceof BuildingSprite)
         node.update(
           frame.time,
-          frame.visit.index === entry.index ? doorOpenness(frame.visit) : 0,
+          Math.max(
+            frame.visit.index === entry.index ? doorOpenness(frame.visit) : 0,
+            entry.event.id === 'fletcher' &&
+              this.activities.actions.fletcher?.running &&
+              this.activities.actions.fletcher.age > 2 &&
+              this.activities.actions.fletcher.age < 3.8
+              ? 1
+              : 0,
+          ),
           this.reduced,
         )
     }
-    for (const [id, life] of this.lives)
-      life.update(frame.time, frame.activeId === id, this.reduced)
+    for (const [id, activity] of this.activitiesByScene) {
+      const entry = this.model.entries.find((e) => e.event.id === id)
+      if (entry) activity.update(frame, entry.x, this.reduced)
+    }
+    for (const scene of this.scenes.values())
+      if (scene instanceof CampsiteScene) scene.update(frame, this.reduced)
+      else if (scene instanceof FirstLinesScene) scene.update(frame.time, this.reduced)
     this.terrain.update(frame.time, this.reduced)
     this.dust.update(frame, this.model, this.reduced)
     this.character.update(
@@ -193,6 +234,14 @@ export class WorldRenderer {
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
+      this.app.canvas.dataset.actions = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(this.activities.actions).map(([id, s]) => [
+            id,
+            { age: s.age, running: s.running, completed: s.completed },
+          ]),
+        ),
+      )
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.visit = frame.visit.phase
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)

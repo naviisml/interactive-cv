@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, SkipForward } from '@lucide/vue'
 import { presentationSlide } from '~/game/core/presentation'
 import type { companySlides } from '~/content/company'
 const props = defineProps<{ progress: number; slides: ReturnType<typeof companySlides> }>()
-const emit = defineEmits<{ seek: [progress: number] }>()
+const emit = defineEmits<{ seek: [progress: number]; exit: [] }>()
 const { t } = useI18n()
 const index = computed(() => presentationSlide(props.progress, props.slides.length))
 </script>
@@ -29,7 +29,7 @@ const index = computed(() => presentationSlide(props.progress, props.slides.leng
         @click="emit('seek', Math.min(1, (index + 1) / slides.length))"
       >
         <ArrowRight :size="18" /></button
-      ><button class="skip" @click="emit('seek', 1)">
+      ><button class="skip" @click="emit('exit')">
         <SkipForward :size="16" />{{ t('company.continue') }}
       </button>
     </div>

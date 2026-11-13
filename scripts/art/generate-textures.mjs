@@ -6,11 +6,7 @@ const random = () => {
   seed = (seed * 1664525 + 1013904223) >>> 0
   return seed / 4294967296
 }
-for (const [name, palette] of [
-  ['earth', [0x294a3e, 0x315347, 0x3b5947, 0x45604b, 0x4c6350]],
-  ['wood', [0x71684f, 0x7e7458, 0x908263, 0x635f4a]],
-  ['stone', [0x738575, 0x80917b, 0x99a58b, 0x647a6b]],
-]) {
+for (const [name, palette] of [['earth', [0x294a3e, 0x315347, 0x3b5947, 0x45604b, 0x4c6350]]]) {
   const size = 64,
     pixels = Buffer.alloc(size * size * 4)
   for (let y = 0; y < size; y++)

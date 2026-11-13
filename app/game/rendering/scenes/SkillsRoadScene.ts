@@ -1,13 +1,17 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js'
 import { skillLogos, skillGroups } from '../../../content/skills'
 import { tapTarget } from '../interactions'
+import { terrainHeight, type TerrainPoint } from '../../core/physics'
 import { label } from '../drawing'
 import type { ActivitySystem } from '../../engine/ActivitySystem'
 import type { WorldFrame } from '../types'
 export class SkillsRoadScene extends Container {
+  private lastPad = -1
   private groups: {
     node: Container
     x: number
+    base: Graphics
+    pad: Graphics
     logos: { id: string; halo: Graphics; x: number; y: number }[]
   }[] = []
   constructor(
@@ -60,9 +64,14 @@ export class SkillsRoadScene extends Container {
         return { id, halo, x: lx, y: ly }
       })
       this.addChild(node)
-      this.groups.push({ node, x, logos })
+
       const base = new Graphics().ellipse(x, 0, 140, 4).fill({ color: 0x284d40, alpha: 0.2 })
       this.addChild(base)
+      const pad = new Graphics()
+      pad.position.set(x, 0)
+      tapTarget(pad, () => this.activity.toggle('skills-road', i), new Rectangle(-35, -30, 70, 40))
+      this.addChild(pad)
+      this.groups.push({ node, x, logos, base, pad })
     })
   }
   private explore(id: string) {
@@ -70,11 +79,36 @@ export class SkillsRoadScene extends Container {
     this.activity.exploredSkills.push(id)
     this.collected(skillLogos.find((l) => l.id === id)!.name, this.activity.exploredSkills.length)
   }
-  update(frame: WorldFrame, ground: number, reduced: boolean) {
+  update(frame: WorldFrame, ground: number, reduced: boolean, terrain: TerrainPoint[]) {
     const px = frame.motion.x - this.x,
       foot = frame.motion.y + ground
     this.groups.forEach((group, i) => {
-      group.node.y = reduced ? 0 : Math.sin(frame.time / 1100 + i * 1.4) * 6
+      const floor = ground - terrainHeight(this.x + group.x, terrain)
+      group.node.y = floor + (reduced ? 0 : Math.sin(frame.time / 1100 + i * 1.4) * 6)
+      group.base.y = floor
+      group.pad.y = floor
+      const on = !!this.activity.switches['skills-road']?.[i]
+      group.pad
+        .clear()
+        .roundRect(-27, -10, 54, 10, 3)
+        .fill(on ? 0xb9c884 : 0x6e9279)
+        .rect(-19, -14, 38, 5)
+        .fill(on ? 0xe8d49a : 0x9db38b)
+      if (on && !reduced)
+        for (let p = 0; p < 5; p++)
+          group.pad.rect(-90 + ((frame.time / 20 + p * 39) % 180), -21, 3, 3).fill(0xe7d89e)
+      if (
+        !frame.navigating &&
+        !frame.paused &&
+        frame.motion.grounded &&
+        Math.abs(px - group.x) < 23 &&
+        Math.abs(foot - floor) < 4
+      ) {
+        if (this.lastPad !== i) {
+          this.activity.toggle('skills-road', i)
+          this.lastPad = i
+        }
+      } else if (this.lastPad === i && Math.abs(px - group.x) > 35) this.lastPad = -1
       group.node.rotation = reduced ? 0 : Math.sin(frame.time / 2300 + i) * 0.008
       group.logos.forEach((logo) => {
         const seen = this.activity.exploredSkills.includes(logo.id)

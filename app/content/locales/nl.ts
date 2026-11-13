@@ -23,8 +23,9 @@ export const dutchEvents: Record<string, Partial<TimelineEvent>> = {
   },
   'coding-college': {
     title: 'Codam Coding College',
+    role: 'Software Development',
     chapter: 'Verder in het vak',
-    summary: 'De opleiding Software Developer bij Codam Coding College.',
+    summary: 'Software Development bij Codam in Amsterdam, van 2021 tot 2023.',
     body: ['Van 2021 tot 2023 volgde ik Software Development bij Codam Coding College.'],
   },
   'skills-road': {

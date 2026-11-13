@@ -49,6 +49,8 @@ const skillFeedback = computed(() =>
 )
 const {
   presentation,
+  startPresentation,
+  exitPresentation,
   seekPresentation,
   subscribe,
   sprinting,
@@ -458,12 +460,14 @@ onBeforeUnmount(() => {
         <ClientOnly
           ><GameCanvas
             :model="rendererModel"
+            :active-id="current.id"
             :get-frame="getWorldFrame"
             :subscribe="subscribe"
             :activities="activities"
             @skill="(name, count) => (exploredSkill = { name, count })"
             @details="handleSceneDetails"
             @seek="seekPresentation"
+            @start-computer="startPresentation"
         /></ClientOnly>
         <ChapterCaption
           :current="current"
@@ -475,11 +479,21 @@ onBeforeUnmount(() => {
           @details="openDetail(nearestIndex, $event)"
           @cancel="stop"
         />
+        <ComputerInvitation
+          v-if="
+            current.id === 'navel-development' &&
+            !presentation.active &&
+            !running &&
+            Math.abs(motion.x - (eventPosition(nearestIndex) - 360)) < 210
+          "
+          @start="startPresentation"
+        />
         <CompanyControls
           v-if="presentation.active"
           :progress="presentation.progress"
           :slides="rendererModel.slides"
           @seek="seekPresentation"
+          @exit="exitPresentation"
         />
         <MovementControls
           :near-ladder="!!nearLadder"
