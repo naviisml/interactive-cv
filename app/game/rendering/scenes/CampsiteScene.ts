@@ -7,13 +7,14 @@ export class CampsiteScene extends Container {
   private flame = new Graphics()
   private stars = new Graphics()
   private lantern = new Graphics()
+  private interactionGlow = new Graphics()
   private lit = true
   private canvas = new Container()
   private tucked = false
   private zip = new Graphics()
   private heatUntil = 0
   private time = 0
-  constructor(locale: string) {
+  constructor(locale: string, private onInteraction: (action: string) => void = () => {}) {
     super()
     this.addChild(new Graphics().ellipse(0, 6, 390, 17).fill({ color: 0x6c805c, alpha: 0.3 }))
     // Tent in three planes, with an opening which can be zipped/unzipped.
@@ -54,7 +55,8 @@ export class CampsiteScene extends Container {
     }
     rect(this, 253, -74, 5, 74, 0x8c9a72)
     rect(this, 238, -93, 35, 21, 0xd8c798)
-    this.addChild(this.flame, this.stars, this.lantern)
+    this.interactionGlow.eventMode = 'none'
+    this.addChild(this.flame, this.stars, this.lantern, this.interactionGlow)
     tapTarget(
       this.lantern,
       () => this.interact('lantern'),
@@ -70,6 +72,25 @@ export class CampsiteScene extends Container {
     if (action === 'tent') this.tucked = !this.tucked
     else if (action === 'lantern') this.lit = !this.lit
     else if (action === 'fire') this.heatUntil = this.time + 1800
+    else return
+    this.onInteraction(action)
+  }
+  setInteractionGlow(action: string | undefined, time: number, reduced: boolean) {
+    this.interactionGlow.clear()
+    if (!action) return
+    const alpha = reduced ? 0.64 : 0.55 + Math.sin(time / 470) * 0.16
+    const style = { color: 0xffdf9e, width: 2.8, alpha }
+    if (action === 'tent') {
+      this.interactionGlow
+        .poly([-430, 0, -355, -157, -202, 0])
+        .stroke(style)
+    } else if (action === 'lantern') {
+      this.interactionGlow.roundRect(237, -95, 37, 24, 2).stroke(style)
+    } else if (action === 'fire') {
+      this.interactionGlow
+        .poly([-25, -6, -10, -49, 15, -6])
+        .stroke(style)
+    }
   }
   update(frame: WorldFrame, reduced: boolean) {
     this.time = frame.time
