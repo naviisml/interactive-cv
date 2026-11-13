@@ -93,9 +93,13 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
           <div class="stack-layout">
             <div class="stack-main">
               <p class="stack-kicker">{{ locale === 'nl' ? 'ROL & CONTEXT' : 'ROLE & CONTEXT' }}</p>
-              <h3>{{ event.role || event.chapter }}</h3>
+              <h3>{{ event.chapter }}</h3>
               <p class="stack-lead">{{ event.summary }}</p>
               <dl class="stack-facts">
+                <div v-if="event.role">
+                  <dt>{{ locale === 'nl' ? 'Functie' : 'Role' }}</dt>
+                  <dd>{{ event.role }}</dd>
+                </div>
                 <div v-if="event.period">
                   <dt>{{ locale === 'nl' ? 'Periode' : 'Period' }}</dt>
                   <dd>{{ event.period }}</dd>
@@ -285,7 +289,7 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
   font-size: 14px;
   line-height: 1.85;
   margin: 0 0 17px;
-  color: #425f50;
+  color: #315341;
 }
 .room-board p:first-child {
   font-size: 18px;
@@ -297,17 +301,17 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
 .room-board.is-stack { min-height: 260px; padding: 20px; }
 .stack-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 20px; align-items: stretch; }
 .stack-main { padding: 20px; border-radius: 7px; background: #e7ecdf; border: 1px solid #d4ddcf; }
-.stack-kicker { margin: 0 0 12px !important; font: 700 10px/1.5 'Space Grotesk', sans-serif !important; letter-spacing: .12em; color: #69836f !important; }
+.stack-kicker { margin: 0 0 12px !important; font: 700 10px/1.5 'Space Grotesk', sans-serif !important; letter-spacing: .12em; color: #4c6757 !important; }
 .stack-main h3 { margin: 0 0 12px; font: 600 clamp(18px, 1.7vw, 24px)/1.2 'Space Grotesk', sans-serif; letter-spacing: -.035em; color: #244b3e; }
-.stack-lead { margin: 0 0 20px !important; font: 500 13px/1.65 'DM Sans', sans-serif !important; color: #456454 !important; }
+.stack-lead { margin: 0 0 20px !important; font: 500 13px/1.65 'DM Sans', sans-serif !important; color: #315140 !important; }
 .stack-facts { display: grid; gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid #c7d5c8; }
 .stack-facts div { display: grid; gap: 3px; }
-.stack-facts dt { font: 600 10px 'Space Grotesk', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #748977; }
+.stack-facts dt { font: 600 10px 'Space Grotesk', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #516d5b; }
 .stack-facts dd { margin: 0; font: 500 13px/1.5 'DM Sans', sans-serif; color: #2b5040; }
 .stack-side { min-width: 0; padding: 8px 2px 8px 0; }
 .stack-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.stack-tags li { display: inline-flex; align-items: center; min-height: 34px; padding: 8px 12px; border: 1px solid #b7cbb9; border-radius: 5px; background: #e7eddd; color: #2b5441; font: 600 12px/1.35 'Space Grotesk', sans-serif; }
-.room-board p.stack-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid #d4dfd0; font: 400 13px/1.75 'DM Sans', sans-serif; color: #54705c; }
+.stack-tags li { display: inline-flex; align-items: center; min-height: 34px; padding: 8px 12px; border: 1px solid #b7cbb9; border-radius: 5px; background: #e7eddd; color: #244634; font: 600 12px/1.35 'Space Grotesk', sans-serif; }
+.room-board p.stack-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid #d4dfd0; font: 400 13px/1.75 'DM Sans', sans-serif; color: #375c48; }
 @media (max-width: 1100px) {
   .stack-layout { grid-template-columns: 1fr; gap: 16px; }
   .stack-main { padding: 16px; }
