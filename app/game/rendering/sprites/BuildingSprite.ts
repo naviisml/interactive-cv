@@ -255,11 +255,16 @@ export class BuildingSprite extends Container {
   setEntranceHighlight(near: boolean, focused: boolean, time: number, reduced: boolean) {
     this.entranceHighlight.clear()
     if (!near || !focused) return
-    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 530)) * 0.5
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 450)) * 0.5
+    const sweep = reduced ? 0.5 : (1 + Math.sin(time / 780)) * 0.5
     this.entranceHighlight
       .roundRect(-34, -94, 68, 96, 2)
-      .fill({ color: 0xffdca0, alpha: 0.055 + pulse * 0.04 })
-      .stroke({ color: 0xffdf9b, width: 2.6, alpha: 0.58 + pulse * 0.25 })
+      .stroke({ color: 0xffd99a, width: 11, alpha: 0.12 + pulse * 0.1 })
+      .roundRect(-34, -94, 68, 96, 2)
+      .fill({ color: 0xffdfa0, alpha: 0.045 + pulse * 0.045 })
+      .stroke({ color: 0xffe9ba, width: 3, alpha: 0.69 + pulse * 0.25 })
+      .rect(-34, -83 + sweep * 67, 3, 17)
+      .fill({ color: 0xfff7d0, alpha: 0.4 + pulse * 0.18 })
   }
   update(time: number, open: number, reduced: boolean, powered = false) {
     // Preserve the artwork and typography aspect ratio on phones too.
