@@ -65,6 +65,7 @@ test('English and Dutch interfaces have the same translation keys', () => {
 
 test('company projects live in the computer, not a second stretch of the walking route', () => {
   const company = journeyEvents.filter((e) => e.level === 'company')
+  assert.equal(company[0]?.category, 'projects')
   assert.deepEqual(
     company.map((e) => e.id),
     ['navel-development'],

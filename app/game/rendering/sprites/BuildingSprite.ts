@@ -184,7 +184,7 @@ export class BuildingSprite extends Container {
       )
     }
     rect(this.car, 57, -21, 9, 5, 0xe3d59a)
-    this.car.position.set(205, 2)
+    this.car.position.set(205, -10)
     this.addChild(this.car)
     rect(this, -260, -12, 520, 12, 0x667c70)
   }

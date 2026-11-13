@@ -32,6 +32,7 @@ export class WorldRenderer {
   private disposed = false
   private reduced = false
   private previous = 0
+  private lastReadout = -1000
   private zoom = 1
   private viewCamera = 0
   private initialized = false
@@ -187,7 +188,8 @@ export class WorldRenderer {
       this.model,
     )
     this.app.render()
-    if (frame.time % 100 < 20) {
+    if (frame.time - this.lastReadout >= 100) {
+      this.lastReadout = frame.time
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
