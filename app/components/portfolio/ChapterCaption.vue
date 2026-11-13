@@ -46,7 +46,7 @@ const sceneHints: Record<string, [string, string]> = {
 }
 </script>
 <template>
-  <header class="world-caption">
+  <header class="world-caption" :class="{ 'is-intro': current.id === 'first-lines' }">
     <p v-if="current.id === 'first-lines'" class="identity-banner">
       <strong>Navarone Ismail</strong>
       <span>{{
@@ -153,6 +153,12 @@ const sceneHints: Record<string, [string, string]> = {
   .scene-hint { font-size: 11px; max-width: 325px; margin-top: 9px; padding: 6px 10px; }
 }
 
+@media (max-width: 700px) and (max-height: 740px) {
+  .world-caption.is-intro .identity-banner { gap: 3px; margin-bottom: 8px; }
+  .world-caption.is-intro .identity-banner strong { font-size: 26px; }
+  .world-caption.is-intro .caption-summary { display: none; }
+  .world-caption.is-intro .scene-hint { margin-top: 6px; }
+}
 @media (pointer: coarse) {
   .caption-enter kbd {
     display: none;
