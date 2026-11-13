@@ -77,6 +77,8 @@ export const timeline: TimelineEvent[] = [
     period: '2013–2017',
     location: 'Amstelveen',
     role: 'Sport, Services & Safety',
+    // The 2011 balance is not evidence of later financial circumstances.
+    finance: { debt: null, savings: null, yearlyIncome: null },
     summary: 'Studying Sport, Services & Safety at Scholengemeenschap Panta Rhei.',
     body: [
       'From 2013 to 2017, I attended Scholengemeenschap Panta Rhei in Amstelveen, studying Sport, Dienstverlening & Veiligheid.',
