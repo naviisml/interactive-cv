@@ -27,6 +27,11 @@ export class BuildingActivityScene extends Container {
   private objectGlow = new Graphics()
   private status: Text
   private statusPanel = new Graphics()
+  private telemetry = new Container()
+  private telemetryPanel = new Graphics()
+  private telemetryText: Text
+  private previousCompletions = 0
+  private telemetryUntil = 0
   private net?: Graphics
   private score?: Text
   private ball?: Graphics
@@ -45,6 +50,15 @@ export class BuildingActivityScene extends Container {
     this.action = buildingActions[id]!
     // Action feedback lives above the architecture, never across its signs.
     this.status = label(this, '', 155, -278, 14, 0x274b3d, 258)
+    this.telemetry.eventMode = 'none'
+    this.telemetryPanel.roundRect(-114, -27, 228, 54, 7)
+      .fill({ color: 0x173c34, alpha: 0.94 })
+      .stroke({ color: 0xe0d49e, width: 1.5, alpha: 0.82 })
+    this.telemetry.addChild(this.telemetryPanel)
+    this.telemetryText = label(this.telemetry, '', 0, -16, 12, 0xf4ecd5, 209)
+    this.telemetryText.anchor.x = 0.5
+    this.telemetryText.style.align = 'center'
+    this.telemetry.visible = false
     this.status.anchor.x = 0.5
     const feedbackY = this.action === 'luggage' ? -150 : this.action === 'departure' ? -245 : -278
     this.status.y = feedbackY
@@ -176,7 +190,74 @@ export class BuildingActivityScene extends Container {
       this.addChild(this.school)
     }
     this.objectGlow.eventMode = 'none'
-    this.addChild(this.object, this.overlay, this.statusPanel, this.status, this.objectGlow)
+    this.addChild(this.object, this.overlay, this.statusPanel, this.status, this.objectGlow, this.telemetry)
+  }
+  /** Measurements follow the moving prop, independently of first-use tooltips. */
+  private updateTelemetry(frame: WorldFrame, record: ActivitySystem['actions'][string] | undefined) {
+    const charge = this.state.charges[this.id]
+    const completed = record?.completed ?? 0
+    if (completed > this.previousCompletions) this.telemetryUntil = frame.time + 2600
+    this.previousCompletions = completed
+    const active = !!charge?.holding || !!record?.running || frame.time < this.telemetryUntil
+    this.telemetry.visible = active && frame.visit.phase === 'outside' && !frame.paused
+    if (!this.telemetry.visible) return
+    const nl = this.locale === 'nl'
+    let message = ''
+    let x = 0
+    let y = -120
+    if (this.action === 'camera') {
+      const speed = Math.round(10 + (charge?.holding ? charge.power : record?.power ?? 0.38) * 80)
+      const phase = charge?.holding
+        ? nl ? 'Laat los om te rijden' : 'Release to drive'
+        : record?.running
+          ? nl ? 'Testrit bezig' : 'Test run'
+          : record?.outcome === 'ticket'
+            ? nl ? 'Geflitst' : 'Speeding ticket'
+            : record?.outcome === 'success'
+              ? nl ? 'Binnen limiet' : 'Within the limit'
+              : nl ? 'Probeer opnieuw' : 'Try again'
+      message = `${nl ? 'Snelheid' : 'Speed'}: ${speed} km/h\n${phase}`
+      x = this.car?.x ?? 70
+      y = -123
+    } else if (this.action === 'departure') {
+      const power = charge?.holding ? charge.power : record?.power ?? 0
+      // Throttle is modeled; speed is a clearly labeled simulated estimate.
+      const simulatedSpeed = Math.round(power * 260)
+      const phase = charge?.holding
+        ? nl ? 'Vermogen opbouwen' : 'Building throttle'
+        : record?.running
+          ? record?.outcome === 'success'
+            ? (nl ? 'Stijgt op' : 'Taking off')
+            : (nl ? 'Te weinig vermogen' : 'Insufficient throttle')
+          : record?.outcome === 'success'
+            ? nl ? 'Opgestegen' : 'Airborne'
+            : nl ? 'Niet opgestegen' : 'No take-off'
+      message = `${nl ? 'Sim. snelheid' : 'Sim. speed'}: ${simulatedSpeed} km/h · ${Math.round(power * 100)}%\n${phase}`
+      x = this.plane?.x ?? 130
+      y = (this.plane?.y ?? -22) - 102
+    } else if (this.action === 'basketball') {
+      const power = charge?.holding ? charge.power : record?.power ?? 0
+      message = charge?.holding
+        ? `${nl ? 'Worpsterkte' : 'Shot power'}: ${Math.round(power * 100)}%\n${nl ? 'Laat los om te schieten' : 'Release to shoot'}`
+        : record?.running
+          ? nl ? 'Bal onderweg' : 'Ball in flight'
+          : record?.outcome === 'success'
+            ? nl ? 'Raak!' : 'Scored!'
+            : nl ? 'Mis · probeer opnieuw' : 'Missed · try again'
+      x = this.ball?.x ?? 65
+      y = Math.min(-87, (this.ball?.y ?? -10) - 82)
+    } else if (this.action === 'luggage') {
+      message = record?.running
+        ? nl ? 'Bagage onderweg…' : 'Luggage on its way…'
+        : nl ? 'Bagage bezorgd' : 'Luggage delivered'
+      x = 182
+      y = -133
+    } else {
+      this.telemetry.visible = false
+      return
+    }
+    this.telemetryText.text = message
+    this.telemetry.position.set(x, y)
   }
   /** The real prop silhouette glows; no detached targeting ellipse. */
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
@@ -381,5 +462,6 @@ export class BuildingActivityScene extends Container {
     // draw a second huge rectangular panel across the building facade.
     this.status.visible = false
     this.statusPanel.visible = false
+    this.updateTelemetry(frame, record)
   }
 }
