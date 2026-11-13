@@ -59,6 +59,67 @@ async function scenario(label, width, height, mobile) {
       await page.locator('.view-toggle').click()
       await canvas.waitFor({ state: 'visible' })
     }
+    if (!mobile) {
+      await page.getByRole('button', { name: 'Skills', exact: true }).click()
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await page.keyboard.press('Space')
+      await page.waitForFunction(
+        () => Number(document.querySelector('canvas')?.dataset.skillCount) > 0,
+      )
+      assert.equal(
+        await page.locator('.activity-controls').count(),
+        0,
+        'no duplicate interaction menu',
+      )
+      await page.getByRole('button', { name: 'Work', exact: true }).click()
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await page.getByRole('button', { name: 'Enter building', exact: true }).click()
+      await page.getByRole('dialog').waitFor({ state: 'visible' })
+      await page.getByRole('button', { name: 'Skills & tools', exact: true }).click()
+      assert.ok(await page.locator('.room-board.is-stack').isVisible())
+      await page.locator('.room-exit').click()
+      await page.waitForFunction(
+        () => document.querySelector('canvas')?.dataset.visit === 'outside',
+      )
+      const doorX = Number(await canvas.getAttribute('data-player-x'))
+      await page.keyboard.down('ArrowLeft')
+      await page.waitForTimeout(400)
+      await page.keyboard.up('ArrowLeft')
+      assert.ok(
+        Number(await canvas.getAttribute('data-player-x')) < doorX - 10,
+        'exit restores movement',
+      )
+      await page.getByRole('button', { name: 'Company & projects', exact: true }).click()
+      await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
+      assert.equal(
+        await page.locator('.company-controls button[aria-pressed]').count(),
+        7,
+        'all original projects remain inside the computer',
+      )
+      await page.getByRole('button', { name: 'Next slide', exact: true }).click()
+      await page.waitForTimeout(150)
+      const p = Number(await canvas.getAttribute('data-presentation')),
+        x = Number(await canvas.getAttribute('data-player-x'))
+      await page.keyboard.down('ArrowRight')
+      await page.waitForTimeout(600)
+      await page.keyboard.up('ArrowRight')
+      assert.ok(
+        Number(await canvas.getAttribute('data-presentation')) > p,
+        'walking after a button click advances the slideshow',
+      )
+      assert.ok(
+        Math.abs(Number(await canvas.getAttribute('data-player-x')) - x) < 1,
+        'watch point holds the actor',
+      )
+      assert.equal(
+        await page
+          .locator('.journey-footer')
+          .getByRole('button', { name: /GmodStore/ })
+          .count(),
+        0,
+        'no duplicate project chapters',
+      )
+    }
     await page.locator('.language-switch select').selectOption('nl')
     await page.waitForFunction(() => document.documentElement.lang === 'nl')
     await page

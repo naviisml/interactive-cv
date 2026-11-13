@@ -5,17 +5,21 @@ import { tapTarget } from './interactions'
 import { AtmosphereScene } from './scenes/AtmosphereScene'
 import { TerrainScene } from './scenes/TerrainScene'
 import { SkillsRoadScene } from './scenes/SkillsRoadScene'
-import { PortalScene } from './scenes/PortalScene'
-import { SchoolScene } from './scenes/SchoolScene'
+import { BuildingSprite } from './sprites/BuildingSprite'
+import { LevelEntranceScene } from './scenes/LevelEntranceScene'
+import { isBuilding } from '../../content/buildings'
+import { doorOpenness } from '../core/buildingVisit'
+
 import { CharacterSprite } from './sprites/CharacterSprite'
 import { ScenerySprite } from './sprites/ScenerySprite'
 import { ComputerSprite } from './sprites/ComputerSprite'
-import { CompanySign } from './sprites/CompanySign'
+
 import { terrainHeight } from '../core/physics'
 import type { ActivitySystem } from '../engine/ActivitySystem'
-import type { RendererCallbacks, WorldFrame, WorldModel } from './types'
+import type { RendererCallbacks, SceneEntry, WorldFrame, WorldModel } from './types'
 export class WorldRenderer {
   readonly app = new Application()
+  private gates = new LevelEntranceScene()
   private dust = new FootstepScene()
   private lives = new Map<string, SceneLife>()
   private world = new Container()
@@ -31,7 +35,6 @@ export class WorldRenderer {
   private zoom = 1
   private viewCamera = 0
   private initialized = false
-  private unlocked = false
   private presentationProgress = 0
   constructor(
     private host: HTMLElement,
@@ -60,8 +63,9 @@ export class WorldRenderer {
     this.app.renderer.events.autoPreventDefault = false
     this.app.canvas.style.touchAction = 'pan-y pinch-zoom'
     this.app.stage.addChild(this.atmosphere, this.world)
-    this.world.addChild(this.terrain, this.scenery, this.dust, this.character)
+    this.world.addChild(this.terrain, this.gates, this.scenery, this.dust, this.character)
     this.terrain.build(this.model)
+    this.gates.build(this.model)
     await this.character.load()
     if (this.disposed) return
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -73,19 +77,26 @@ export class WorldRenderer {
   setModel(model: WorldModel) {
     this.model = model
     this.terrain.build(model)
+    this.gates.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
     this.lives.clear()
   }
-  private makeScene(id: string) {
-    if (id === 'gmodstore') return new PortalScene()
+  private makeScene(entry: SceneEntry) {
+    const id = entry.event.id
+    if (isBuilding(id))
+      return new BuildingSprite(
+        entry.event,
+        () => this.callbacks.details(entry.index),
+        this.model.locale,
+      )
     if (id === 'skills-road')
-      return new SkillsRoadScene(this.activities, (name, count) =>
-        this.callbacks.skill(name, count),
+      return new SkillsRoadScene(
+        this.activities,
+        (name, count) => this.callbacks.skill(name, count),
+        this.model.locale,
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides)
-    if (['panta-rhei', 'roc-hilversum', 'coding-college'].includes(id))
-      return new SchoolScene(id, this.activities)
     const sprite = new ScenerySprite()
     void sprite.load(id)
     return sprite
@@ -100,7 +111,9 @@ export class WorldRenderer {
     this.previous = frame.time
     const targetZoom = frame.presentation.active
       ? Math.min(frame.scale, (width - 24) / 820)
-      : frame.scale
+      : isBuilding(frame.activeId)
+        ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
+        : frame.scale
     const targetCamera = frame.presentation.active
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : frame.camera
@@ -117,17 +130,6 @@ export class WorldRenderer {
     this.world.scale.set(this.zoom)
     this.world.position.set(-this.viewCamera * this.zoom, base + frame.cameraY * this.zoom)
     const entry = this.model.entries.find((entry) => entry.event.id === frame.activeId)
-    this.activities.update(
-      frame,
-      entry,
-      dt,
-      entry ? terrainHeight(entry.x, this.model.geometry.terrain) : 0,
-      frame.navigating,
-    )
-    if (this.activities.runes.length === 3 && !this.unlocked) {
-      this.unlocked = true
-      this.callbacks.unlock()
-    }
     const visible = this.model.entries.filter(
       (entry) =>
         entry.x + (entry.event.span ?? 920) / 2 > this.viewCamera - 400 &&
@@ -143,23 +145,7 @@ export class WorldRenderer {
     for (const entry of visible) {
       let node = this.scenes.get(entry.event.id)
       if (!node) {
-        node = this.makeScene(entry.event.id)
-        if (
-          (entry.event.category === 'work' || entry.event.category === 'projects') &&
-          entry.event.id !== 'first-lines'
-        ) {
-          const sign = new CompanySign(entry.event)
-          sign.x = entry.event.id === 'navel-development' ? -395 : -320
-          sign.y =
-            terrainHeight(entry.x, this.model.geometry.terrain) -
-            terrainHeight(entry.x + sign.x, this.model.geometry.terrain)
-          tapTarget(
-            sign,
-            () => this.callbacks.details(entry.index),
-            new Rectangle(-255, -170, 265, 110),
-          )
-          node.addChild(sign)
-        }
+        node = this.makeScene(entry)
         if (node instanceof ComputerSprite)
           tapTarget(
             node,
@@ -171,7 +157,7 @@ export class WorldRenderer {
           )
         if (
           !(node instanceof SkillsRoadScene) &&
-          !(node instanceof SchoolScene) &&
+          !(node instanceof BuildingSprite) &&
           !(node instanceof ComputerSprite)
         ) {
           const life = new SceneLife(entry.event.id)
@@ -185,9 +171,12 @@ export class WorldRenderer {
       if (node instanceof SkillsRoadScene)
         node.update(frame, terrainHeight(entry.x, this.model.geometry.terrain), this.reduced)
       if (node instanceof ComputerSprite) node.update(frame.presentation.progress, this.zoom)
-      if (node instanceof PortalScene) node.update(this.activities, frame.time, this.reduced)
-      if (node instanceof SchoolScene)
-        node.update(this.activities, frame.activeId === entry.event.id && !frame.paused)
+      if (node instanceof BuildingSprite)
+        node.update(
+          frame.time,
+          frame.visit.index === entry.index ? doorOpenness(frame.visit) : 0,
+          this.reduced,
+        )
     }
     for (const [id, life] of this.lives)
       life.update(frame.time, frame.activeId === id, this.reduced)
@@ -203,6 +192,7 @@ export class WorldRenderer {
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
+      this.app.canvas.dataset.visit = frame.visit.phase
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)
     }
   }

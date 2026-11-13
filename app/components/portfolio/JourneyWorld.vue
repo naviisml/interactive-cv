@@ -1,14 +1,11 @@
 <script setup lang="ts">
+import { useBuildingVisit } from '~/game/engine/useBuildingVisit'
+import { isBuilding } from '~/content/buildings'
 import { useJourney } from '~/game/engine/useJourney'
 import { useWorldViewport } from '~/game/engine/useWorldViewport'
 import { companySlides } from '~/content/company'
 import { ActivitySystem } from '~/game/engine/ActivitySystem'
-import {
-  timeline as cvTimeline,
-  isBriefEvent,
-  hasDetails,
-  type TimelineFilter,
-} from '~/content/timeline'
+import { timeline as cvTimeline, hasDetails, type TimelineFilter } from '~/content/timeline'
 import { journeyEvents, levelForEvent, firstInLevel, type LevelId } from '~/content/journey'
 import { sceneryTransition } from '~/game/core/sceneryTransition'
 import { readingProgress } from '~/game/core/readingProgress'
@@ -37,6 +34,8 @@ let detailOpener: HTMLElement | undefined
 const worldRoot = ref<HTMLElement>()
 const view = useWorldViewport(worldRoot)
 const journey = useJourney(trackIndices, view)
+const buildingVisit = useBuildingVisit(journey)
+const { visit } = buildingVisit
 const activities = markRaw(new ActivitySystem())
 const exploredSkill = ref({ name: '', count: 0 })
 const skillFeedback = computed(() =>
@@ -55,7 +54,6 @@ const {
   sprinting,
   touchSprint,
   cameraY,
-  unlockRoute,
   worldGeometry,
   worldWidth: WORLD_WIDTH,
   eventPosition,
@@ -93,9 +91,12 @@ const rendererModel = computed(() => ({
   width: WORLD_WIDTH.value,
   geometry: worldGeometry.value,
   entries: entries.value.map((entry) => ({ ...entry, x: eventPosition(entry.index) })),
-  slides: companySlides(timeline.value),
+  slides: companySlides(localized.cvTimeline.value),
   locale: locale.value,
   tutorial: t('world.route'),
+  levelTitles: Object.fromEntries(
+    ['about', 'skills', 'work', 'company', 'contact'].map((id) => [id, t('nav.' + id)]),
+  ),
 }))
 function getWorldFrame() {
   return {
@@ -113,6 +114,7 @@ function getWorldFrame() {
     technical: scenery.value.technical,
     activeId: timeline.value[nearestIndex.value]?.id ?? '',
     presentation: { ...presentation },
+    visit: { ...visit },
     navigating: running.value,
   }
 }
@@ -120,15 +122,24 @@ const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, moneyOpen],
+  [listMode, detailIndex, moneyOpen, buildingVisit.blocking],
   () => {
-    paused.value = listMode.value || detailIndex.value !== null || moneyOpen.value
+    paused.value =
+      listMode.value ||
+      detailIndex.value !== null ||
+      moneyOpen.value ||
+      buildingVisit.blocking.value
   },
   { immediate: true },
 )
 async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
+  if (isBuilding(timeline.value[index]!.id)) {
+    if (listMode.value) listMode.value = false
+    buildingVisit.enter(index)
+    return
+  }
   if (!hasDetails(timeline.value[index]!)) return
   detailOpener = (event?.currentTarget as HTMLElement) || worldRoot.value
   if (listMode.value) {
@@ -157,6 +168,7 @@ async function closeDetail() {
 }
 async function changeFilter(filter: TimelineFilter) {
   if (filter === selectedFilter.value || sceneChanging.value) return
+  buildingVisit.cancel()
   detailIndex.value = null
   sceneChanging.value = true
   stop()
@@ -177,6 +189,11 @@ const displayProgress = computed(() => (listMode.value ? listProgress.value : pr
 const destinationTitle = computed(() =>
   destination.value ? timeline.value[destination.value.index]?.title : '',
 )
+const visitEvent = computed(() => (visit.index === null ? undefined : timeline.value[visit.index]))
+const enterable = computed(
+  () =>
+    isBuilding(current.value.id) && Math.abs(motion.x - eventPosition(nearestIndex.value)) < 200,
+)
 const current = computed(() => timeline.value[nearestIndex.value]!)
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 const financeIndex = computed(() =>
@@ -189,6 +206,7 @@ watch(destination, (value) => {
   if (Math.abs(motion.x - eventPosition(index)) < 3) detailIndex.value = index
 })
 async function navigateLevel(id: LevelId) {
+  buildingVisit.cancel()
   if (selectedFilter.value !== 'all') {
     await changeFilter('all')
     await nextTick()
@@ -337,6 +355,7 @@ function scrollToEvent(index: number) {
   queueListUpdate()
 }
 async function toggleList() {
+  buildingVisit.cancel()
   detailIndex.value = null
   pendingDetailIndex.value = null
   if (listMode.value) {
@@ -356,6 +375,7 @@ async function toggleList() {
   }
 }
 function navigateTimeline(index: number) {
+  buildingVisit.cancel()
   if (listMode.value) scrollToEvent(index)
   else goTo(index)
 }
@@ -363,9 +383,10 @@ function interact(event: KeyboardEvent) {
   if (
     !listMode.value &&
     detailIndex.value === null &&
+    visit.phase === 'outside' &&
     event.key.toLowerCase() === 'e' &&
     nearby.value &&
-    !isBriefEvent(nearby.value) &&
+    isBuilding(nearby.value.id) &&
     !(event.target as HTMLElement)?.closest('button,a,input')
   )
     openDetail(nearestIndex.value)
@@ -377,7 +398,8 @@ onMounted(async () => {
       document.activeElement === document.documentElement)
   )
     worldRoot.value?.focus({ preventScroll: true })
-  paused.value = listMode.value || detailIndex.value !== null || moneyOpen.value
+  paused.value =
+    listMode.value || detailIndex.value !== null || moneyOpen.value || buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -432,14 +454,13 @@ onBeforeUnmount(() => {
       @wheel="wheelTravel"
       :aria-label="t('common.worldLabel')"
     >
-      <div class="world-scene" :inert="!!detailEvent">
+      <div class="world-scene" :inert="!!detailEvent || visit.phase === 'inside'">
         <ClientOnly
           ><GameCanvas
             :model="rendererModel"
             :get-frame="getWorldFrame"
             :subscribe="subscribe"
             :activities="activities"
-            @unlock-route="unlockRoute('gmodstore')"
             @skill="(name, count) => (exploredSkill = { name, count })"
             @details="handleSceneDetails"
             @seek="seekPresentation"
@@ -449,14 +470,10 @@ onBeforeUnmount(() => {
           :running="running"
           :destination-title="destinationTitle"
           :feedback="skillFeedback"
+          :enterable="enterable"
+          @enter="buildingVisit.enter(nearestIndex)"
           @details="openDetail(nearestIndex, $event)"
           @cancel="stop"
-        />
-        <ActivityControls
-          v-if="nearby"
-          :id="nearby.id"
-          :paused="paused"
-          @command="(action, index) => activities.command(action, index)"
         />
         <CompanyControls
           v-if="presentation.active"
@@ -473,10 +490,25 @@ onBeforeUnmount(() => {
           @jump="jump"
         />
       </div>
+      <BuildingInterior
+        v-if="visit.phase === 'inside' && visitEvent"
+        :event="visitEvent"
+        @leave="buildingVisit.leave"
+      />
       <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
     </section>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
-      <ReadingList :entries="entries" :active="listActive" @open="openDetail" @back="toggleList" />
+      <ReadingList
+        :entries="entries"
+        :projects="
+          localized.cvTimeline.value.filter(
+            (e) => rendererModel.slides.some((s) => s.id === e.id) && e.id !== 'navel-development',
+          )
+        "
+        :active="listActive"
+        @open="openDetail"
+        @back="toggleList"
+      />
     </section>
     <JourneyTimeline
       :entries="entries"

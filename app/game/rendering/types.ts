@@ -1,3 +1,4 @@
+import type { BuildingVisit } from '../core/buildingVisit'
 import type { Motion, WorldGeometry } from '../core/physics'
 import type { companySlides } from '../../content/company'
 import type { TimelineEvent } from '../../content/timeline'
@@ -21,6 +22,7 @@ export interface WorldFrame {
   technical: number
   activeId: string
   presentation: { active: boolean; progress: number; center: number }
+  visit: BuildingVisit
   navigating: boolean
 }
 export interface WorldModel {
@@ -30,10 +32,10 @@ export interface WorldModel {
   slides: ReturnType<typeof companySlides>
   locale: string
   tutorial: string
+  levelTitles: Record<string, string>
 }
 
 export interface RendererCallbacks {
-  unlock: () => void
   skill: (name: string, count: number) => void
   details: (index: number) => void
   seek: (progress: number) => void

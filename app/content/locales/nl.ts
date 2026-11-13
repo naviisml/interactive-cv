@@ -22,9 +22,10 @@ export const dutchEvents: Record<string, Partial<TimelineEvent>> = {
     body: ['Van 2017 tot 2018 volgde ik de opleiding Software Developer bij ROC Hilversum.'],
   },
   'coding-college': {
+    title: 'Codam Coding College',
     chapter: 'Verder in het vak',
-    summary: 'De opleiding Software Developer bij Coding College Amsterdam.',
-    body: ['Van 2021 tot 2023 volgde ik Software Development bij Coding College Amsterdam.'],
+    summary: 'De opleiding Software Developer bij Codam Coding College.',
+    body: ['Van 2021 tot 2023 volgde ik Software Development bij Codam Coding College.'],
   },
   'skills-road': {
     title: 'De tools waarmee ik bouw',
@@ -39,7 +40,7 @@ export const dutchEvents: Record<string, Partial<TimelineEvent>> = {
     body: [
       'Via Navel Development ontwikkel en implementeer ik webapplicaties, REST- en OAuth-API’s en integraties voor opdrachtgevers.',
       'Ik richt omgevingen in met Docker en ontwikkel packages voor Composer en npm. Ook draag ik bij aan opensourceprojecten.',
-      'De klantopdrachten verderop horen bij Navel Development en lopen naast mijn andere werkervaring.',
+      'Deze klantopdrachten horen bij Navel Development en lopen naast mijn andere werkervaring.',
     ],
   },
   gmodstore: {

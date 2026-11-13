@@ -1,23 +1,21 @@
-export type CharacterAction = 'idle' | 'walk' | 'run' | 'climb' | 'jump' | 'fall' | 'slide'
-export const SPRITE_WIDTH = 32,
-  SPRITE_HEIGHT = 64,
-  SPRITE_FRAMES = 32
-export function spriteFrame(action: CharacterAction, phase: number): number {
-  const frame = Math.max(0, Math.floor(phase))
-  switch (action) {
-    case 'walk':
-      return 1 + (frame % 12)
-    case 'run':
-      return 20 + (frame % 12)
-    case 'climb':
-      return 15 + (frame % 4)
-    case 'jump':
-      return 13
-    case 'fall':
-      return 14
-    case 'slide':
-      return 19
-    default:
-      return 0
-  }
+/** Offline atlas contract. Every action owns complete frames with the same foot pivot. */
+export const SPRITE_WIDTH = 48,
+  SPRITE_HEIGHT = 96
+export const characterClips = {
+  idle: { start: 0, frames: 6, fps: 5 },
+  walk: { start: 6, frames: 12, fps: 12 },
+  run: { start: 18, frames: 12, fps: 17 },
+  climb: { start: 30, frames: 8, fps: 10 },
+  jump: { start: 38, frames: 2, fps: 8 },
+  fall: { start: 40, frames: 2, fps: 6 },
+  slide: { start: 42, frames: 2, fps: 6 },
+  crouch: { start: 44, frames: 4, fps: 8 },
+  dance: { start: 48, frames: 12, fps: 10 },
+  enter: { start: 60, frames: 6, fps: 9 },
+} as const
+export type CharacterAction = keyof typeof characterClips
+export const SPRITE_FRAMES = 66
+export function spriteFrame(action: CharacterAction, phase: number) {
+  const clip = characterClips[action]
+  return clip.start + (Math.max(0, Math.floor(phase)) % clip.frames)
 }

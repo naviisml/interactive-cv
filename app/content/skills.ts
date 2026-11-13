@@ -125,4 +125,22 @@ export const skillLogos: SkillLogo[] = [
     height: 30,
   },
 ]
-export const SKILL_ROAD_SPAN = 3000
+export const SKILL_ROAD_SPAN = 1580
+
+export const skillGroups = [
+  {
+    id: 'tooling',
+    title: { en: 'Tooling', nl: 'Tooling' },
+    ids: ['docker', 'github', 'gitlab', 'figma', 'jira'],
+  },
+  {
+    id: 'web',
+    title: { en: 'Web development', nl: 'Webontwikkeling' },
+    ids: ['html', 'css', 'php', 'laravel', 'nodejs', 'vue', 'react', 'symfony'],
+  },
+  {
+    id: 'systems',
+    title: { en: 'Systems & cloud', nl: 'Systemen & cloud' },
+    ids: ['digitalocean', 'kafka', 'c', 'lua', 'spring'],
+  },
+] as const

@@ -73,3 +73,15 @@ Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the sl
 - Game Space overrides a focused navigation button. Forms, puzzles, reading mode and dialogs keep native keyboard behavior.
 
 Tests cover movement at different frame rates, reverse supports, ladders, jumps, sprint, multi-pointer state, scene spans, presentation bounds, translation coverage and all logo assets. The GitHub browser smoke test checks desktop/mobile layout, canvas startup, keyboard input, menu/list navigation and language switching. Real iPhone Safari multi-touch and GPU performance require an on-device check; a headless browser does not establish them.
+
+### World chapters and building visits
+
+`app/content/journey.ts` is the **walking route**, not the full CV. Navel Development owns one stop. Its seven project slides are resolved from the complete, localized CV with `companySlides`; they are also expandable inside its list entry. Do not add these projects to the route again.
+
+`app/content/buildings.ts` assigns the six school/employer facades. `BuildingSprite` draws grounded doors and facade signs. Door clicks, E and the accessible nearby entrance button all call `useBuildingVisit`. The visit state advances through approach → opening → entering → inside → leaving → closing. `buildingVisit.ts` controls door openness and actor visibility from that same state. `BuildingInterior` holds the localized story/tools boards and return door. Navigation cancels a visit; closing returns control at the exact doorway.
+
+`skillGroups` in `app/content/skills.ts` owns compact clusters and category labels. A discovery belongs to `ActivitySystem`, so culling or changing language does not reset it. `LevelEntranceScene` draws exactly one grounded arch for each section in the route.
+
+### Character atlas
+
+Run `npm run sprites:generate` after editing `scripts/build-character.mjs`. This authors complete 48×96 pixel poses, a shared bottom-centre anchor, `public/sprites/navi.png`, the JSON atlas manifest, and `art/character/poses.png` for review. `characterClips` is the runtime clip table. Idle/walk/run/climb/jump/fall/slide/entry are wired into the game; crouch and dance are separate authored clips available for future input bindings. Add a clip to the generator and runtime table together; never stretch individual limbs at runtime. The alpha/baseline and clip isolation tests validate the actual atlas bytes.

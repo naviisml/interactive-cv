@@ -6,7 +6,11 @@ import {
   categoryColors,
   type TimelineEvent,
 } from '~/content/timeline'
-const props = defineProps<{ entries: { event: TimelineEvent; index: number }[]; active: number }>()
+const props = defineProps<{
+  entries: { event: TimelineEvent; index: number }[]
+  active: number
+  projects?: TimelineEvent[]
+}>()
 const emit = defineEmits<{ open: [index: number]; back: [] }>()
 const { t } = useI18n()
 const order = computed(() => props.entries.map((entry) => entry.index))
@@ -53,6 +57,19 @@ const order = computed(() => props.entries.map((entry) => entry.index))
         <div v-if="event.tags?.length" class="tech-tags">
           <span v-for="tag in event.tags" :key="tag">{{ tag }}</span>
         </div>
+        <div
+          v-if="event.id === 'navel-development' && projects?.length"
+          class="company-reading-projects"
+        >
+          <details v-for="project in projects" :key="project.id">
+            <summary>
+              {{ project.title }} <small>{{ project.period || project.label }}</small>
+            </summary>
+            <p>{{ project.summary }}</p>
+            <p v-for="paragraph in storyParagraphs(project)" :key="paragraph">{{ paragraph }}</p>
+            <NuxtLink :to="`/events/${project.id}`">{{ t('common.fullPage') }} ↗</NuxtLink>
+          </details>
+        </div>
         <button v-if="hasDetails(event)" class="reading-link" @click="emit('open', index)">
           {{ t(event.category === 'projects' ? 'list.project' : 'list.experience') }} ↗</button
         ><a v-if="event.id === 'contact'" class="reading-link" href="mailto:contact@navel.dev"
@@ -65,3 +82,33 @@ const order = computed(() => props.entries.map((entry) => entry.index))
     </div>
   </div>
 </template>
+
+<style scoped>
+.company-reading-projects {
+  margin: 24px 0;
+}
+.company-reading-projects details {
+  border-top: 1px solid #bcc7af;
+  padding: 16px 0;
+}
+.company-reading-projects summary {
+  cursor: pointer;
+  font: 500 18px 'Space Grotesk';
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.company-reading-projects small {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #71856b;
+}
+.company-reading-projects p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.company-reading-projects a {
+  font-size: 12px;
+}
+</style>

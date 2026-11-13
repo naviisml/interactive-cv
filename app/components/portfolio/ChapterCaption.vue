@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { FileText } from '@lucide/vue'
+import { FileText, DoorOpen } from '@lucide/vue'
 import { hasDetails, type TimelineEvent } from '~/content/timeline'
 defineProps<{
   current: TimelineEvent
   running: boolean
   destinationTitle?: string
   feedback?: string
+  enterable?: boolean
 }>()
-const emit = defineEmits<{ details: [event: MouseEvent]; cancel: [] }>()
+const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }>()
 const { t } = useI18n()
 </script>
 <template>
@@ -21,7 +22,7 @@ const { t } = useI18n()
     <div class="caption-title">
       <h1>{{ current.title }}</h1>
       <button
-        v-if="hasDetails(current)"
+        v-if="hasDetails(current) && current.category !== 'work' && current.category !== 'school'"
         class="caption-details"
         aria-haspopup="dialog"
         :aria-label="t('common.detailsAbout', { title: current.title })"
@@ -30,6 +31,13 @@ const { t } = useI18n()
         <FileText :size="16" aria-hidden="true" />{{ t('common.details') }}
       </button>
     </div>
+    <button
+      v-if="enterable && !running"
+      class="caption-details caption-enter"
+      @click="emit('enter')"
+    >
+      <DoorOpen :size="18" />{{ t('building.enter') }}<kbd>E</kbd>
+    </button>
     <p class="caption-summary">{{ current.summary }}</p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
       >contact@navel.dev</a

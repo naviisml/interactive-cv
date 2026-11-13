@@ -101,5 +101,14 @@
   "page": {
     "life": "A LIFE IN PROGRESS",
     "missing": "This chapter has not been written yet."
+  },
+  "building": {
+    "enter": "Enter building",
+    "leave": "Back outside",
+    "story": "The story",
+    "stack": "Skills & tools",
+    "education": "MY EDUCATION",
+    "workplace": "WORK EXPERIENCE",
+    "explore": "Explore this place"
   }
 }

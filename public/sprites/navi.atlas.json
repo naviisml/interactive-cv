@@ -1,0 +1,52 @@
+{
+  "frame": {
+    "width": 48,
+    "height": 96,
+    "anchor": [
+      0.5,
+      1
+    ]
+  },
+  "clips": {
+    "idle": {
+      "start": 0,
+      "count": 6
+    },
+    "walk": {
+      "start": 6,
+      "count": 12
+    },
+    "run": {
+      "start": 18,
+      "count": 12
+    },
+    "climb": {
+      "start": 30,
+      "count": 8
+    },
+    "jump": {
+      "start": 38,
+      "count": 2
+    },
+    "fall": {
+      "start": 40,
+      "count": 2
+    },
+    "slide": {
+      "start": 42,
+      "count": 2
+    },
+    "crouch": {
+      "start": 44,
+      "count": 4
+    },
+    "dance": {
+      "start": 48,
+      "count": 12
+    },
+    "enter": {
+      "start": 60,
+      "count": 6
+    }
+  }
+}

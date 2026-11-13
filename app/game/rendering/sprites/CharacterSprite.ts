@@ -1,5 +1,6 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js'
-import { spriteFrame, SPRITE_FRAMES } from '../../core/characterSprite'
+import { spriteFrame, SPRITE_FRAMES, characterClips } from '../../core/characterSprite'
+import { actorEntry } from '../../core/buildingVisit'
 import { shadowSurface } from '../../core/physics'
 import type { WorldFrame, WorldModel } from '../types'
 export class CharacterSprite extends Container {
@@ -40,9 +41,21 @@ export class CharacterSprite extends Container {
                 : Math.abs(m.vx) > 15
                   ? 'walk'
                   : 'idle'
-    this.body.texture = this.frames[spriteFrame(action, frame.animationFrame)]!
-    this.body.scale.set(frame.facing * 1.5, 1.5)
-    this.body.position.set(m.x, m.y)
+    const entering = actorEntry(frame.visit)
+    const clipAction = entering > 0 && entering < 1 ? 'enter' : action
+    this.body.texture =
+      this.frames[
+        spriteFrame(
+          clipAction,
+          clipAction === 'idle' || clipAction === 'enter'
+            ? (frame.time / 1000) * characterClips[clipAction].fps
+            : frame.animationFrame,
+        )
+      ]!
+    this.body.scale.set(frame.facing * (1 - entering * 0.12), 1 - entering * 0.12)
+    this.body.position.set(m.x, m.y - entering * 18)
+    this.body.alpha = 1 - entering
+    this.shadow.visible = entering < 0.9
     const support = shadowSurface(m, model.geometry),
       distance = Math.max(0, support - m.y)
     this.shadow.position.set(m.x, support)

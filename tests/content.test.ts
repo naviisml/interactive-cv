@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { journeyEvents } from '../app/content/journey.ts'
-import { skillLogos } from '../app/content/skills.ts'
+import { skillGroups, SKILL_ROAD_SPAN, skillLogos } from '../app/content/skills.ts'
 import { hasDetails } from '../app/content/timeline.ts'
 import { dutchEvents } from '../app/content/locales/nl.ts'
 import { journeyLayout, currentSlot } from '../app/game/core/journeyLayout.ts'
@@ -31,13 +31,13 @@ test('long scene spans remain current until the actual zone boundary and stay le
     (i) => journeyEvents[i]?.span ?? 920,
   )
   const skill = slots.find((slot) => journeyEvents[slot.index]?.id === 'skills-road')!
-  assert.equal(currentSlot(skill.x + 1275, slots)?.index, skill.index)
+  assert.equal(currentSlot(skill.x + SKILL_ROAD_SPAN / 2 - 5, slots)?.index, skill.index)
   const world = createWorld(
     slots.map((slot) => ({ ...slot, course: journeyEvents[slot.index]?.category !== 'skills' })),
   )
   assert.equal(
-    terrainHeight(skill.x - 1275, world.geometry.terrain),
-    terrainHeight(skill.x + 1275, world.geometry.terrain),
+    terrainHeight(skill.x - SKILL_ROAD_SPAN / 2 + 180, world.geometry.terrain),
+    terrainHeight(skill.x + SKILL_ROAD_SPAN / 2 - 180, world.geometry.terrain),
   )
   for (let i = 1; i < slots.length; i++) assert.equal(slots[i - 1]!.end, slots[i]!.start)
 })
@@ -61,4 +61,21 @@ test('English and Dutch interfaces have the same translation keys', () => {
       )
       .sort()
   assert.deepEqual(keys(read('en')), keys(read('nl')))
+})
+
+test('company projects live in the computer, not a second stretch of the walking route', () => {
+  const company = journeyEvents.filter((e) => e.level === 'company')
+  assert.deepEqual(
+    company.map((e) => e.id),
+    ['navel-development'],
+  )
+  assert.equal(journeyEvents.at(-2)?.id, 'navel-development')
+  assert.equal(journeyEvents.at(-1)?.id, 'contact')
+})
+test('compact skill groups contain each original technology exactly once', () => {
+  const ids = skillGroups.flatMap((g) => [...g.ids])
+  assert.equal(ids.length, 18)
+  assert.equal(new Set(ids).size, 18)
+  assert.deepEqual([...ids].sort(), skillLogos.map((l) => l.id).sort())
+  assert.ok(SKILL_ROAD_SPAN < 1700)
 })

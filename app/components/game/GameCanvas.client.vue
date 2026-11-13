@@ -9,7 +9,6 @@ const props = defineProps<{
   subscribe: (callback: () => void) => () => void
 }>()
 const emit = defineEmits<{
-  unlockRoute: []
   skill: [name: string, count: number]
   details: [index: number]
   seek: [progress: number]
@@ -25,7 +24,6 @@ onMounted(async () => {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
-      unlock: () => emit('unlockRoute'),
       skill: (name, count) => emit('skill', name, count),
       details: (index) => emit('details', index),
       seek: (progress) => emit('seek', progress),

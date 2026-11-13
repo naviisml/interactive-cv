@@ -52,15 +52,7 @@ export const levels: JourneyLevel[] = [
     title: 'My company & projects',
     subtitle: 'Navel Development · Client work & Navel Cloud',
     color: '#9480a6',
-    entries: cv([
-      'navel-development',
-      'gmodstore',
-      'q-lite',
-      'shopify',
-      'fifty-five',
-      'aquablu',
-      'navel-cloud',
-    ]),
+    entries: cv(['navel-development']),
   },
   {
     id: 'contact',
@@ -87,7 +79,11 @@ export const levels: JourneyLevel[] = [
   },
 ]
 export const journeyEvents = levels.flatMap((level) =>
-  level.entries.map((event) => ({ ...event, level: level.id })),
+  level.entries.map((event) => ({
+    ...event,
+    span: event.category === 'school' ? 1280 : level.id === 'work' ? 1500 : event.span,
+    level: level.id,
+  })),
 )
 export const levelForEvent = (index: number) =>
   levels.find((level) => level.id === journeyEvents[index]?.level) ?? levels[0]!

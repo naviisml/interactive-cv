@@ -101,5 +101,14 @@
   "page": {
     "life": "EEN LEVEN IN ONTWIKKELING",
     "missing": "Dit hoofdstuk is nog niet geschreven."
+  },
+  "building": {
+    "enter": "Naar binnen",
+    "leave": "Naar buiten",
+    "story": "Het verhaal",
+    "stack": "Vaardigheden & tools",
+    "education": "MIJN OPLEIDING",
+    "workplace": "WERKERVARING",
+    "explore": "Ontdek deze plek"
   }
 }

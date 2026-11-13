@@ -116,11 +116,5 @@ export class TerrainScene extends Container {
           .stroke({ width: 2, color: 0xd8c69c }),
       )
     }
-    const ground = terrainHeight(440, points)
-    rect(this, 390, -ground - 100, 160, 76, 0x35594c)
-    rect(this, 400, -ground - 24, 5, 24, 0x7c8968)
-    rect(this, 535, -ground - 24, 5, 24, 0x7c8968)
-    label(this, model.locale === 'nl' ? 'UITLEG' : 'TUTORIAL', 402, -ground - 89, 10)
-    label(this, model.tutorial, 402, -ground - 62, 10)
   }
 }
