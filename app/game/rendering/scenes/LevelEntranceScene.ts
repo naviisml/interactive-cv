@@ -34,13 +34,15 @@ export class LevelEntranceScene extends Container {
           .fill(0x6e8669),
       )
       rect(back, -110, -239, 214, 12, 0x839b78)
+      rect(back, -125, -282, 250, 30, 0x3e604f)
+      for (const px of [-98, 92]) rect(back, px, -252, 5, 9, 0x829673)
       const plaque = label(
         back,
-        `${i + 1}  /  ${model.levelTitles[level.id]}`,
+        `LEVEL ${i + 1}  /  ${model.levelTitles[level.id]}`,
         -4,
         -274,
         15,
-        0x365745,
+        0xeee4c4,
         260,
       )
       plaque.anchor.x = 0.5

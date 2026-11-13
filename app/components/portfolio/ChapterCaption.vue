@@ -9,7 +9,27 @@ defineProps<{
   enterable?: boolean
 }>()
 const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const sceneHints: Record<string, [string, string]> = {
+  'panta-rhei': ['Tik op de bal om te schieten.', 'Tap the ball to shoot.'],
+  'roc-hilversum': [
+    'Tik op de werkbank om de verbinding te maken.',
+    'Tap the workstation to connect the circuit.',
+  ],
+  'coding-college': [
+    'Tik op de computer: bouwen, testen, uitvoeren.',
+    'Tap the computer: build, test, run.',
+  ],
+  fletcher: [
+    'Tik op de bel bij de ingang voor de bagage.',
+    'Ring the bell at the entrance for luggage.',
+  ],
+  'get-e': ['Tik op het vliegtuig om te vertrekken.', 'Tap the aircraft for take-off.'],
+  appjection: [
+    'Tik op de auto voor een rit langs de flitspaal.',
+    'Tap the car to drive past the speed camera.',
+  ],
+}
 </script>
 <template>
   <header class="world-caption">
@@ -40,6 +60,9 @@ const { t } = useI18n()
       <DoorOpen :size="18" />{{ t('building.enter') }}<kbd aria-hidden="true">E</kbd>
     </button>
     <p class="caption-summary">{{ current.summary }}</p>
+    <p v-if="sceneHints[current.id] && !running" class="scene-hint">
+      {{ sceneHints[current.id]?.[locale === 'nl' ? 0 : 1] }}
+    </p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
       >contact@navel.dev</a
     >
@@ -55,6 +78,18 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
+.scene-hint {
+  font-size: 12px;
+  margin-top: 8px;
+  color: #395c50;
+}
+@media (max-width: 700px) {
+  .scene-hint {
+    font-size: 11px;
+    max-width: 290px;
+  }
+}
+
 @media (pointer: coarse) {
   .caption-enter kbd {
     display: none;

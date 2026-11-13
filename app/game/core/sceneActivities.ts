@@ -24,24 +24,24 @@ export function aircraftPose(age: number) {
   const taxi = Math.min(age, 1.4),
     flight = Math.max(0, age - 1.4)
   return {
-    x: 310 + taxi * taxi * 28 + flight * 190,
+    x: 130 + taxi * taxi * 28 + flight * 190,
     y: -12 - Math.pow(flight, 1.5) * 41,
     angle: -Math.min(12, flight * 8),
     scale: Math.max(0.48, 1 - flight * 0.075),
   }
 }
 export function cameraCarPose(age: number) {
-  const x = -390 + age * 230
+  const x = -280 + age * 155
   return { x, flash: age >= 2.65 && age < 3.05 }
 }
 export function basketballPose(age: number) {
   if (age <= 1.1) {
     const t = age / 1.1
-    return { x: 330 + 205 * t, y: -10 - 120 * t - 80 * 4 * t * (1 - t) }
+    return { x: -90 + 305 * t, y: -10 - 120 * t - 80 * 4 * t * (1 - t) }
   }
-  if (age <= 1.5) return { x: 535, y: -130 + (age - 1.1) * 115 }
+  if (age <= 1.5) return { x: 215, y: -130 + (age - 1.1) * 115 }
   const t = Math.min(1, (age - 1.5) / 0.7)
-  return { x: 535 + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
+  return { x: 215 + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
 }
 export const skillDecks = [
   { id: 'tooling-bench', offset: -530, width: 190, height: 35 },

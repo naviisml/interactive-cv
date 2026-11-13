@@ -56,7 +56,7 @@ Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the sl
 
 `art/skills` retains the untouched Figma PNG originals. `npm run art:skills` makes small, aspect-preserving runtime textures so the road does not decode eighteen large source images on a phone. SVG logo files remain unchanged.
 
-`npm run art:export` regenerates static scenery textures from `art/scenes/StoryScene.vue`. `npm run sprites:generate` rebuilds the character atlas. The source reference photos are not bundled.
+`npm run art:export` regenerates static scenery textures from `art/scenes/FirstLines.vue`. `npm run sprites:generate` rebuilds the character atlas. The source reference photos are not bundled.
 
 ## Languages and money
 

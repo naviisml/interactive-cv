@@ -132,7 +132,13 @@ export class WorldRenderer {
         : frame.scale
     const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
-      : cameraTarget(frame.motion.x, width / targetZoom, this.model.width)
+      : Math.max(
+          0,
+          Math.min(
+            this.model.width - width / targetZoom,
+            frame.motion.x - (width / targetZoom) * (width < 700 ? 0.5 : 0.38),
+          ),
+        )
     if (!this.initialized) {
       this.zoom = targetZoom
       this.viewCamera = targetCamera

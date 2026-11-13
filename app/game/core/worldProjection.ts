@@ -1,6 +1,6 @@
 import { sceneLayout } from './sceneLayout.ts'
 export function worldProjection(width: number, height: number) {
-  const scale = Math.max(0.8, Math.min(1, (height - 190) / sceneLayout.height))
+  const scale = Math.max(0.42, Math.min(1, (width - 28) / 650, (height - 165) / sceneLayout.height))
   return { scale, viewport: Math.max(1, width) / scale, groundInset: height < 440 ? 56 : 76 }
 }
 export function renderWindow(camera: number, viewport: number, world: number, overscan = 360) {
