@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {timeline as cvTimeline,isBriefEvent,storyParagraphs,categoryNames,categoryColors,type TimelineFilter} from '~/data/timeline'
 import {journeyEvents as timeline,levels,levelForEvent,firstInLevel,type LevelId} from '~/data/levels'
+import {sceneryTransition} from '~/composables/sceneryTransition'
 import {renderWindow} from '~/composables/worldProjection'
 import {sceneLayout} from '~/data/sceneLayout'
 import { terrainHeight, shadowSurface } from '~/composables/physics'
@@ -23,6 +24,7 @@ const journey = useJourney(trackIndices,view)
 const { cameraY,unlockRoute,worldGeometry,worldWidth:WORLD_WIDTH,eventPosition,destination,running,destinationTitle,motion, animationFrame, camera, facing, paused, touchDirection, touchVertical, nearLadder, nearestIndex, nearby, progress, goTo, jump, stop, scrollByDistance, endScrollTravel } = journey
 const windowBounds=computed(()=>renderWindow(camera.value,view.value.viewport,WORLD_WIDTH.value))
 const visibleEntries=computed(()=>entries.value.filter(({index})=>eventPosition(index)>=windowBounds.value.start&&eventPosition(index)<=windowBounds.value.end))
+const scenery=computed(()=>sceneryTransition(motion.x,entries.value.map(({event,index})=>({x:eventPosition(index),urban:event.level==='work'||event.level==='company'?1:0,technical:event.level==='skills'?1:0}))))
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
@@ -178,7 +180,7 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories"><button v-for="filter in filters" :key="filter" :aria-pressed="selectedFilter===filter" :data-category="filter" @click="changeFilter(filter)"><i/><span>{{ filter==='all'?'All':categoryNames[filter] }}</span><small>{{ filteredIndexes(filter).length }}</small></button></nav>
     <section v-if="!listMode" ref="worldRoot" class="world" :style="{'--ground-y':`${view.groundInset}px`}" :class="`level-${activeLevel.id}`" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <div class="world-scene" :inert="!!detailEvent">
-      <WorldAtmosphere :camera="camera*view.scale" :viewport-width="view.viewport*view.scale" :level="activeLevel.id" />
+      <WorldAtmosphere :camera="camera*view.scale" :viewport-width="view.viewport*view.scale" :urban="scenery.urban" :technical="scenery.technical" />
       <header class="world-caption">
         <p class="caption-meta"><CategoryBadge :category="current.category"/><span v-if="current.label!=='SKILLS'&&current.category!=='contact'">{{current.label}}</span></p>
         <div class="caption-title"><h1>{{current.title}}</h1><button v-if="!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" aria-haspopup="dialog" :aria-label="`Details about ${current.title}`" @click="openDetail(nearestIndex,$event)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="1" stroke="currentColor"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor"/></svg>Details</button></div>
