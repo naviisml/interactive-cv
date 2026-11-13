@@ -358,6 +358,14 @@ async function scenario(label, width, height, mobile) {
             canvas?.dataset.cue !== 'fletcher:door'
         },
       )
+      // A used doorway stays accessible by E even after its hint disappears.
+      await page.locator('.world').focus()
+      await page.keyboard.press('e')
+      await page.getByRole('dialog').waitFor({ state: 'visible' })
+      await page.locator('.room-exit').click()
+      await page.waitForFunction(
+        () => document.querySelector('canvas')?.dataset.visit === 'outside',
+      )
       // The first-use prompt disappears, but the physical doorway remains clickable.
       await tapWorld(page, canvas, 'fletcher', 0, -44, false)
       await page.getByRole('dialog').waitFor({ state: 'visible' })
