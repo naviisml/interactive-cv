@@ -21,8 +21,12 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      title: 'Navi · A life in progress',
-      meta: [{ name: 'description', content: 'Explore a developer’s story, one step at a time.' }],
+      title: 'Navarone Ismail — Full-stack Software Engineer | Interactive Portfolio',
+      meta: [
+        { name: 'description', content: 'Explore Navarone Ismail’s software engineering career, technical leadership, projects and skills in an interactive portfolio.' },
+        { name: 'theme-color', content: '#f4f1e9' },
+        { name: 'color-scheme', content: 'light' },
+      ],
     },
   },
   typescript: { strict: true },
