@@ -10,6 +10,7 @@ const { locale } = useI18n()
 const index = computed(() => presentationSlide(props.progress, props.slides.length))
 const project = computed(() => props.slides[index.value])
 const mainScroll = ref<HTMLElement>()
+const projectList = ref<HTMLElement>()
 const shell = ref<HTMLElement>()
 const isNl = computed(() => locale.value === 'nl')
 const label = (nl: string, en: string) => isNl.value ? nl : en
@@ -20,6 +21,20 @@ function select(i: number) {
 }
 function keydown(event: KeyboardEvent) {
   if ((event.target as HTMLElement)?.closest('input,textarea,select,[contenteditable]')) return
+  if (event.key === 'Tab') {
+    const buttons = [...(shell.value?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? [])]
+      .filter((button) => button.getClientRects().length > 0)
+    const first = buttons[0], last = buttons.at(-1)
+    if (!first || !last) return
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === shell.value)) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === shell.value)) {
+      event.preventDefault()
+      first.focus()
+    }
+    return
+  }
   if (event.key === 'Escape') {
     event.preventDefault()
     emit('exit')
@@ -34,8 +49,16 @@ function keydown(event: KeyboardEvent) {
     select(props.slides.length - 1)
   }
 }
-watch(index, () => {
+watch(index, async () => {
   mainScroll.value?.scrollTo({ top: 0, behavior: 'instant' })
+  await nextTick()
+  const container = projectList.value
+  const item = container?.querySelector<HTMLElement>('.archive-file.is-active')
+  if (container && item && container.scrollWidth > container.clientWidth)
+    container.scrollTo({
+      left: item.offsetLeft - container.clientWidth / 2 + item.clientWidth / 2,
+      behavior: 'instant',
+    })
 })
 onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
 </script>
@@ -82,7 +105,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
             <span>{{ label('DOSSIERS', 'CASE FILES') }}</span>
             <span>{{ String(slides.length).padStart(2, '0') }}</span>
           </div>
-          <div class="archive-projects">
+          <div ref="projectList" class="archive-projects">
             <button
               v-for="(item, i) in slides"
               :key="item.id"
