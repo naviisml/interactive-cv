@@ -25,6 +25,7 @@ export class SchoolActivityScene extends Container {
     private kind: 'circuit' | 'compile',
     private state: ActivitySystem,
     private locale: string,
+    private onInteraction: () => void = () => {},
   ) {
     super()
     const nl = locale === 'nl'
@@ -59,6 +60,7 @@ export class SchoolActivityScene extends Container {
           tile,
           () => {
             state.circuit[i] = (state.circuit[i]! + 1) % 4
+            this.onInteraction()
           },
           new Rectangle(-29, -26, 58, 52),
         )
@@ -106,7 +108,10 @@ export class SchoolActivityScene extends Container {
     node.addChild(new Graphics().roundRect(-width / 2, -17, width, 35, 4).fill(0xdce0bf))
     const title = label(node, text, 0, -10, 12, 0x294a3b, width - 4)
     title.anchor.x = 0.5
-    tapTarget(node, action, new Rectangle(-width / 2, -22, width, 44))
+    tapTarget(node, () => {
+      action()
+      this.onInteraction()
+    }, new Rectangle(-width / 2, -22, width, 44))
     this.controls.push({ node, action: text })
     this.addChild(node)
   }
