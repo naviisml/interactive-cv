@@ -1,3 +1,4 @@
+import type { FinancialMetadata } from '../game/core/financialSnapshot.ts'
 export type EventCategory = 'work' | 'projects' | 'school' | 'skills' | 'contact'
 export type TimelineFilter = EventCategory | 'all'
 export const categoryNames = {
@@ -34,6 +35,8 @@ export interface TimelineEvent {
   via?: string
   tags?: string[]
   landmark: Landmark
+  /** Public historical financial information, scoped to this event. */
+  finance?: FinancialMetadata
 }
 // Source: CV 2026 — Navarone Ismail, Figma file fRNmeTPW9BxYg11rzeDezV.
 // Chronological by starting date. Overlapping study, employment and client work are intentional.
@@ -47,10 +50,20 @@ export const timeline: TimelineEvent[] = [
     kind: 'milestone',
     landmark: 'home',
     accent: '#e3c17b',
-    summary: 'Teaching myself to program, starting with projects including a school forum.',
+    summary: 'From Habbo retro servers to understanding PHP and building my first CMS.',
     body: [
-      'I started programming when I was eleven. One of my first projects was a school forum. By sixteen, I was building web applications for small businesses.',
+      'It started with Habbo. Friends and I wanted to understand how retro servers worked. Initially I changed things using Inspect Element, and later in HTML and CSS files, but PHP was still a mystery.',
+      'I studied three existing CMS projects from their entry points, followed their logic and rewrote the code myself to understand it. On RetroNet, we shared what we built. Eventually I developed and sold my own CMS.',
+      'We also sold in-game credits purchased by phone or text. Hosting the VPS cost money, so I put the surplus aside rather than spending it.',
     ],
+    finance: {
+      featured: 'savings',
+      debt: 0,
+      context: {
+        en: 'In the first year, CMS sales and credits generated approximately €700 in revenue against €120 of VPS expenses. €50 in and €10 out per month were broad averages, not a salary or exact annual accounting. I saved the surplus and used my allowance for everyday expenses.',
+        nl: 'In het eerste jaar leverden CMS-verkoop en credits ongeveer €700 omzet op, tegenover €120 aan VPS-kosten. €50 inkomsten en €10 uitgaven per maand waren globale gemiddelden, geen salaris of exacte jaarrekening. Ik spaarde het overschot en gebruikte mijn zakgeld voor gewone uitgaven.',
+      },
+    },
   },
   {
     category: 'school',
