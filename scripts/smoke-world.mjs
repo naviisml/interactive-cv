@@ -547,6 +547,28 @@ async function visualAuditScenario() {
       })[name])
       await page.waitForTimeout(500)
       await page.screenshot({ path: `test-results/world/audit-${name}.png` })
+      if (name === '06-hotel') {
+        // A character walking from the entrance towards the luggage bell should
+        // switch which world object is highlighted, without any floating HUD.
+        await page.waitForFunction(() => document.querySelector('canvas')?.dataset.cue === 'fletcher:door')
+        await page.locator('.world').focus()
+        await page.keyboard.down('ArrowRight')
+        try {
+          await page.waitForFunction(
+            () => document.querySelector('canvas')?.dataset.cue === 'fletcher:bell',
+            {},
+            { timeout: 6000 },
+          )
+        } finally {
+          await page.keyboard.up('ArrowRight')
+        }
+        await page.keyboard.press('e')
+        await page.waitForFunction(
+          () => !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').fletcher?.running,
+        )
+        await page.screenshot({ path: 'test-results/world/audit-hotel-bell-tooltip.png' })
+        assert.equal(await page.locator('.world-caption,.caption-activity,.first-code-launch').count(), 0)
+      }
       if (name === '02-basket') {
         await chargeWorld(page, canvas, 'panta-rhei', 65, -10, 1130)
         await page.waitForTimeout(1200)
