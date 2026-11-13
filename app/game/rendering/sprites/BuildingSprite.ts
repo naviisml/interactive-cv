@@ -10,6 +10,7 @@ export class BuildingSprite extends Container {
   private left = new Container()
   private right = new Container()
   private lights = new Graphics()
+  private entranceHighlight = new Graphics()
   private panes: { x: number; y: number; w: number; h: number }[] = []
   readonly kind: BuildingKind
   constructor(event: TimelineEvent, enter: () => void, locale: string) {
@@ -76,7 +77,7 @@ export class BuildingSprite extends Container {
     rect(this.right, 6, 7, 19, 57, 0x9fbeb0)
     rect(this.right, 4, 65, 2, 10, 0xe1cc92)
     this.doors.addChild(this.left, this.right)
-    this.facade.addChild(this.doors, this.lights)
+    this.facade.addChild(this.doors, this.lights, this.entranceHighlight)
     rect(this.facade, -48, -4, 96, 4, 0xb8b48d)
     const target = new Container()
     tapTarget(target, enter, new Rectangle(-43, -100, 86, 104))
@@ -261,6 +262,16 @@ export class BuildingSprite extends Container {
     // The traffic story takes place in the lane in front of the office.
 
     for (const x of [-254, 245]) rect(this.facade, x, -242, 9, 230, 0x6e8276)
+  }
+  setEntranceHighlight(near: boolean, focused: boolean, time: number, reduced: boolean) {
+    this.entranceHighlight.clear()
+    if (!near) return
+    const pulse = reduced ? 0.5 : (1 + Math.sin(time / 380)) * 0.5
+    this.entranceHighlight
+      .roundRect(-43, -103, 86, 107, 5)
+      .stroke({ color: 0xf7d9a0, width: focused ? 3.5 : 2, alpha: focused ? 0.72 + pulse * 0.22 : 0.35 + pulse * 0.1 })
+      .roundRect(-47, -107, 94, 115, 7)
+      .stroke({ color: 0xf6d7a0, width: 6, alpha: focused ? 0.11 + pulse * 0.08 : 0.07 })
   }
   update(time: number, open: number, reduced: boolean, powered = false) {
     // Preserve the artwork and typography aspect ratio on phones too.
