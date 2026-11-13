@@ -144,7 +144,7 @@ function updateListProgress() {
 function queueListUpdate() { if (listMode.value && !scrollFrame) scrollFrame = requestAnimationFrame(updateListProgress) }
 function scrollToEvent(index: number) {
   const target = listRoot.value?.querySelector<HTMLElement>(`[data-timeline-index="${index}"]`)
-  if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 135, behavior: 'instant' })
+  if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 160, behavior: 'instant' })
   queueListUpdate()
 }
 async function toggleList() {
