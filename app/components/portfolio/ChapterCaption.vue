@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { FileText } from '@lucide/vue'
 import { hasDetails, type TimelineEvent } from '~/content/timeline'
-defineProps<{ current: TimelineEvent; running: boolean; destinationTitle?: string }>()
+defineProps<{
+  current: TimelineEvent
+  running: boolean
+  destinationTitle?: string
+  feedback?: string
+}>()
 const emit = defineEmits<{ details: [event: MouseEvent]; cancel: [] }>()
 const { t } = useI18n()
 </script>
@@ -36,5 +41,6 @@ const { t } = useI18n()
         {{ t('common.cancel') }}
       </button>
     </p>
+    <p v-if="feedback" class="caption-activity" role="status">{{ feedback }}</p>
   </header>
 </template>

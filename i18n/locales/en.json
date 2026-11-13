@@ -64,7 +64,9 @@
     "reset": "New ball",
     "wires": "Connect the wires",
     "wire": "Rotate wire {n}",
-    "schoolyard": "SCHOOLYARD"
+    "schoolyard": "SCHOOLYARD",
+    "skillsHint": "Jump or tap a logo to explore it.",
+    "skillFound": "{name} explored · {count}/{total} tools"
   },
   "company": {
     "slideshow": "Navel Development presentation",

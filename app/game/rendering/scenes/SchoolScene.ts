@@ -1,4 +1,5 @@
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Rectangle } from 'pixi.js'
+import { tapTarget } from '../interactions'
 import { rect, label } from '../drawing'
 import {
   circuitCell,
@@ -17,7 +18,10 @@ export class SchoolScene extends Container {
     .fill(0xe9e3cb)
     .stroke({ width: 2, color: 0x3a5f4e })
   private state = ''
-  constructor(private id: string) {
+  constructor(
+    private id: string,
+    private activities: ActivitySystem,
+  ) {
     super()
     this.pivot.set(300, 310)
     if (id === 'panta-rhei') {
@@ -29,6 +33,10 @@ export class SchoolScene extends Container {
       rect(this, 160, 200, 5, 110, 0x7a8b69)
       rect(this, 268, 200, 5, 110, 0x7a8b69)
       this.addChild(this.ball)
+      tapTarget(this.ball, () => activities.command('kick'), new Rectangle(-22, -22, 44, 44))
+      const scoreTarget = new Container()
+      tapTarget(scoreTarget, () => activities.command('reset'), new Rectangle(150, 146, 130, 54))
+      this.addChild(scoreTarget)
     } else {
       rect(this, 160, 73, 280, 165, 0x35554b)
       rect(this, 154, 69, 292, 5, 0x9aaa8c)
@@ -48,7 +56,8 @@ export class SchoolScene extends Container {
     }
     this.addChild(this.dynamic)
   }
-  update(activity: ActivitySystem) {
+  update(activity: ActivitySystem, interactive: boolean) {
+    this.eventMode = interactive ? 'passive' : 'none'
     if (this.id === 'panta-rhei') this.ball.position.set(activity.ball.x, activity.ball.y)
     const key =
       this.id === 'roc-hilversum'
@@ -84,6 +93,13 @@ export class SchoolScene extends Container {
           cell.size - 1,
           circuit.lit.includes(index) ? 0x61775c : 0x476552,
         )
+        const target = new Container()
+        tapTarget(
+          target,
+          () => this.activities.command('wire', index),
+          new Rectangle(cell.x, cell.y, cell.size, cell.size),
+        )
+        this.dynamic.addChild(target)
         const g = new Graphics()
           .moveTo(a.x, a.y)
           .lineTo(cell.x + cell.size / 2, cell.y + cell.size / 2)
@@ -94,8 +110,8 @@ export class SchoolScene extends Container {
       label(
         this.dynamic,
         circuit.complete ? '●' : '○',
-        407,
-        96,
+        circuitLamp.x - 10,
+        circuitLamp.y - 14,
         23,
         circuit.complete ? 0xf1d999 : 0x87a08b,
       )
@@ -113,6 +129,13 @@ export class SchoolScene extends Container {
     for (const [index, x] of [184, 300, 416].entries()) {
       rect(this.dynamic, x - 31, 296, 62, 14, 0x91a87e)
       label(this.dynamic, ['{', ';', '}'][index]!, x - 4, 275, 16)
+      const target = new Container()
+      tapTarget(
+        target,
+        () => this.activities.command('code', index),
+        new Rectangle(x - 31, 263, 62, 47),
+      )
+      this.dynamic.addChild(target)
     }
   }
 }

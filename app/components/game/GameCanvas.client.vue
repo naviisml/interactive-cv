@@ -8,7 +8,12 @@ const props = defineProps<{
   getFrame: () => WorldFrame
   subscribe: (callback: () => void) => () => void
 }>()
-const emit = defineEmits<{ unlockRoute: [] }>()
+const emit = defineEmits<{
+  unlockRoute: []
+  skill: [name: string, count: number]
+  details: [index: number]
+  seek: [progress: number]
+}>()
 const { t } = useI18n()
 const host = ref<HTMLElement>(),
   error = ref('')
@@ -19,9 +24,12 @@ onMounted(async () => {
   try {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
     if (disposed || !host.value) return
-    renderer = new WorldRenderer(host.value, props.model, props.activities, () =>
-      emit('unlockRoute'),
-    )
+    renderer = new WorldRenderer(host.value, props.model, props.activities, {
+      unlock: () => emit('unlockRoute'),
+      skill: (name, count) => emit('skill', name, count),
+      details: (index) => emit('details', index),
+      seek: (progress) => emit('seek', progress),
+    })
     await renderer.init()
     if (disposed) return
     unsubscribe = props.subscribe(() => renderer?.render(props.getFrame()))
@@ -50,7 +58,7 @@ onBeforeUnmount(() => {
 .game-canvas {
   position: absolute;
   inset: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .game-canvas :deep(canvas) {
   display: block;

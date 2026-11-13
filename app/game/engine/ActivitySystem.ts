@@ -8,6 +8,7 @@ import {
 } from '../core/worldActivities'
 import type { WorldFrame, SceneEntry } from '../rendering/types'
 export class ActivitySystem {
+  exploredSkills: string[] = []
   ball: Football = newFootball()
   goals = 0
   turns = [3, 0, 1, 2, 1, 3]

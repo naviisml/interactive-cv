@@ -64,7 +64,9 @@
     "reset": "Nieuwe bal",
     "wires": "Verbind de draden",
     "wire": "Draai draad {n}",
-    "schoolyard": "SCHOOLPLEIN"
+    "schoolyard": "SCHOOLPLEIN",
+    "skillsHint": "Spring of tik op een logo om het te ontdekken.",
+    "skillFound": "{name} ontdekt · {count}/{total} tools"
   },
   "company": {
     "slideshow": "Presentatie van Navel Development",

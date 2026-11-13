@@ -38,6 +38,16 @@ const worldRoot = ref<HTMLElement>()
 const view = useWorldViewport(worldRoot)
 const journey = useJourney(trackIndices, view)
 const activities = markRaw(new ActivitySystem())
+const exploredSkill = ref({ name: '', count: 0 })
+const skillFeedback = computed(() =>
+  current.value.category === 'skills'
+    ? t(exploredSkill.value.name ? 'activity.skillFound' : 'activity.skillsHint', {
+        name: exploredSkill.value.name,
+        count: exploredSkill.value.count,
+        total: 18,
+      })
+    : '',
+)
 const {
   presentation,
   seekPresentation,
@@ -134,6 +144,10 @@ async function openDetail(index: number, event?: MouseEvent) {
     stop()
     detailIndex.value = index
   }
+}
+function handleSceneDetails(index: number) {
+  if (timeline.value[index]?.id === 'navel-development') goTo(index)
+  else void openDetail(index)
 }
 async function closeDetail() {
   detailIndex.value = null
@@ -426,11 +440,15 @@ onBeforeUnmount(() => {
             :subscribe="subscribe"
             :activities="activities"
             @unlock-route="unlockRoute('gmodstore')"
+            @skill="(name, count) => (exploredSkill = { name, count })"
+            @details="handleSceneDetails"
+            @seek="seekPresentation"
         /></ClientOnly>
         <ChapterCaption
           :current="current"
           :running="running"
           :destination-title="destinationTitle"
+          :feedback="skillFeedback"
           @details="openDetail(nearestIndex, $event)"
           @cancel="stop"
         />

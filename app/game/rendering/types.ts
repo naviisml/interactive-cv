@@ -31,3 +31,10 @@ export interface WorldModel {
   locale: string
   tutorial: string
 }
+
+export interface RendererCallbacks {
+  unlock: () => void
+  skill: (name: string, count: number) => void
+  details: (index: number) => void
+  seek: (progress: number) => void
+}

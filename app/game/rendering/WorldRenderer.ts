@@ -1,4 +1,7 @@
-import { Application, Container } from 'pixi.js'
+import { Application, Container, Rectangle } from 'pixi.js'
+import { SceneLife } from './scenes/SceneLife'
+import { FootstepScene } from './scenes/FootstepScene'
+import { tapTarget } from './interactions'
 import { AtmosphereScene } from './scenes/AtmosphereScene'
 import { TerrainScene } from './scenes/TerrainScene'
 import { SkillsRoadScene } from './scenes/SkillsRoadScene'
@@ -10,9 +13,11 @@ import { ComputerSprite } from './sprites/ComputerSprite'
 import { CompanySign } from './sprites/CompanySign'
 import { terrainHeight } from '../core/physics'
 import type { ActivitySystem } from '../engine/ActivitySystem'
-import type { WorldFrame, WorldModel } from './types'
+import type { RendererCallbacks, WorldFrame, WorldModel } from './types'
 export class WorldRenderer {
   readonly app = new Application()
+  private dust = new FootstepScene()
+  private lives = new Map<string, SceneLife>()
   private world = new Container()
   private scenery = new Container()
   private atmosphere = new AtmosphereScene()
@@ -27,11 +32,12 @@ export class WorldRenderer {
   private viewCamera = 0
   private initialized = false
   private unlocked = false
+  private presentationProgress = 0
   constructor(
     private host: HTMLElement,
     private model: WorldModel,
     private activities: ActivitySystem,
-    private unlock: () => void,
+    private callbacks: RendererCallbacks,
   ) {}
   async init() {
     await this.app.init({
@@ -51,8 +57,10 @@ export class WorldRenderer {
     this.host.appendChild(this.app.canvas)
     this.app.canvas.setAttribute('aria-label', 'Playable portfolio world')
     this.app.canvas.dataset.renderer = 'pixi'
+    this.app.renderer.events.autoPreventDefault = false
+    this.app.canvas.style.touchAction = 'pan-y pinch-zoom'
     this.app.stage.addChild(this.atmosphere, this.world)
-    this.world.addChild(this.terrain, this.scenery, this.character)
+    this.world.addChild(this.terrain, this.scenery, this.dust, this.character)
     this.terrain.build(this.model)
     await this.character.load()
     if (this.disposed) return
@@ -67,18 +75,24 @@ export class WorldRenderer {
     this.terrain.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
+    this.lives.clear()
   }
   private makeScene(id: string) {
     if (id === 'gmodstore') return new PortalScene()
-    if (id === 'skills-road') return new SkillsRoadScene()
+    if (id === 'skills-road')
+      return new SkillsRoadScene(this.activities, (name, count) =>
+        this.callbacks.skill(name, count),
+      )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides)
-    if (['panta-rhei', 'roc-hilversum', 'coding-college'].includes(id)) return new SchoolScene(id)
+    if (['panta-rhei', 'roc-hilversum', 'coding-college'].includes(id))
+      return new SchoolScene(id, this.activities)
     const sprite = new ScenerySprite()
     void sprite.load(id)
     return sprite
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
+    this.presentationProgress = frame.presentation.progress
     const width = this.app.screen.width,
       height = this.app.screen.height,
       base = height - frame.groundInset,
@@ -112,7 +126,7 @@ export class WorldRenderer {
     )
     if (this.activities.runes.length === 3 && !this.unlocked) {
       this.unlocked = true
-      this.unlock()
+      this.callbacks.unlock()
     }
     const visible = this.model.entries.filter(
       (entry) =>
@@ -124,6 +138,7 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
+        this.lives.delete(id)
       }
     for (const entry of visible) {
       let node = this.scenes.get(entry.event.id)
@@ -138,17 +153,46 @@ export class WorldRenderer {
           sign.y =
             terrainHeight(entry.x, this.model.geometry.terrain) -
             terrainHeight(entry.x + sign.x, this.model.geometry.terrain)
+          tapTarget(
+            sign,
+            () => this.callbacks.details(entry.index),
+            new Rectangle(-255, -170, 265, 110),
+          )
           node.addChild(sign)
+        }
+        if (node instanceof ComputerSprite)
+          tapTarget(
+            node,
+            () =>
+              this.callbacks.seek(
+                Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
+              ),
+            new Rectangle(-296, -354, 662, 244),
+          )
+        if (
+          !(node instanceof SkillsRoadScene) &&
+          !(node instanceof SchoolScene) &&
+          !(node instanceof ComputerSprite)
+        ) {
+          const life = new SceneLife(entry.event.id)
+          this.lives.set(entry.event.id, life)
+          node.addChild(life)
         }
         this.scenes.set(entry.event.id, node)
         this.scenery.addChild(node)
       }
       node.position.set(entry.x, -terrainHeight(entry.x, this.model.geometry.terrain))
-      if (node instanceof SkillsRoadScene) node.update(frame.motion.x, frame.time, this.reduced)
+      if (node instanceof SkillsRoadScene)
+        node.update(frame, terrainHeight(entry.x, this.model.geometry.terrain), this.reduced)
       if (node instanceof ComputerSprite) node.update(frame.presentation.progress, this.zoom)
       if (node instanceof PortalScene) node.update(this.activities, frame.time, this.reduced)
-      if (node instanceof SchoolScene) node.update(this.activities)
+      if (node instanceof SchoolScene)
+        node.update(this.activities, frame.activeId === entry.event.id && !frame.paused)
     }
+    for (const [id, life] of this.lives)
+      life.update(frame.time, frame.activeId === id, this.reduced)
+    this.terrain.update(frame.time, this.reduced)
+    this.dust.update(frame, this.model, this.reduced)
     this.character.update(
       { ...frame, running: frame.running && !frame.presentation.active },
       this.model,
@@ -158,6 +202,7 @@ export class WorldRenderer {
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
       this.app.canvas.dataset.playerY = frame.motion.y.toFixed(1)
       this.app.canvas.dataset.scene = frame.activeId
+      this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)
     }
   }
