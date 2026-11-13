@@ -37,9 +37,7 @@ export class CampsiteScene extends Container {
     )
     tapTarget(
       this.canvas,
-      () => {
-        this.tucked = !this.tucked
-      },
+      () => this.interact('tent'),
       new Rectangle(-310, -165, 360, 170),
     )
     this.canvas.addChild(this.zip)
@@ -59,18 +57,19 @@ export class CampsiteScene extends Container {
     this.addChild(this.flame, this.stars, this.lantern)
     tapTarget(
       this.lantern,
-      () => {
-        this.lit = !this.lit
-      },
+      () => this.interact('lantern'),
       new Rectangle(211, -110, 88, 115),
     )
     tapTarget(
       this.flame,
-      () => {
-        this.heatUntil = this.time + 1800
-      },
+      () => this.interact('fire'),
       new Rectangle(-43, -80, 88, 88),
     )
+  }
+  interact(action: string) {
+    if (action === 'tent') this.tucked = !this.tucked
+    else if (action === 'lantern') this.lit = !this.lit
+    else if (action === 'fire') this.heatUntil = this.time + 1800
   }
   update(frame: WorldFrame, reduced: boolean) {
     this.time = frame.time
