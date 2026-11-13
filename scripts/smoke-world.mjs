@@ -44,6 +44,7 @@ async function scenario(label, width, height, mobile) {
       (await firstCode.locator('iframe').getAttribute('srcdoc')).includes('background: lavender'),
       'HTML/CSS preview follows editor changes',
     )
+    await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
 
@@ -60,6 +61,7 @@ async function scenario(label, width, height, mobile) {
     }
     await workshop.getByRole('button', { name: 'Run pipeline' }).click()
     await workshop.getByText('Success. You completed this workstation.').waitFor()
+    await page.screenshot({ path: `test-results/world/${label}-skills-workshop.png` })
     await workshop.getByRole('button', { name: 'Continue the journey' }).click()
     await workshop.waitFor({ state: 'hidden' })
 
