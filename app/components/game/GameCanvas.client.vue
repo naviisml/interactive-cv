@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   startComputer: []
+  openFirstComputer: []
   skill: [name: string, count: number]
   details: [index: number]
   seek: [progress: number]
@@ -37,6 +38,7 @@ onMounted(async () => {
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
       startComputer: () => emit('startComputer'),
+      openFirstComputer: () => emit('openFirstComputer'),
       skill: (name, count) => emit('skill', name, count),
       details: (index) => emit('details', index),
       seek: (progress) => emit('seek', progress),
