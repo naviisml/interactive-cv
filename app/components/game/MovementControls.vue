@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
 .movement-ui {
   position: absolute;
   z-index: 7;
-  inset: auto 20px 12px;
+  inset: auto clamp(12px, 2vw, 26px) 14px;
   pointer-events: none;
   color: #e6e5cb;
   user-select: none;
@@ -151,12 +151,19 @@ onBeforeUnmount(() => {
 }
 .keyboard-hints {
   display: flex;
-  gap: 14px;
+  width: fit-content;
+  max-width: 100%;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  font: 10px 'Space Grotesk';
-  min-height: 36px;
-  text-shadow: 0 1px 2px #18372e;
+  font: 500 11px 'Space Grotesk', sans-serif;
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 1px solid #abc1a85c;
+  border-radius: 8px;
+  background: #203f34cf;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 5px 18px #18372e24;
 }
 .keyboard-hints > span {
   display: inline-flex;
@@ -171,11 +178,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
   gap: 3px;
   align-items: center;
-  min-height: 25px;
-  padding: 3px 6px;
-  border-color: #aab994;
-  background: #294d40;
-  border-radius: 3px;
+  min-height: 27px;
+  padding: 3px 7px;
+  border-color: #9bb59a;
+  background: #315747;
+  border-radius: 4px;
 }
 .direction-pad,
 .action-pad {
@@ -199,8 +206,8 @@ onBeforeUnmount(() => {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -208,14 +215,15 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: #365a4e;
   border: 1px solid #a4b592;
-  border-radius: 5px;
+  border-radius: 8px;
   color: #f4e9c4;
-  box-shadow: 0 3px 0 #173d32;
+  box-shadow: 0 3px 0 #173d32, 0 5px 16px #0d2a2545;
   padding: 5px;
+  transition: background 130ms ease, transform 130ms ease;
 }
 .movement-ui button:active {
   background: #607e60;
-  box-shadow: none;
+  box-shadow: 0 1px 0 #173d32;
   transform: translateY(2px);
 }
 button svg {
@@ -236,12 +244,17 @@ button small {
   display: flex;
   align-items: center;
   gap: 6px;
-  font: 10px 'Space Grotesk';
+  font: 600 11px 'Space Grotesk', sans-serif;
   margin: 0;
-  text-shadow: 0 1px 2px #173d32;
+  padding: 4px 8px;
+  background: #203f34d9;
+  border-radius: 4px;
 }
 .is-touch {
-  height: 92px;
+  height: 96px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .movement-ui button { transition: none; }
 }
 @media (max-width: 380px) {
   .movement-ui {

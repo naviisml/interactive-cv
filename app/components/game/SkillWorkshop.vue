@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Check, RotateCcw, X, GitBranch, Layers3, ServerCog } from '@lucide/vue'
+import { ArrowRight, Check, AlertCircle, X, GitBranch, Layers3, ServerCog } from '@lucide/vue'
 const props = defineProps<{ initialGroup: number; completed: string[] }>()
 const emit = defineEmits<{ close: []; complete: [id: string] }>()
 const { locale } = useI18n()
@@ -25,37 +25,49 @@ const workers = ref(3)
 const backlog = ref(120)
 const tickCount = ref(0)
 const feedback = ref('')
+const feedbackKind = ref<'success' | 'error' | 'info'>('info')
 const dialog = ref<HTMLElement>()
 const selectedId = computed(() => ids[group.value] ?? 'tooling')
 const translated = (value: { en: string; nl: string }) => value[nl.value ? 'nl' : 'en']
 function showGroup(index: number) {
   group.value = index
   feedback.value = ''
+  feedbackKind.value = 'info'
 }
 function finish() {
   if (!props.completed.includes(selectedId.value)) emit('complete', selectedId.value)
+  feedbackKind.value = 'success'
   feedback.value = nl.value ? 'Gelukt. Je hebt deze werkbank voltooid.' : 'Success. You completed this workstation.'
 }
 function runPipeline() {
   if (flow.value.length !== 4) return
   if (flow.value.every((step, index) => step === expected[index])) finish()
-  else feedback.value = nl.value
+  else {
+    feedbackKind.value = 'error'
+    feedback.value = nl.value
     ? 'De pipeline heeft een verkeerde volgorde. Commit eerst, test daarna, bouw de image en deploy als laatste.'
     : 'Pipeline order is incorrect. Commit, test, build the image, then deploy.'
+  }
 }
 function runWeb() {
   if (webTasks.every((task) => task.valid.includes(answers.value[task.id] ?? ''))) finish()
-  else feedback.value = nl.value
+  else {
+    feedbackKind.value = 'error'
+    feedback.value = nl.value
     ? 'Niet elke taak past bij het gekozen gereedschap. Denk aan structuur, styling en backendgedrag.'
     : 'One or more tools do not fit the task. Consider markup, styling and server-side behaviour.'
+  }
 }
 function simulate() {
   backlog.value = Math.max(0, backlog.value + 180 - workers.value * 60)
   tickCount.value += 1
   if (backlog.value === 0) finish()
-  else feedback.value = nl.value
+  else {
+    feedbackKind.value = 'info'
+    feedback.value = nl.value
     ? 'De wachtrij bevat nog ' + backlog.value + ' jobs. Probeer meer workers en draai de simulatie opnieuw.'
     : 'The queue still has ' + backlog.value + ' jobs. Add capacity and simulate another minute.'
+  }
 }
 function restart() {
   flow.value = []
@@ -64,6 +76,7 @@ function restart() {
   backlog.value = 120
   tickCount.value = 0
   feedback.value = ''
+  feedbackKind.value = 'info'
 }
 function key(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -176,7 +189,11 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.workshop-close'
             <small>{{ nl ? 'Gesimuleerde minuten' : 'Minutes simulated' }}: {{ tickCount }}</small>
           </div>
         </template>
-        <p v-if="feedback" class="challenge-feedback" role="status">{{ feedback }}</p>
+        <p v-if="feedback" class="challenge-feedback" :class="feedbackKind" role="status">
+          <Check v-if="feedbackKind === 'success'" :size="17" aria-hidden="true" />
+          <AlertCircle v-else :size="17" aria-hidden="true" />
+          <span>{{ feedback }}</span>
+        </p>
       </div>
       <footer>
         <span>{{ nl ? 'Voltooide werkbanken' : 'Workstations completed' }}: {{ completed.length }} / 3</span>
@@ -201,14 +218,15 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.workshop-close'
   background: #152c2be8;
   color: #e9ebd6;
 }
-.workshop-window { width: min(950px, 100%); max-height: 100%; overflow: auto; background: #233c39; border: 2px solid #9aaf98; box-shadow: 0 20px 75px #0a1f207a; }
+.workshop-window { width: min(950px, 100%); max-height: 100%; overflow: auto; background: #233c39; border: 1px solid #9aaf98; border-radius: 9px; box-shadow: 0 24px 90px #081d1b99; }
 .workshop-top { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 25px 19px; border-bottom: 1px solid #56756d; }
 .workshop-overline, .challenge-head > span { color: #b9d0ad; font: 10px 'Space Grotesk'; letter-spacing: .14em; }
 .workshop-top h2 { font: 500 clamp(22px, 3vw, 32px) 'Space Grotesk'; margin: 7px 0 0; }
 .workshop-close { min-width: 44px; min-height: 44px; display: grid; place-items: center; }
 .workshop-tabs { display: flex; border-bottom: 1px solid #56756d; background: #1b3531; }
 .workshop-tabs button { display: flex; align-items: center; gap: 9px; flex: 1; padding: 13px; min-height: 55px; font: 12px 'Space Grotesk'; border-right: 1px solid #55746a; text-align: left; }
-.workshop-tabs button[aria-pressed='true'] { background: #e2e4ce; color: #294b40; }
+.workshop-tabs button[aria-pressed='true'] { background: #e2e4ce; color: #294b40; font-weight: 600; }
+.workshop-tabs button:not([aria-pressed='true']):hover { background: #2c4d43; }
 .completed-icon { margin-left: auto; color: #9fbd76; }
 .workshop-tabs button[aria-pressed='true'] .completed-icon { color: #417648; }
 .workshop-stage { padding: 26px; min-height: 350px; }
@@ -216,18 +234,20 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.workshop-close'
 .challenge-head h3 { font: 500 clamp(20px, 2.8vw, 28px) 'Space Grotesk'; margin: 8px 0; }
 .challenge-head p { color: #c0d1be; font: 13px/1.75 'DM Sans', sans-serif; margin: 0 0 22px; }
 .flow-rack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
-.flow-slot { position: relative; min-width: 0; min-height: 93px; background: #162f2b; border: 1px dashed #87a38f; padding: 13px; display: flex; flex-direction: column; justify-content: space-between; }
+.flow-slot { position: relative; min-width: 0; min-height: 93px; background: #162f2b; border: 1px dashed #87a38f; border-radius: 5px; padding: 13px; display: flex; flex-direction: column; justify-content: space-between; }
 .flow-slot.filled { background: #365b4d; border-style: solid; }
 .slot-number { color: #a9bda7; font: 11px 'Space Grotesk'; }
 .flow-slot strong { font: 500 clamp(12px, 2vw, 18px) 'Space Grotesk'; text-transform: uppercase; }
 .flow-slot > svg { position: absolute; top: 39px; right: -15px; z-index: 1; background: #233c39; border-radius: 50%; }
 .challenge-options { display: flex; gap: 9px; flex-wrap: wrap; margin: 19px 0; }
 .challenge-options button, .technology-options button { border: 1px solid #91ab92; background: #33564a; color: #f0ebd3; min-height: 41px; padding: 9px 13px; border-radius: 3px; font: 12px 'Space Grotesk'; }
-.challenge-options button:disabled { opacity: .35; }
+.challenge-options button:hover:not(:disabled), .technology-options button:hover:not([aria-pressed='true']) { border-color: #d8dfbc; background: #426958; }
+.challenge-options button:disabled { opacity: .52; }
 .challenge-options button span { margin-right: 8px; color: #d4d59d; }
 .challenge-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 21px; }
-.challenge-actions button { min-height: 44px; padding: 10px 15px; font: 12px 'Space Grotesk'; border: 1px solid #819f87; }
+.challenge-actions button { min-height: 44px; padding: 10px 15px; font: 600 12px 'Space Grotesk'; border: 1px solid #819f87; border-radius: 5px; }
 .challenge-actions .primary-action { background: #dfe4c7; color: #294e40; font-weight: 600; }
+.challenge-actions .primary-action:hover:not(:disabled) { background: #f0efdb; }
 .challenge-actions button:disabled { opacity: .35; }
 .challenge-actions small { margin-left: auto; font-size: 11px; color: #bbcab7; }
 .web-tasks { display: grid; gap: 13px; }
@@ -236,7 +256,7 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.workshop-close'
 .task-heading small { color: #b8cba2; font: 11px 'Space Grotesk'; }
 .task-heading strong { font: 500 13px 'Space Grotesk'; }
 .technology-options { display: flex; gap: 6px; flex-wrap: wrap; }
-.technology-options button { font-size: 11px; padding: 7px 10px; min-height: 34px; }
+.technology-options button { font-size: 12px; padding: 9px 12px; min-height: 42px; }
 .technology-options button[aria-pressed='true'] { color: #274837; background: #dce3c4; }
 .capacity-numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .capacity-numbers > div { background: #1b322f; border: 1px solid #789487; padding: 17px; }
@@ -251,9 +271,13 @@ input[type='range'] { width: 100%; accent-color: #c8d7a5; margin: 17px 0; }
 .worker-tiles { display: flex; gap: 8px; }
 .worker-tiles span { height: 20px; flex: 1; background: #334a43; border: 1px solid #658775; }
 .worker-tiles .is-running { background: #a7c49c; }
-.challenge-feedback { border-left: 3px solid #c7d4a1; background: #1b342d; padding: 13px; margin: 18px 0 0; font: 13px/1.65 'DM Sans'; }
+.challenge-feedback { display: flex; align-items: flex-start; gap: 11px; border-left: 3px solid #c7d4a1; background: #1b342d; padding: 13px 15px; margin: 18px 0 0; font: 13px/1.65 'DM Sans'; border-radius: 0 5px 5px 0; }
+.challenge-feedback svg { flex: none; margin-top: 2px; }
+.challenge-feedback.error { border-color: #ddae86; background: #4a382f; }
+.challenge-feedback.success { border-color: #b6d49e; background: #244a39; }
+@media (prefers-reduced-motion: reduce) { .capacity-meter span { transition: none; } }
 footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 25px; border-top: 1px solid #55736a; gap: 16px; font: 11px 'Space Grotesk'; }
-footer button { display: flex; gap: 8px; align-items: center; padding: 9px 14px; background: #dce3ca; color: #294a40; min-height: 42px; }
+footer button { display: flex; gap: 8px; align-items: center; padding: 9px 14px; background: #dce3ca; color: #294a40; min-height: 44px; border-radius: 5px; font-weight: 600; }
 button:focus-visible,input:focus-visible { outline: 3px solid #e9c781; outline-offset: 2px; }
 @media(max-width:700px) {
   .skill-workshop { padding: 6px; }

@@ -23,7 +23,8 @@ export function label(
   const t = new Text({
     text,
     style: {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'Space Grotesk, Arial, sans-serif',
+      fontWeight: '500',
       fontSize: size,
       fill: color,
       wordWrap: true,

@@ -175,8 +175,8 @@ onBeforeUnmount(() => {
 .money-counter {
   display: flex;
   align-items: center;
-  gap: 10px;
-  border-left: 1px solid #bec7b2;
+  gap: 16px;
+  border-left: 1px solid #cbd2c3;
   padding-left: 18px;
   min-width: 250px;
 }
@@ -187,12 +187,12 @@ onBeforeUnmount(() => {
 }
 .debt-balance > span {
   text-transform: uppercase;
-  font: 8px 'Space Grotesk';
-  letter-spacing: 1.5px;
-  color: #7a826f;
+  font: 600 9px 'Space Grotesk', sans-serif;
+  letter-spacing: 1px;
+  color: #52685c;
 }
 .debt-balance strong {
-  font: 500 14px 'Space Grotesk';
+  font: 600 14px 'Space Grotesk', sans-serif;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -202,18 +202,21 @@ onBeforeUnmount(() => {
   font:
     italic 12px Georgia,
     serif;
-  width: 21px;
-  height: 21px;
-  border: 1px solid #8d9c83;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #8c9f8c;
   border-radius: 50%;
+  background: #f8f8ef;
   padding: 0;
   flex-shrink: 0;
 }
+.debt-info-button:hover { background: #e5ecdb; }
 .debt-dialog {
   border: 1px solid #a5b295;
+  border-radius: 8px;
   background: #f4f1e7;
   color: #2d4d43;
-  width: min(520px, calc(100% - 28px));
+  width: min(580px, calc(100% - 28px));
   max-height: 85svh;
   padding: 26px 30px;
   overscroll-behavior: contain;
@@ -228,8 +231,12 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .debt-dialog header button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
   font-size: 28px;
-  padding: 0 2px;
+  border-radius: 5px;
 }
 .debt-dialog h2 {
   font: 500 31px/1.15 'Space Grotesk';
@@ -237,9 +244,9 @@ onBeforeUnmount(() => {
   margin: 19px 0;
 }
 .debt-dialog > p {
-  font-size: 13px;
-  line-height: 1.9;
-  color: #64775e;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #405f4e;
 }
 .debt-dialog h3 {
   font: 500 19px 'Space Grotesk';
@@ -275,7 +282,7 @@ onBeforeUnmount(() => {
 }
 .debt-chapter dt {
   font-size: 12px;
-  color: #6c7e64;
+  color: #526b57;
 }
 .debt-chapter dd {
   margin: 0;
@@ -320,16 +327,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
 }
 .debt-resources p {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   margin: 6px 0 0;
-  color: #6a7b60;
+  color: #4e6957;
 }
 .debt-dialog .debt-footnote {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   margin-top: 24px;
-  color: #808b74;
+  color: #59705c;
 }
 @media (max-width: 700px) {
   .money-counter {
@@ -349,8 +356,8 @@ onBeforeUnmount(() => {
     font-size: 12px;
   }
   .debt-info-button {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
   }
   .debt-dialog {
     padding: 20px;

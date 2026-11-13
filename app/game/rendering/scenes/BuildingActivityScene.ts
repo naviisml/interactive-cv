@@ -23,6 +23,7 @@ export class BuildingActivityScene extends Container {
   private object = new Container()
   private overlay = new Graphics()
   private status: Text
+  private statusPanel = new Graphics()
   private ball?: Graphics
   private plane?: AircraftSprite
   private car?: Container
@@ -36,8 +37,8 @@ export class BuildingActivityScene extends Container {
   ) {
     super()
     this.action = buildingActions[id]!
-    const nl = locale === 'nl'
-    this.status = label(this, '', 330, -180, 11, 0x335c4a, 230)
+    // Action feedback lives above the architecture, never across its signs.
+    this.status = label(this, '', 0, -341, 12, 0x274b3d, 278)
     this.status.anchor.x = 0.5
     this.status.visible = false
     const start = () => state.trigger(id, this.action)
@@ -75,20 +76,20 @@ export class BuildingActivityScene extends Container {
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
       holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88))
-      rect(this, 166, -198, 68, 28, 0x29483f)
-      this.status.visible = true
-      this.status.position.set(200, -191)
-      this.status.style.fill = 0xe9dfb7
-      this.status.style.fontSize = 12
+
+
+
+
+
     } else if (this.action === 'departure') {
       rect(this, -260, -4, 590, 15, 0x71897a)
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
       this.plane = new AircraftSprite()
       this.object.addChild(this.plane)
       holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90))
-      this.status.visible = true
-      this.status.position.set(42, -180)
-      this.status.style.fontSize = 12
+
+
+
     } else if (this.action === 'camera') {
       rect(this, -280, -12, 620, 20, 0x5b7368)
       for (let x = -260; x < 320; x += 72) rect(this, x, -3, 35, 2, 0xc4c6a5)
@@ -112,9 +113,8 @@ export class BuildingActivityScene extends Container {
       this.object.addChild(car)
       holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76))
 
-      this.status.visible = true
-      this.status.position.set(42, -180)
-      this.status.style.fontSize = 12
+
+
     } else if (this.action === 'luggage') {
       rect(this, 146, -52, 73, 7, 0xb8a275)
       for (const x of [151, 209]) rect(this, x, -45, 5, 45, 0x526a52)
@@ -132,7 +132,7 @@ export class BuildingActivityScene extends Container {
       rect(this.cart, 3, -43, 22, 28, 0x7d9783)
       for (const x of [-22, 23]) this.cart.addChild(new Graphics().circle(x, -5, 5).fill(0x35584a))
       this.object.addChild(this.cart)
-      this.status.position.set(385, -134)
+
     } else {
       rect(this, 107, -103, 126, 69, 0x243e39)
       rect(this, 113, -97, 114, 55, 0x18352e)
@@ -147,13 +147,7 @@ export class BuildingActivityScene extends Container {
         0xc9d9ac,
         105,
       )
-      if (this.action === 'compile') {
-        this.status.visible = true
-        this.status.position.set(120, -53)
-        this.status.anchor.x = 0
-        this.status.style.fontSize = 8
-        this.status.style.fill = 0xd7e5ad
-      } else {
+      if (this.action !== 'compile') {
         rect(this, 237, -94, 4, 86, 0x7d8a6d)
         this.addChild(
           new Graphics().poly([225, -96, 251, -96, 246, -116, 230, -116]).fill(0xa9af83),
@@ -181,7 +175,7 @@ export class BuildingActivityScene extends Container {
       )
       this.addChild(terminal)
     }
-    this.addChild(this.object, this.overlay)
+    this.addChild(this.object, this.overlay, this.statusPanel, this.status)
   }
   update(frame: WorldFrame, entryX: number, reduced: boolean) {
     const record = this.state.actions[this.id],
@@ -189,20 +183,32 @@ export class BuildingActivityScene extends Container {
       age = record?.age ?? 0,
       nl = this.locale === 'nl'
     this.overlay.clear()
+    this.statusPanel.clear()
     const charge = this.state.charges[this.id]
     const charging = !!charge?.holding
-    if (charging && !frame.paused) {
-      this.overlay
-        .roundRect(-112, -204, 224, 14, 5)
-        .fill(0x294d42)
-        .roundRect(-109, -201, charge.power * 218, 8, 3)
-        .fill(charge.power >= 0.8 ? 0xc78167 : 0xe1c98e)
-      if (this.action === 'basketball') {
-        this.overlay
-          .rect(-112 + 218 * 0.52, -204, 2, 14)
-          .fill(0xd7e8ae)
-          .rect(-112 + 218 * 0.78, -204, 2, 14)
-          .fill(0xd7e8ae)
+    const distance = Math.abs(frame.motion.x - entryX)
+    const showStatus = !frame.navigating && frame.visit.phase === 'outside' && distance < 310
+    const opacity = Math.min(1, Math.max(0, (310 - distance) / 85))
+    this.status.visible = showStatus
+    this.status.alpha = opacity
+    this.statusPanel.alpha = opacity
+    if (showStatus) {
+      // The label reads like an architectural annotation, not a second HUD.
+      this.statusPanel
+        .roundRect(-152, -351, 308, 61, 7)
+        .fill({ color: 0x19392f, alpha: 0.17 })
+        .roundRect(-156, -355, 308, 61, 7)
+        .fill({ color: 0xf4f0df, alpha: 0.97 })
+        .stroke({ width: 1.5, color: 0x8da78f, alpha: 0.9 })
+      if (charging) {
+        this.statusPanel
+          .roundRect(-142, -306, 280, 5, 2)
+          .fill(0xc4ceba)
+          .roundRect(-142, -306, 280 * charge.power, 5, 2)
+          .fill(charge.power >= 0.8 ? 0xb97758 : 0x4d8a66)
+        if (this.action === 'basketball')
+          for (const threshold of [0.52, 0.78])
+            this.statusPanel.rect(-142 + 280 * threshold, -309, 2, 11).fill(0x24483a)
       }
     }
     if (this.ball) {

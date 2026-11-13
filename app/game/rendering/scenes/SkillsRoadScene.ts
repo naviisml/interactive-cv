@@ -12,7 +12,7 @@ export class SkillsRoadScene extends Container {
     x: number
     base: Graphics
     pad: Graphics
-    logos: { id: string; halo: Graphics; x: number; y: number }[]
+    logos: { id: string; halo: Graphics; x: number; y: number; seen?: boolean }[]
   }[] = []
   constructor(
     private activity: ActivitySystem,
@@ -54,15 +54,20 @@ export class SkillsRoadScene extends Container {
         const name = label(badge, logo.name.replace(' / React Native', ''), 0, 24, 9, 0x294b43, 70)
         name.anchor.x = 0.5
         tapTarget(badge, () => this.explore(id), new Rectangle(-30, -27, 60, 65))
-        void Assets.load<Texture>(logo.asset).then((texture) => {
-          if (this.destroyed) return
-          const sprite = new Sprite(texture)
-          sprite.anchor.set(0.5)
-          sprite.scale.set(Math.min(36 / texture.width, 36 / texture.height))
-          badge.addChild(sprite)
-        })
+        void Assets.load<Texture>(logo.asset)
+          .then((texture) => {
+            if (this.destroyed || !texture.width || !texture.height) return
+            const sprite = new Sprite(texture)
+            sprite.anchor.set(0.5)
+            sprite.scale.set(Math.min(36 / texture.width, 36 / texture.height))
+            badge.addChild(sprite)
+          })
+          .catch(() => {
+            // The visible technology name stays available if its texture fails.
+            // Asset errors should never crash a running interactive scene.
+          })
         node.addChild(badge)
-        return { id, halo, x: lx, y: ly }
+        return { id, halo, x: lx, y: ly, seen: undefined as boolean | undefined }
       })
       const terminal = new Container()
       node.addChild(terminal)
@@ -125,16 +130,19 @@ export class SkillsRoadScene extends Container {
           foot > logo.y + group.node.y - 25
         )
           this.explore(logo.id)
-        logo.halo
-          .clear()
-          .circle(0, 0, 24)
-          .fill({ color: seen ? 0xe5c985 : 0xf0ebd2, alpha: seen ? 0.7 : 0.28 })
-        if (seen)
+        if (logo.seen !== seen) {
+          logo.seen = seen
           logo.halo
-            .moveTo(12, 14)
-            .lineTo(16, 18)
-            .lineTo(23, 10)
-            .stroke({ width: 2, color: 0x567b55 })
+            .clear()
+            .circle(0, 0, 24)
+            .fill({ color: seen ? 0xe5c985 : 0xf0ebd2, alpha: seen ? 0.7 : 0.28 })
+          if (seen)
+            logo.halo
+              .moveTo(12, 14)
+              .lineTo(16, 18)
+              .lineTo(23, 10)
+              .stroke({ width: 2, color: 0x567b55 })
+        }
       })
     })
   }

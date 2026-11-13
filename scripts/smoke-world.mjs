@@ -31,6 +31,10 @@ async function scenario(label, width, height, mobile) {
     assert.ok(Math.abs(header.y + header.height - stage.y) < 3)
     assert.ok(Math.abs(stage.y + stage.height - footer.y) < 3)
     assert.ok(footer.y + footer.height < height + 3)
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+      'the world must not introduce horizontal document overflow',
+    )
     // The opening monitor is a genuine, accessible editable workstation.
     await page.locator('.journey-footer').getByRole('button', { name: /My first code/ }).click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
@@ -38,6 +42,7 @@ async function scenario(label, width, height, mobile) {
     await openFirst.click()
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
     await firstCode.waitFor({ state: 'visible' })
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
     await firstCode.getByRole('button', { name: 'style.css' }).click()
     await firstCode.getByRole('textbox', { name: 'CSS editor' }).fill('body { background: lavender; }')
     assert.ok(
@@ -56,6 +61,23 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-first-code.png` })
     await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
     await firstCode.waitFor({ state: 'hidden' })
+    await page.waitForFunction(
+      () => document.activeElement?.textContent?.includes('Open the first computer'),
+    )
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
+
+    if (mobile) {
+      await page.locator('.menu-toggle').click()
+      // A click on header whitespace is outside the menu and cannot
+      // accidentally trigger an interactive object in the world.
+      await page.locator('.portfolio-header').click({ position: { x: 7, y: 7 } })
+      assert.equal(
+        await page.locator('.menu-toggle').getAttribute('aria-expanded'),
+        'false',
+        'mobile menu closes after tapping outside',
+      )
+      assert.equal(await page.getByRole('dialog').count(), 0, 'outside tap opens no scene objects')
+    }
 
     // Skills are now task-driven, not simply collected logos.
     const skillsLaunch = page.getByRole('button', { name: 'Skills', exact: true })
@@ -65,6 +87,7 @@ async function scenario(label, width, height, mobile) {
     await page.getByRole('button', { name: 'Open the workstations' }).click()
     const workshop = page.getByRole('dialog', { name: 'Build something that works.' })
     await workshop.waitFor({ state: 'visible' })
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), true)
     for (const step of ['commit', 'test', 'build', 'deploy']) {
       await workshop.getByRole('button', { name: '+ ' + step }).click()
     }
@@ -73,6 +96,10 @@ async function scenario(label, width, height, mobile) {
     await page.screenshot({ path: `test-results/world/${label}-skills-workshop.png` })
     await workshop.getByRole('button', { name: 'Continue the journey' }).click()
     await workshop.waitFor({ state: 'hidden' })
+    await page.waitForFunction(
+      () => document.activeElement?.textContent?.includes('Open the workstations'),
+    )
+    assert.equal(await page.locator('.world-scene').evaluate((element) => element.inert), false)
 
     if (!mobile) {
       const before = Number(await canvas.getAttribute('data-player-x'))
@@ -128,6 +155,7 @@ async function scenario(label, width, height, mobile) {
       await page.getByRole('dialog').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: 'Skills & tools', exact: true }).click()
       assert.ok(await page.locator('.room-board.is-stack').isVisible())
+      await page.screenshot({ path: `test-results/world/${label}-building-interior.png` })
       await page.locator('.room-exit').click()
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.visit === 'outside',
@@ -141,15 +169,25 @@ async function scenario(label, width, height, mobile) {
         'exit restores movement',
       )
       await page.getByRole('button', { name: 'Company & projects', exact: true }).click()
-      await page
-        .getByRole('button', { name: 'Explore my projects', exact: true })
-        .waitFor({ state: 'visible', timeout: 20000 })
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      assert.equal(
+        await page.locator('.computer-invitation').count(),
+        0,
+        'a second floating project CTA must not cover the interactive computer',
+      )
       assert.equal(
         await page.locator('.company-controls').count(),
         0,
         'arriving does not silently start or capture walking',
       )
-      await page.getByRole('button', { name: 'Explore my projects', exact: true }).click()
+      // The in-world screen remains clickable, and keyboard users get an
+      // unobtrusive focus-revealed action with the same behavior.
+      const computerAction = page.locator('.canvas-accessibility').getByRole('button', {
+        name: 'Explore my projects',
+        exact: true,
+      })
+      await computerAction.focus()
+      await computerAction.click()
       await page.locator('.company-controls').waitFor({ state: 'visible', timeout: 20000 })
       assert.equal(
         await page.locator('.company-controls button[aria-pressed]').count(),
@@ -216,10 +254,28 @@ async function scenario(label, width, height, mobile) {
     await page.close()
   }
 }
+async function readingModeScenario() {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
+  try {
+    await page.goto(base + '/?view=list', { waitUntil: 'networkidle', timeout: 60000 })
+    await page.locator('.timeline-list').waitFor({ state: 'visible' })
+    assert.equal(await page.locator('canvas[data-renderer="pixi"]').count(), 0,
+      'direct reading mode must not initialize the WebGL game')
+    assert.ok(await page.getByRole('button', { name: 'World view' }).isVisible(),
+      'reading mode keeps navigation back to the world')
+    console.log('PASS_reading_mode: direct accessible reading view without a WebGL renderer')
+  } catch (error) {
+    failures++
+    console.error(`FAIL_reading_mode: ${error.stack || error}`)
+  } finally {
+    await page.close()
+  }
+}
 try {
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
+  await readingModeScenario()
 } finally {
   await browser.close()
 }

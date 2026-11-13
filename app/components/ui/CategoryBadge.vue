@@ -16,8 +16,8 @@ defineProps<{ category: EventCategory }>()
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--category-color);
-  font: 500 10px 'Space Grotesk';
+  color: #2d5145;
+  font: 600 10px 'Space Grotesk', sans-serif;
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
@@ -25,7 +25,7 @@ i {
   display: inline-block;
   width: 8px;
   height: 8px;
-  background: currentColor;
+  background: var(--category-color);
 }
 .category-projects i {
   transform: rotate(45deg);
@@ -35,7 +35,7 @@ i {
 .category-school i {
   border-radius: 50%;
   background: transparent;
-  border: 2px solid currentColor;
+  border: 2px solid var(--category-color);
   width: 9px;
   height: 9px;
 }

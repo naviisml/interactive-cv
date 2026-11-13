@@ -9,13 +9,13 @@ const emit = defineEmits<{
 }>()
 const { t, locale, setLocale } = useI18n()
 const menuOpen = ref(false)
-const labels: Record<LevelId, string> = {
-  about: 'About',
-  skills: 'Skills',
-  work: 'Work',
-  company: 'Company & projects',
-  contact: 'Contact',
+const menuRoot = ref<HTMLElement>()
+function dismissMenu(event: PointerEvent) {
+  if (menuOpen.value && !menuRoot.value?.contains(event.target as Node))
+    menuOpen.value = false
 }
+onMounted(() => document.addEventListener('pointerdown', dismissMenu))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', dismissMenu))
 function navigate(id: LevelId) {
   menuOpen.value = false
   emit('navigate', id)
@@ -28,7 +28,7 @@ function toggleView() {
 <template>
   <header class="portfolio-header" @keydown.esc="menuOpen = false">
     <NuxtLink class="wordmark" to="/" aria-label="Navi home">navi<span>®</span></NuxtLink>
-    <div class="header-menu">
+    <div ref="menuRoot" class="header-menu">
       <button
         class="menu-toggle"
         :aria-expanded="menuOpen"
@@ -90,8 +90,8 @@ function toggleView() {
 .language-switch select {
   border: 0;
   background: transparent;
-  color: #496350;
-  font: 11px 'Space Grotesk';
+  color: #345747;
+  font: 600 12px 'Space Grotesk';
   min-height: 44px;
 }
 .sr-only {
@@ -121,8 +121,9 @@ function toggleView() {
   gap: 28px;
   min-height: 86px;
   padding: 12px 3%;
-  background: #f4f1e9;
-  border-bottom: 1px solid #cfd4c4;
+  background: #f8f5ed;
+  border-bottom: 1px solid #cbd2c3;
+  box-shadow: 0 4px 18px #284d3e0c;
 }
 .header-menu {
   min-width: 0;
@@ -131,24 +132,25 @@ function toggleView() {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 .portfolio-menu > button {
   position: relative;
   white-space: nowrap;
   padding: 14px 10px;
   font:
-    12px 'Space Grotesk',
+    13px 'Space Grotesk',
     sans-serif;
-  color: #687c70;
-  border-radius: 4px;
+  color: #506b5d;
+  border-radius: 5px;
   min-height: 44px;
 }
 .portfolio-menu > button:hover {
-  background: #e7eadf;
+  background: #e5e9de;
   color: #294a40;
 }
 .portfolio-menu > button[aria-current] {
+  font-weight: 600;
   color: #294a40;
   background: #e7eadf;
 }
@@ -165,6 +167,10 @@ function toggleView() {
   display: flex;
   align-items: center;
   gap: 7px;
+  margin-left: 10px;
+  padding-inline: 12px;
+  border: 1px solid #cdd4c5;
+  background: #f4f2e9;
 }
 .menu-toggle {
   display: none;
@@ -225,8 +231,8 @@ function toggleView() {
     right: 0;
     top: 100%;
     padding: 12px 4% 18px;
-    box-shadow: 0 12px 20px #173d3314;
-    background: #f4f1e9;
+    box-shadow: 0 18px 32px #173d3328;
+    background: #f8f5ed;
     border-bottom: 1px solid #cfd4c4;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
@@ -255,28 +261,28 @@ function toggleView() {
     border-left: 0;
     gap: 12px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
   }
   .portfolio-header :deep(.debt-balance) {
     min-width: 0;
   }
   .portfolio-header :deep(.debt-balance > span) {
-    font-size: 7px;
+    font-size: 9px;
     letter-spacing: 0.7px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .portfolio-header :deep(.debt-balance strong) {
-    font-size: 11px;
+    font-size: 12px;
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .portfolio-header :deep(.debt-info-button) {
     margin: 0;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
   }
 }
 @media (max-width: 380px) {
@@ -297,7 +303,7 @@ function toggleView() {
     padding-left: 0;
   }
   .portfolio-header :deep(.debt-balance strong) {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 </style>
