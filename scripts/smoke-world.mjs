@@ -32,9 +32,15 @@ async function scenario(label, width, height, mobile) {
     if (!mobile) {
       const before = Number(await canvas.getAttribute('data-player-x'))
       await page.keyboard.down('ArrowRight')
-      await page.waitForTimeout(650)
-      await page.keyboard.up('ArrowRight')
-      await page.waitForTimeout(100)
+      try {
+        await page.waitForFunction(
+          (x) => Number(document.querySelector('canvas')?.dataset.playerX) > x + 25,
+          before,
+          { timeout: 5000 },
+        )
+      } finally {
+        await page.keyboard.up('ArrowRight')
+      }
       assert.ok(
         Number(await canvas.getAttribute('data-player-x')) > before + 25,
         'keyboard works without a first click',

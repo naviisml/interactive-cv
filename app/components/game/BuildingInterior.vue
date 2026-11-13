@@ -174,7 +174,7 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
 .room-content {
   position: relative;
   width: min(820px, calc(100% - 70px));
-  margin: 5px auto 60px;
+  margin: 5px auto 30px;
 }
 .room-period {
   font-size: 11px;
@@ -218,7 +218,7 @@ h2 {
   border: 1px solid #bfc3a3;
   box-shadow: 7px 8px 0 #263f3538;
   min-height: 160px;
-  max-height: 38vh;
+  max-height: 32vh;
   overflow: auto;
   animation: board-in 0.2s ease-out;
 }

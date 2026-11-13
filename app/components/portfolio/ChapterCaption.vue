@@ -34,9 +34,10 @@ const { t } = useI18n()
     <button
       v-if="enterable && !running"
       class="caption-details caption-enter"
+      :aria-label="t('building.enter')"
       @click="emit('enter')"
     >
-      <DoorOpen :size="18" />{{ t('building.enter') }}<kbd>E</kbd>
+      <DoorOpen :size="18" />{{ t('building.enter') }}<kbd aria-hidden="true">E</kbd>
     </button>
     <p class="caption-summary">{{ current.summary }}</p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
@@ -52,3 +53,11 @@ const { t } = useI18n()
     <p v-if="feedback" class="caption-activity" role="status">{{ feedback }}</p>
   </header>
 </template>
+
+<style scoped>
+@media (pointer: coarse) {
+  .caption-enter kbd {
+    display: none;
+  }
+}
+</style>

@@ -42,9 +42,11 @@ export class BuildingSprite extends Container {
     const target = new Container()
     tapTarget(target, enter, new Rectangle(-43, -100, 86, 104))
     this.addChild(target)
-    const hint = label(this, locale === 'nl' ? 'INGANG' : 'ENTRANCE', 0, -116, 8, 0xd4d9ba, 110)
-    hint.anchor.x = 0.5
-    for (const x of [-230, 230]) {
+    if (this.kind !== 'airport') {
+      const hint = label(this, locale === 'nl' ? 'INGANG' : 'ENTRANCE', 0, -116, 8, 0xd4d9ba, 110)
+      hint.anchor.x = 0.5
+    }
+    for (const x of this.kind === 'mobility' ? [-230] : [-230, 230]) {
       rect(this, x - 14, -24, 28, 24, 0x7d8265)
       const g = new Graphics()
         .poly([
@@ -90,6 +92,9 @@ export class BuildingSprite extends Container {
   }
   private hotel() {
     this.masonry(-270, -280, 540, 280, 0x857d65)
+    rect(this, -286, -250, 25, 132, 0x36594e)
+    for (const [i, letter] of [...'HOTEL'].entries())
+      label(this, letter, -281, -240 + i * 23, 15, 0xf1dfb4, 24)
     rect(this, -283, -287, 566, 11, 0xc2b992)
     rect(this, -278, -276, 556, 5, 0xaaa27d)
     rect(this, -254, -267, 508, 66, 0x36594e)

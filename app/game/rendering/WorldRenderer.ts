@@ -14,7 +14,7 @@ import { CharacterSprite } from './sprites/CharacterSprite'
 import { ScenerySprite } from './sprites/ScenerySprite'
 import { ComputerSprite } from './sprites/ComputerSprite'
 
-import { terrainHeight } from '../core/physics'
+import { terrainHeight, cameraTarget } from '../core/physics'
 import type { ActivitySystem } from '../engine/ActivitySystem'
 import type { RendererCallbacks, SceneEntry, WorldFrame, WorldModel } from './types'
 export class WorldRenderer {
@@ -116,7 +116,7 @@ export class WorldRenderer {
         : frame.scale
     const targetCamera = frame.presentation.active
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
-      : frame.camera
+      : cameraTarget(frame.motion.x, width / targetZoom, this.model.width)
     if (!this.initialized) {
       this.zoom = targetZoom
       this.viewCamera = targetCamera

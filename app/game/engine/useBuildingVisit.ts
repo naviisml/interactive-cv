@@ -15,7 +15,7 @@ export function useBuildingVisit(journey: ReturnType<typeof import('./useJourney
   }
   const unsubscribe = journey.subscribe(() => {
     const now = performance.now(),
-      dt = previous ? Math.min(0.05, (now - previous) / 1000) : 0
+      dt = previous ? Math.min(1, (now - previous) / 1000) : 0
     previous = now
     if (visit.phase === 'approaching' && !journey.running.value && visit.index !== null) {
       if (Math.abs(journey.motion.x - journey.eventPosition(visit.index)) < 4)
