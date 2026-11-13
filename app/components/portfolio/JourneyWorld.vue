@@ -216,6 +216,18 @@ const enterable = computed(
     isBuilding(current.value.id) && Math.abs(motion.x - eventPosition(nearestIndex.value)) < 200,
 )
 const current = computed(() => timeline.value[nearestIndex.value]!)
+const nearFirstComputer = computed(
+  () => current.value.id === 'first-lines' &&
+    Math.abs(motion.x - (eventPosition(nearestIndex.value) - 90)) < 210,
+)
+const nearbyWorkshop = computed(() => {
+  if (current.value.id !== 'skills-road') return null
+  const offset = motion.x - eventPosition(nearestIndex.value)
+  const positions = [-440, 0, 440]
+  const closest = positions.reduce((best, x, index) =>
+    Math.abs(offset - x) < Math.abs(offset - positions[best]!) ? index : best, 0)
+  return Math.abs(offset - positions[closest]!) < 220 ? closest : null
+})
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 const financeIndex = computed(() =>
   cvTimeline.findIndex((event) => event.id === timeline.value[activeIndex.value]?.id),
@@ -501,16 +513,16 @@ onBeforeUnmount(() => {
           @cancel="stop"
         />
         <button
-          v-if="current.id === 'first-lines' && !running && !firstCodeOpen"
+          v-if="nearFirstComputer && !running && !firstCodeOpen"
           class="first-code-launch"
           @click="openFirstComputer"
         >
           {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
         </button>
         <button
-          v-if="current.id === 'skills-road' && !running && workshopIndex === null"
+          v-if="nearbyWorkshop !== null && !running && workshopIndex === null"
           class="first-code-launch"
-          @click="openWorkshop(0)"
+          @click="openWorkshop(nearbyWorkshop!)"
         >
           {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
         </button>
