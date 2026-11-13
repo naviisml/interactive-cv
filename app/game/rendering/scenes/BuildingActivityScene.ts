@@ -237,13 +237,13 @@ export class BuildingActivityScene extends Container {
             ? (success ? (nl ? 'Vlucht geslaagd · opnieuw?' : 'Take-off successful · retry?') : (nl ? 'Te weinig vermogen · opnieuw?' : 'Too little power · retry?'))
             : (nl ? 'Houd vliegtuig vast om vermogen op te bouwen' : 'Press and hold the plane to build speed')
     } else if (this.car) {
-      const speed = Math.round(20 + (record?.power ?? 0.38) * 110)
+      const speed = Math.round(10 + (record?.power ?? 0.38) * 80)
       const p = running ? cameraCarPose(age, speed) : { x: -150, flash: false }
       this.car.position.set(p.x, -5)
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
       this.status.text = charging
-        ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(20 + charge.power * 110)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
+        ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(10 + charge.power * 80)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
         : running
           ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : (nl ? 'Passage…' : 'Passing camera…')}`
           : record?.completed
