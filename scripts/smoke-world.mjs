@@ -572,6 +572,22 @@ async function scenario(label, width, height, mobile) {
       () => document.querySelector('canvas')?.dataset.circuit === '[0,0,0,0,0,1]',
     )
     await page.screenshot({ path: `test-results/world/${label}-circuit-powered.png` })
+    const enterSchool = page
+      .locator('.canvas-accessibility')
+      .getByRole('button', { name: 'Enter building', exact: true })
+    await enterSchool.focus()
+    await enterSchool.press('Enter')
+    const school = page.locator('.building-interior')
+    await school.waitFor({ state: 'visible' })
+    assert.equal(
+      await school.locator('.room-tabs').count(),
+      0,
+      'school information is a single card',
+    )
+    assert.ok(await school.locator('.room-board').innerText())
+    await school.locator('.room-exit').click()
+    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.visit === 'outside')
+
     await page
       .locator('.journey-footer')
       .getByRole('button', { name: /Codam Coding College/ })

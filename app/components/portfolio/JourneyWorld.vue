@@ -562,12 +562,17 @@ onBeforeUnmount(() => {
         <div class="intro-copy">
           <p class="eyebrow">NAVARONE ISMAIL / SOFTWARE DEVELOPER</p>
           <h1>{{ locale === 'nl' ? 'Welkom in mijn portfolio.' : 'Welcome to my portfolio.' }}</h1>
-          <p>
-            {{
+          <p class="intro-description">
+            <span class="intro-long">{{
               locale === 'nl'
                 ? 'Een loopbaan is meer dan een lijst functies. Daarom kun je door mijn verhaal lopen: ontdek wat ik bouwde, hoe ik leerde en de mensen en projecten onderweg.'
                 : 'A career is more than a list of job titles. So I made mine a place to explore. Walk through my story, try what I built, and discover the projects along the way.'
-            }}
+            }}</span>
+            <span class="intro-short">{{
+              locale === 'nl'
+                ? 'Ontdek hoe ik leerde, bouwde en teams leidde.'
+                : 'Explore how I learned, built and led teams.'
+            }}</span>
           </p>
           <p class="intro-desktop">
             <kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd>
@@ -726,7 +731,8 @@ onBeforeUnmount(() => {
   font-size: 12px !important;
   margin-top: 26px;
 }
-.intro-touch {
+.intro-touch,
+.intro-short {
   display: none;
 }
 .intro-start {
@@ -797,8 +803,11 @@ onBeforeUnmount(() => {
   .intro-hero {
     flex-basis: 49%;
   }
-  .intro-copy > p:nth-of-type(2) {
+  .intro-long {
     display: none;
+  }
+  .intro-short {
+    display: inline;
   }
 }
 @media (prefers-reduced-motion: reduce) {
