@@ -102,5 +102,7 @@ test('holding then releasing a ball or vehicle affects success instead of auto-p
   game.releaseCharge('appjection', 'camera')
   assert.equal(game.actions['appjection']?.outcome, 'ticket')
   assert.equal(cameraCarPose(2.8, 40).flash, false)
-  assert.equal(cameraCarPose(2.8, 100).flash, true)
+  assert.equal(cameraCarPose(2, 100).flash, true)
+  assert.equal(cameraCarPose(2.8, 100).flash, false)
+  assert.ok(cameraCarPose(2, 100).x > cameraCarPose(2, 40).x)
 })
