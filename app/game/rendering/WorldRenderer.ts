@@ -108,7 +108,7 @@ export class WorldRenderer {
       )
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact') return new CampsiteScene(this.model.locale)
-    return new FirstLinesScene()
+    return new FirstLinesScene(() => this.callbacks.openFirstComputer())
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
