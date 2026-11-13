@@ -64,6 +64,7 @@ export class WorldInteractionCue extends Container {
     reduced: boolean,
     text?: string,
     shiftX = 0,
+    shiftY = 0,
   ) {
     const change = reduced ? 1 : 0.22
     this.intensity += ((near ? 1 : 0) - this.intensity) * change
@@ -89,7 +90,7 @@ export class WorldInteractionCue extends Container {
       this.lastCopy = copy
     }
     this.bubble.x = shiftX
-    this.bubble.y = -(this.spec.popupOffset ?? 106) - (reduced ? 0 : pulse * 3)
+    this.bubble.y = -(this.spec.popupOffset ?? 106) + shiftY - (reduced ? 0 : pulse * 3)
     this.bubble.alpha = this.reveal
     this.bubble.scale.set(0.94 + this.reveal * 0.06)
   }
