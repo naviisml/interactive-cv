@@ -222,6 +222,7 @@ export class WorldRenderer {
               : 0,
           ),
           this.reduced,
+          width < 700,
         )
     }
     for (const [id, activity] of this.activitiesByScene) {

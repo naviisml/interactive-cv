@@ -56,15 +56,17 @@ button {
 }
 @media (max-width: 500px) {
   .computer-invitation {
-    top: auto;
-    bottom: 96px;
+    top: 104px;
+    bottom: auto;
     left: 12px;
-    padding: 10px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
     width: calc(100% - 24px);
   }
   .computer-invitation h2 {
-    font-size: 14px;
-    margin-bottom: 8px;
+    display: none;
   }
   .computer-invitation p,
   .computer-invitation > svg {

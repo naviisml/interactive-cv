@@ -151,6 +151,7 @@ async function scenario(label, width, height, mobile) {
       if (!(await stop.count())) continue
       await stop.click()
       await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      if (mobile) await page.locator('.world-caption h1').tap()
       await page.waitForTimeout(350)
       await page.screenshot({ path: `test-results/world/${label}-${name}.png` })
     }

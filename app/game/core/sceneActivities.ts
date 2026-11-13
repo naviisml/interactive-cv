@@ -37,11 +37,11 @@ export function cameraCarPose(age: number) {
 export function basketballPose(age: number) {
   if (age <= 1.1) {
     const t = age / 1.1
-    return { x: -90 + 305 * t, y: -10 - 120 * t - 80 * 4 * t * (1 - t) }
+    return { x: -90 + 290 * t, y: -10 - 120 * t - 80 * 4 * t * (1 - t) }
   }
-  if (age <= 1.5) return { x: 215, y: -130 + (age - 1.1) * 115 }
+  if (age <= 1.5) return { x: 200, y: -130 + (age - 1.1) * 115 }
   const t = Math.min(1, (age - 1.5) / 0.7)
-  return { x: 215 + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
+  return { x: 200 + 30 * t, y: -84 + 74 * t - 18 * Math.sin(t * Math.PI) }
 }
 export const skillDecks = [
   { id: 'tooling-bench', offset: -530, width: 190, height: 35 },

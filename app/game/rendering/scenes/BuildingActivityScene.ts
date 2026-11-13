@@ -51,17 +51,17 @@ export class BuildingActivityScene extends Container {
           .bezierCurveTo(-40, -38, 15, -38, 15, -3)
           .stroke({ width: 2, color: 0xe3d6ac }),
       )
-      rect(this, 228, -151, 5, 151, 0x68846d)
-      rect(this, 197, -159, 55, 36, 0xc6c8a5)
-      rect(this, 206, -151, 25, 18, 0xaab89b)
+      rect(this, 213, -151, 5, 151, 0x68846d)
+      rect(this, 182, -159, 55, 36, 0xc6c8a5)
+      rect(this, 191, -151, 25, 18, 0xaab89b)
       this.addChild(
         new Graphics()
-          .ellipse(215, -129, 20, 4)
+          .ellipse(200, -129, 20, 4)
           .stroke({ width: 3, color: 0xb8845f })
-          .moveTo(199, -126)
-          .lineTo(206, -105)
-          .lineTo(225, -105)
-          .lineTo(232, -126)
+          .moveTo(184, -126)
+          .lineTo(191, -105)
+          .lineTo(210, -105)
+          .lineTo(217, -126)
           .stroke({ width: 1, color: 0xdbe0bd }),
       )
       this.ball = new Graphics()
@@ -75,9 +75,9 @@ export class BuildingActivityScene extends Container {
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
       tapTarget(this.ball, start, new Rectangle(-38, -38, 76, 76))
-      rect(this, 181, -198, 68, 28, 0x29483f)
+      rect(this, 166, -198, 68, 28, 0x29483f)
       this.status.visible = true
-      this.status.position.set(215, -191)
+      this.status.position.set(200, -191)
       this.status.style.fill = 0xe9dfb7
       this.status.style.fontSize = 12
     } else if (this.action === 'departure') {
@@ -220,7 +220,7 @@ export class BuildingActivityScene extends Container {
             : 'Departed · tap for another flight'
           : captions.departure[nl ? 0 : 1]
     } else if (this.car) {
-      const p = running ? cameraCarPose(age) : { x: -180, flash: false }
+      const p = running ? cameraCarPose(age) : { x: -150, flash: false }
       this.car.position.set(p.x, -5)
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
