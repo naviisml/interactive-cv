@@ -10,7 +10,7 @@ import { SkillsRoadScene } from './scenes/SkillsRoadScene'
 import { BuildingSprite } from './sprites/BuildingSprite'
 import { LevelEntranceScene } from './scenes/LevelEntranceScene'
 import { isBuilding } from '../../content/buildings'
-import { circuitConnected } from '../core/learningActivities'
+import { circuitConnected, pipelineSteps } from '../core/learningActivities'
 import { cuesForScene, selectWorldCue, type WorldCueAction } from '../core/worldCues'
 import { WorldInteractionCue } from './WorldInteractionCue'
 import { skillGroups } from '../../content/skills'
@@ -179,7 +179,7 @@ export class WorldRenderer {
   }
   private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
     const candidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
-    const positions = new Map<string, { screenX: number; near: boolean }>()
+    const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
     for (const [id, { node, entry }] of this.cues) {
       const x = entry.x + node.spec.x
       const ground = terrainHeight(entry.x, this.model.geometry.terrain)
@@ -200,7 +200,7 @@ export class WorldRenderer {
       const hovered = !!this.pointer && visible &&
         Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
       const near = visible && (hovered || distance < node.spec.radius)
-      positions.set(id, { screenX: projectedX, near })
+      positions.set(id, { screenX: projectedX, screenY: projectedY, near })
       if (near) candidates.push({ id, distance, radius: node.spec.radius, hovered })
     }
     const selected = frame.visit.phase === 'outside' && !frame.paused
@@ -229,9 +229,28 @@ export class WorldRenderer {
           ? (nl ? 'Bagage bezorgd · bel opnieuw' : 'Delivered · ring again')
           : (nl ? 'Geslaagd · probeer opnieuw' : 'Completed · try again')
       }
+      if (entry.event.id === 'skills-road') {
+        if (node.spec.key === 'tooling') {
+          const pipeline = this.activities.pipeline
+          feedback = pipeline.status === 'success'
+            ? (nl ? 'Pipeline geslaagd · deployed' : 'Pipeline passed · deployed')
+            : pipeline.status === 'error'
+              ? (nl ? 'Verkeerde volgorde · opnieuw' : 'Wrong order · retry')
+              : pipeline.completed > 0
+                ? `${pipeline.completed}/4 · ${pipelineSteps[pipeline.completed] ?? 'deploy'}`
+                : undefined
+        } else if (node.spec.key === 'web' && (this.activities.web.records || this.activities.web.theme)) {
+          feedback = nl ? 'Live pagina bijgewerkt' : 'Live page updated'
+        } else if (node.spec.key === 'cloud' && this.activities.actions['skill-systems']) {
+          feedback = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activities.cloud.queued)} · ${this.activities.cloud.workers} workers`
+        }
+      }
       const safeX = Math.max(127, Math.min(width - 127, p.screenX))
+      const popupOffset = node.spec.popupOffset ?? 106
+      const top = p.screenY - (popupOffset + 27) * this.zoom
+      const pushDown = Math.max(0, (16 - top) / this.zoom)
       node.update(frame.time, p.near && frame.visit.phase === 'outside', selectedThis, this.reduced,
-        feedback, (safeX - p.screenX) / this.zoom)
+        feedback, (safeX - p.screenX) / this.zoom, pushDown)
     }
     if (frame.paused) this.currentCue = undefined
     this.app.canvas.dataset.cue = this.currentCue
