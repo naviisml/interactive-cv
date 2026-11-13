@@ -548,15 +548,6 @@ onBeforeUnmount(() => {
         >
           {{ locale === 'nl' ? 'Open de werkbanken' : 'Open the workstations' }}
         </button>
-        <ComputerInvitation
-          v-if="
-            current.id === 'navel-development' &&
-            !presentation.active &&
-            !running &&
-            Math.abs(motion.x - (eventPosition(nearestIndex) - 360)) < 210
-          "
-          @start="startPresentation"
-        />
         <CompanyControls
           v-if="presentation.active"
           :progress="presentation.progress"
