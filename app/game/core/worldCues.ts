@@ -25,6 +25,7 @@ export interface WorldCueSpec {
   x: number
   y: number
   radius: number
+  popupOffset?: number
   title: { en: string; nl: string }
   hint: { en: string; nl: string }
 }
@@ -53,7 +54,7 @@ export function cuesForScene(id: string): WorldCueSpec[] {
       cue('tooling', 'skill-0', -440, -185, 'Build a deployment', 'Bouw een deployment', 'Use the four pipeline steps', 'Gebruik de vier pipelinestappen', 150),
       cue('web', 'skill-1', 0, -185, 'Change the live page', 'Pas de livepagina aan', 'Tap a technology or screen', 'Tik op een technologie of scherm', 150),
       cue('cloud', 'skill-2', 440, -185, 'Scale the workers', 'Schaal de workers', 'Tap a server rack', 'Tik op een serverrack', 150),
-    ]
+    ].map((item) => ({ ...item, popupOffset: 166 }))
   if (id === 'contact')
     return [
       cue('tent', 'tent', -355, -100, 'Open the tent', 'Open de tent', 'Tap to unzip', 'Tik om te openen', 120),
