@@ -26,11 +26,11 @@ npm run format:check
 | `app/components/game` | Canvas lifecycle, touch/keyboard hints, computer invitation, slideshow controls and building interiors |
 | `app/components/finance` | Money counters and support information |
 | `app/components/ui` | Shared UI components |
-| `app/content` | CV events, journey sections, logo manifest, company slides and finances |
+| `app/content` | CV events with finance metadata, journey sections, logo manifest, company slides and support resources |
 | `app/content/locales` | Dutch CV and support-resource copy |
 | `i18n/locales` | English and Dutch interface messages |
 | `app/game/engine` | Movement loop, viewport and persistent activity state |
-| `app/game/core` | Framework-independent movement, terrain, navigation and presentation rules |
+| `app/game/core` | Framework-independent movement, terrain, navigation, finance history and presentation rules |
 | `app/game/rendering` | PixiJS scene graph, renderer and drawing helpers |
 | `app/game/rendering/sprites` | Character atlas, scenery textures, aircraft, computer, character and building exteriors |
 | `app/game/rendering/scenes` | Atmosphere, terrain, Skills road and building activities, campsite and layered level entrances |
@@ -62,7 +62,7 @@ Navel Development uses `ComputerSprite`. `app/content/company.ts` selects the sl
 
 `@nuxtjs/i18n` loads English and Dutch messages lazily. The header language selector persists the choice in the locale cookie. UI messages live in `i18n/locales`; event translations are separate content objects so paragraphs stay readable and editable. Locale changes update signs and the computer without rebuilding physical layout or restarting the journey.
 
-`app/content/finances.json` contains chronological financial snapshots by original event ID. `null` means undisclosed; omission carries a previous value forward. No financial amounts are invented. English and Dutch use the same figures, translated labels and locale-aware currency formatting. Support links retain the original official URLs.
+Financial snapshots now live in the `finance` metadata on the original event in `app/content/timeline.ts`. Omitted values carry forward, while explicit `null` withholds information at and after an event. Current/private balances and salary are not published. Historic business turnover in a context note is not confused with personal gross/net annual income. The country-specific support links live in `app/content/finance-support.json` and retain their original URLs.
 
 ## Controls and checks
 
@@ -93,3 +93,7 @@ Run `npm run sprites:generate` after editing `scripts/build-character.mjs`. This
 The contact stop is `CampsiteScene`: tent zip, lantern and fire are interactive. Its clearing stays level and bounds the world near the campsite. It never opens a finish overlay or locks movement.
 
 Only `FirstLines.vue` still uses authored SVG scenery. Its export is `public/world/scenes/first-lines.svg`; the superseded project/building textures and old football/portal/wire-grid simulation have been removed. The other scenes are reusable Pixi objects.
+
+## First-code workstation
+
+The opening scene's computer is clickable, with an accessible button as a fallback. It opens a real HTML/CSS editor and immediate preview in a sandboxed iframe (no script execution). This is intentionally a learning interaction, separate from the later Navel Development project slideshow. Editing the sample never changes deployed files.
