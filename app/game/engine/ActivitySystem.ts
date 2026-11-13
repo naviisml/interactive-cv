@@ -3,6 +3,7 @@ import {
   advanceQueue,
   circuitSeed,
   tickRover,
+  type RoverCommand,
   type RoverState,
 } from '../core/learningActivities.ts'
 import {
@@ -15,6 +16,22 @@ import {
 export class ActivitySystem {
   circuit = [...circuitSeed]
   rover: RoverState = { commands: [], age: 0, status: 'idle' }
+  editRover(command: RoverCommand | 'undo') {
+    if (this.rover.status === 'running') return false
+    if (command === 'undo') this.rover.commands.pop()
+    else {
+      if (this.rover.commands.length >= 8) return false
+      this.rover.commands.push(command)
+    }
+    this.rover.age = 0
+    this.rover.status = 'idle'
+    return true
+  }
+  runRover() {
+    if (this.rover.status === 'running' || !this.rover.commands.length) return false
+    Object.assign(this.rover, { age: 0, status: 'running' })
+    return true
+  }
   cloud = { workers: 1, queued: 18, processed: 0 }
   web = { theme: 0, records: 0 }
   exploredSkills: string[] = []

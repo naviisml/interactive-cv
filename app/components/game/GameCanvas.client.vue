@@ -30,17 +30,8 @@ function runAccessibleAction(index = 0) {
   if (action === 'circuit')
     props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
   else if (action === 'compile') {
-    const rover = props.activities.rover
-    if (rover.status === 'running') return
-    if (index < 2 && rover.commands.length < 8) {
-      rover.commands.push(index === 0 ? 'step' : 'jump')
-      rover.status = 'idle'
-    }
-    if (index === 2) {
-      rover.commands.pop()
-      rover.status = 'idle'
-    }
-    if (index === 3 && rover.commands.length) Object.assign(rover, { age: 0, status: 'running' })
+    if (index === 3) props.activities.runRover()
+    else props.activities.editRover((['step', 'jump', 'undo'] as const)[index]!)
   } else
     props.activities.trigger(
       id,

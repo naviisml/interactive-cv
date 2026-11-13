@@ -412,6 +412,18 @@ async function scenario(label, width, height, mobile) {
       .click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     await page.waitForTimeout(500)
+    for (const x of [87, 87, 265])
+      await tapWorld(page, canvas, 'coding-college', SCHOOL_LAB_OFFSET + x, -96, mobile)
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.rover || '{}').status === 'error',
+      {},
+      { timeout: 6000 },
+    )
+    for (let n = 0; n < 2; n++)
+      await tapWorld(page, canvas, 'coding-college', SCHOOL_LAB_OFFSET + 204, -96, mobile)
+    await page.waitForFunction(
+      () => JSON.parse(document.querySelector('canvas')?.dataset.rover || '{}').age === 0,
+    )
     for (const x of [87, 147, 87, 147, 87, 265])
       await tapWorld(page, canvas, 'coding-college', SCHOOL_LAB_OFFSET + x, -96, mobile)
     await page.waitForFunction(

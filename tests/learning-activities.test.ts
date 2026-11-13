@@ -96,3 +96,19 @@ test('a released ball starts at the held position, including a jump, and keeps t
     'the shot retains its release point after the player moves',
   )
 })
+
+test('correcting a failed rover program rewinds execution before the next run', () => {
+  const game = new ActivitySystem()
+  game.editRover('step')
+  game.editRover('step')
+  game.runRover()
+  game.tick(3, false)
+  assert.equal(game.rover.status, 'error')
+  game.editRover('undo')
+  assert.equal(game.rover.age, 0, 'editing cannot silently execute the corrected program')
+  assert.equal(game.rover.status, 'idle')
+  for (const command of ['jump', 'step', 'jump', 'step'] as const) game.editRover(command)
+  game.runRover()
+  game.tick(6, false)
+  assert.equal(game.rover.status, 'success')
+})

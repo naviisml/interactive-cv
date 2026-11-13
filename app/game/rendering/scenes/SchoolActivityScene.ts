@@ -76,13 +76,10 @@ export class SchoolActivityScene extends Container {
       this.button(nl ? 'Stap' : 'Step', 87, -96, 51, () => this.command('step'))
       this.button(nl ? 'Spring' : 'Jump', 147, -96, 57, () => this.command('jump'))
       this.button('↶', 204, -96, 40, () => {
-        if (state.rover.status !== 'running') {
-          state.rover.commands.pop()
-          state.rover.status = 'idle'
-        }
+        state.editRover('undo')
       })
       this.button('▶ Run', 265, -96, 65, () => {
-        if (state.rover.commands.length) Object.assign(state.rover, { age: 0, status: 'running' })
+        state.runRover()
       })
       // A route with two actual gaps. A step into a gap fails; a jump clears it.
       for (let i = 0; i < 8; i++) {
@@ -112,10 +109,7 @@ export class SchoolActivityScene extends Container {
     this.addChild(node)
   }
   command(command: RoverCommand) {
-    const rover = this.state.rover
-    if (rover.status === 'running' || rover.commands.length >= 8) return
-    rover.commands.push(command)
-    rover.status = 'idle'
+    this.state.editRover(command)
   }
   update(frame: WorldFrame, reduced: boolean) {
     const nl = this.locale === 'nl',
