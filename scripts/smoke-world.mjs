@@ -643,6 +643,11 @@ async function visualAuditScenario() {
           /km\/h/.test(JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection || ''),
           {}, { timeout: 4000 })
         await page.waitForTimeout(1100)
+        const bounds = await canvas.evaluate((el) => JSON.parse(el.dataset.telemetryBounds || '{}').appjection)
+        if (bounds) {
+          assert.ok(bounds.left >= -1 && bounds.right <= 391,
+            'moving speed telemetry must remain inside the mobile viewport')
+        }
         await page.screenshot({ path: 'test-results/world/audit-car-passing-camera.png' })
       }
     }
