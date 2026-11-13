@@ -23,6 +23,8 @@ const emit = defineEmits<{
 }>()
 const { t, locale } = useI18n()
 const currentAction = computed(() => buildingActions[props.activeId])
+const currentIndex = computed(() => props.model.entries.find((entry) => entry.event.id === props.activeId)?.index)
+
 function runAccessibleAction(index = 0) {
   const id = props.activeId,
     action = buildingActions[id]
@@ -143,14 +145,22 @@ onBeforeUnmount(() => {
   disposed = true
   releaseRenderer()
 })
+defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
 </script>
 <template>
   <div ref="host" class="game-canvas">
     <div
-      v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road'"
+      v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road' || activeId === 'first-lines'"
       class="canvas-accessibility"
       @keydown.esc.stop.prevent="host?.closest<HTMLElement>('.world')?.focus()"
     >
+      <button v-if="activeId === 'first-lines'" @click="emit('openFirstComputer')">
+        {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+      </button>
+      <button v-if="currentAction && currentIndex !== undefined"
+        @click="emit('details', currentIndex)">
+        {{ t('building.enter') }}
+      </button>
       <template v-if="currentAction === 'circuit'">
         <button v-for="i in 6" :key="i" @click="runAccessibleAction(i - 1)">
           {{ locale === 'nl' ? 'Draai kabel' : 'Rotate wire' }} {{ i }}
