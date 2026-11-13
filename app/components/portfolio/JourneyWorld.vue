@@ -23,6 +23,7 @@ const entries = computed(() =>
   trackIndices.value.map((index) => ({ event: timeline.value[index]!, index })),
 )
 const filters = ['all', 'work', 'projects', 'school', 'skills'] as const
+const worldCanvas = ref<{ interactNearest: () => boolean }>()
 const sceneChanging = ref(false)
 const worldReady = ref(false)
 const rendererUnavailable = ref(false)
@@ -212,20 +213,9 @@ async function changeFilter(filter: TimelineFilter) {
 const listRoot = ref<HTMLElement>()
 const activeIndex = computed(() => (listMode.value ? listActive.value : nearestIndex.value))
 const displayProgress = computed(() => (listMode.value ? listProgress.value : progress.value))
-const destinationTitle = computed(() =>
-  destination.value ? timeline.value[destination.value.index]?.title : '',
-)
+
 const visitEvent = computed(() => (visit.index === null ? undefined : timeline.value[visit.index]))
-const enterable = computed(
-  () =>
-    isBuilding(current.value.id) && Math.abs(motion.x - eventPosition(nearestIndex.value)) < 200,
-)
 const current = computed(() => timeline.value[nearestIndex.value]!)
-const nearFirstComputer = computed(
-  () =>
-    current.value.id === 'first-lines' &&
-    Math.abs(motion.x - (eventPosition(nearestIndex.value) + 140)) < 210,
-)
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 // Financial metadata follows the same ordered scenes as the active list/world,
 // including authored skills/contact scenes that have no separate CV record.
@@ -440,17 +430,13 @@ function navigateTimeline(index: number) {
   else goTo(index)
 }
 function interact(event: KeyboardEvent) {
-  if (paused.value || event.defaultPrevented || event.repeat) return
-  if (
-    !listMode.value &&
-    detailIndex.value === null &&
-    visit.phase === 'outside' &&
-    event.key.toLowerCase() === 'e' &&
-    nearby.value &&
-    isBuilding(nearby.value.id) &&
-    !(event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]')
-  )
-    openDetail(nearestIndex.value)
+  if (paused.value || event.defaultPrevented || event.repeat || listMode.value ||
+      visit.phase !== 'outside' || event.key.toLowerCase() !== 'e' ||
+      (event.target as HTMLElement)?.closest('button,a,input,textarea,select,[contenteditable]'))
+    return
+  // A world interaction is chosen by proximity to an actual object, not by
+  // whichever chapter happened to be selected in the HTML header.
+  if (worldCanvas.value?.interactNearest()) event.preventDefault()
 }
 let worldDisposed = false
 onNuxtReady(async () => {
@@ -537,6 +523,7 @@ onBeforeUnmount(() => {
         <ClientOnly
           ><GameCanvas
             v-if="worldReady"
+            ref="worldCanvas"
             @availability="rendererUnavailable = !$event"
             :model="rendererModel"
             :active-id="current.id"
@@ -551,23 +538,9 @@ onBeforeUnmount(() => {
             @open-first-computer="openFirstComputer"
         /></ClientOnly>
         <div class="world-chrome" :inert="rendererUnavailable">
-          <ChapterCaption
-            :current="current"
-            :running="running"
-            :destination-title="destinationTitle"
-            :feedback="skillFeedback"
-            :enterable="enterable"
-            @enter="enterBuilding(nearestIndex, $event)"
-            @details="openDetail(nearestIndex, $event)"
-            @cancel="stop"
-          />
-          <button
-            v-if="nearFirstComputer && !running && !firstCodeOpen"
-            class="first-code-launch is-first-code"
-            @click="openFirstComputer"
-          >
-            {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
-          </button>
+          <p class="world-chapter-announcement" role="status" aria-live="polite">
+            {{ current.title }}. {{ skillFeedback }}
+          </p>
           <CompanyControls
             v-if="presentation.active"
             :progress="presentation.progress"
@@ -618,45 +591,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.first-code-launch {
+.world-chapter-announcement {
   position: absolute;
-  clip-path: inset(50%);
   width: 1px;
   height: 1px;
+  padding: 0;
+  margin: 0;
   overflow: hidden;
-  top: 168px;
-  right: clamp(18px, 3vw, 48px);
-  z-index: 7;
-  min-height: 44px;
-  padding: 11px 15px;
-  color: #e9e7cc;
-  background: #365f4c;
-  border: 1px solid #c6cea6;
-  border-radius: 6px;
-  box-shadow:
-    0 5px 20px #25473a26,
-    0 3px 0 #25473a44;
-  font:
-    600 12px 'Space Grotesk',
-    sans-serif;
-}
-.first-code-launch:hover {
-  background: #284c3f;
-}
-.first-code-launch:focus-visible {
-  clip-path: none;
-  width: auto;
-  height: auto;
-  outline: 3px solid #e1bc7f;
-}
-@media (max-width: 700px) {
-  .first-code-launch {
-    top: 138px;
-    right: 16px;
-    max-width: 185px;
-  }
-  .first-code-launch.is-first-code {
-    top: 233px;
-  }
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 </style>
