@@ -111,7 +111,7 @@ function getWorldFrame() {
     paused: paused.value,
     urban: scenery.value.urban,
     technical: scenery.value.technical,
-    activeId: nearby.value?.id ?? '',
+    activeId: timeline.value[nearestIndex.value]?.id ?? '',
     presentation: { ...presentation },
     navigating: running.value,
   }

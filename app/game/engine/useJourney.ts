@@ -186,9 +186,7 @@ export function useJourney(
   function keydown(e: KeyboardEvent) {
     if (
       paused.value ||
-      (e.target as HTMLElement)?.closest(
-        'input, textarea, select, [contenteditable], [data-world-activity]',
-      )
+      (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable]')
     )
       return
     const key = e.key.toLowerCase()

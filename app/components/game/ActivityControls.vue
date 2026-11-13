@@ -43,9 +43,8 @@ const { t } = useI18n()
 .activity-controls {
   position: absolute;
   z-index: 7;
-  left: 50%;
-  bottom: 110px;
-  transform: translateX(-50%);
+  right: 20px;
+  bottom: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -72,6 +71,17 @@ const { t } = useI18n()
 </style>
 
 <style scoped>
+@media (pointer: coarse) {
+  /* Touch users rotate the full-size tiles directly in the world. Keep the
+     equivalent controls available to assistive technology and keyboard focus. */
+  .activity-controls:not(:focus-within) {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 @media (max-width: 600px) {
   .activity-controls span {
     display: none;
