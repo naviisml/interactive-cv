@@ -68,12 +68,15 @@ async function scenario(label, width, height, mobile) {
 
     if (mobile) {
       await page.locator('.menu-toggle').click()
-      await canvas.tap({ position: { x: 180, y: Math.min(280, Math.floor(stage.height * 0.6)) } })
+      // Use empty left-edge scenery; tapping the actual scene monitor would
+      // legitimately open the code editor and pause subsequent navigation.
+      await canvas.tap({ position: { x: 8, y: Math.min(320, Math.floor(stage.height * 0.68)) } })
       assert.equal(
         await page.locator('.menu-toggle').getAttribute('aria-expanded'),
         'false',
         'mobile menu closes after tapping outside',
       )
+      assert.equal(await page.getByRole('dialog').count(), 0, 'outside tap opens no scene objects')
     }
 
     // Skills are now task-driven, not simply collected logos.
