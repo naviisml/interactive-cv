@@ -12,6 +12,7 @@ const emit = defineEmits<{ details: [event: MouseEvent]; cancel: []; enter: [] }
 const { t, locale } = useI18n()
 const sceneHints: Record<string, [string, string]> = {
   'first-lines': ['Open de monitor om HTML en CSS te bewerken.', 'Open the monitor to edit HTML and CSS.'],
+  'navel-development': ['Open het scherm om mijn projecten te bekijken.', 'Select the project screen to explore my work.'],
   'panta-rhei': ['Houd de bal vast en laat los om te schieten.', 'Hold the ball and release to shoot.'],
   'roc-hilversum': [
     'Tik op de werkbank om de verbinding te maken.',
@@ -65,7 +66,7 @@ const sceneHints: Record<string, [string, string]> = {
     </button>
     </div>
     <p class="caption-summary">{{ current.summary }}</p>
-    <p v-if="sceneHints[current.id] && !running" class="scene-hint" :class="{ 'sr-only': current.id !== 'first-lines' }">
+    <p v-if="sceneHints[current.id] && !running" class="scene-hint" :class="{ 'sr-only': current.id !== 'first-lines' && current.id !== 'navel-development' }">
       {{ sceneHints[current.id]?.[locale === 'nl' ? 0 : 1] }}
     </p>
     <a v-if="current.id === 'contact'" class="caption-details" href="mailto:contact@navel.dev"
