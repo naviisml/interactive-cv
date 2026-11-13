@@ -32,6 +32,8 @@ async function scenario(label, width, height, mobile) {
     assert.ok(Math.abs(stage.y + stage.height - footer.y) < 3)
     assert.ok(footer.y + footer.height < height + 3)
     // The opening monitor is a genuine, accessible editable workstation.
+    await page.locator('.journey-footer').getByRole('button', { name: /My first code/ }).click()
+    await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     const openFirst = page.getByRole('button', { name: /Open the first computer/i })
     await openFirst.click()
     const firstCode = page.getByRole('dialog', { name: 'Explore the code' })
