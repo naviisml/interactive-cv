@@ -179,10 +179,10 @@ onBeforeUnmount(() => { detachTouch(worldRoot.value); window.removeEventListener
     <section v-if="!listMode" ref="worldRoot" class="world" :style="{'--ground-y':`${view.groundInset}px`}" :class="`level-${activeLevel.id}`" tabindex="-1" @pointerdown="gestureStart" @pointermove="gestureMove" @pointerup="gestureEnd" @pointercancel="gestureEnd" @lostpointercapture="gestureEnd" @wheel="wheelTravel" aria-label="Interactive life timeline. Use left and right arrows to walk, Space to jump, up and down to climb ladders, and E to open a nearby event.">
       <div class="world-scene" :inert="!!detailEvent">
       <WorldAtmosphere :camera="camera*view.scale" :viewport-width="view.viewport*view.scale" :level="activeLevel.id" />
-      <header class="world-caption" :class="{'is-intro':!nearby}">
+      <header class="world-caption">
         <p class="caption-meta"><CategoryBadge :category="current.category"/><span v-if="current.label!=='SKILLS'&&current.category!=='contact'">{{current.label}}</span></p>
-        <div class="caption-title"><h1>{{nearby?current.title:activeLevel.title}}</h1><button v-if="nearby&&!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" @click="openDetail(nearestIndex)">Details <span aria-hidden="true">↗&#xfe0e;</span></button></div>
-        <p class="caption-summary">{{nearby?current.summary:activeLevel.subtitle}}</p>
+        <div class="caption-title"><h1>{{current.title}}</h1><button v-if="!isBriefEvent(current)&&current.id!=='contact'" class="caption-details" aria-haspopup="dialog" :aria-label="`Details about ${current.title}`" @click="openDetail(nearestIndex,$event)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="1" stroke="currentColor"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor"/></svg>Details</button></div>
+        <p class="caption-summary">{{current.summary}}</p>
         <p v-if="running" class="caption-travel" role="status"><span>Running to {{destinationTitle}}</span><button @click="stop">Cancel</button></p>
         <p v-else-if="nearby&&activityHints[current.id]" class="caption-activity" role="status">{{activityHints[current.id]}}</p>
       </header>
