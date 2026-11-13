@@ -2,6 +2,10 @@ import { advanceAction, type SceneAction, type ActionState } from '../core/scene
 /** Scene state survives culling and locale changes. Renderers never own the score. */
 export class ActivitySystem {
   exploredSkills: string[] = []
+  completedWorkshops: string[] = []
+  completeWorkshop(id: string) {
+    if (!this.completedWorkshops.includes(id)) this.completedWorkshops.push(id)
+  }
   actions: Record<string, ActionState> = {}
   switches: Record<string, number[]> = {}
   trigger(id: string, action: SceneAction) {
