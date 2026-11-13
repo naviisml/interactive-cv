@@ -5,7 +5,7 @@ import { Code2, RotateCcw, X } from '@lucide/vue'
 const emit = defineEmits<{ close: [] }>()
 const { locale } = useI18n()
 const initialHtml = '<main class="retro"><h1>RetroNet</h1><p>My first website</p><button>Enter the community</button></main>'
-const initialCss = 'body { font-family: Arial, sans-serif; background: #d7e2d3; }\n.retro { max-width: 360px; margin: 35px auto; padding: 24px; background: white; border: 3px solid #43694f; }\nh1 { color: #43694f; }\nbutton { background: #43694f; color: white; padding: 10px 15px; border: 0; }'
+const initialCss = 'body { font-family: Arial, sans-serif; background: #d7e2d3; }\n.retro { max-width: 360px; margin: 35px auto; padding: 24px; background: white; border: 3px solid #43694f; }\nh1 { color: #43694f; }\nbutton { background: #43694f; color: white; padding: 10px 15px; border: 0; }\n@media (max-width: 480px) { .retro { margin: 8px; padding: 12px; border-width: 2px; } .retro h1 { font-size: 22px; margin: 0 0 8px; } .retro p { margin: 0 0 10px; } }'
 const html = useState('first-code-html', () => initialHtml)
 const css = useState('first-code-css', () => initialCss)
 const tab = ref<'html' | 'css'>('html')
@@ -219,7 +219,16 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid #e8cc90; outli
   footer p { font-size: 10px; max-width: 55%; }
   footer button { min-height: 44px; white-space: normal; text-align: center; }
 }
-@media (max-height: 600px) and (max-width: 680px) {
+@media (max-width: 680px) and (max-height: 740px) {
+  .lab-header { padding: 4px 12px; }
+  .lab-intro { padding: 8px 12px; }
+  .lab-intro h2 { font-size: 19px; }
   .lab-intro p { display: none; }
+  .lab-mobile-switch { padding: 3px; }
+  .lab-mobile-switch button { min-height: 40px; }
+  .preview-toolbar, .editor-toolbar { min-height: 38px; }
+  footer { padding: 6px 10px; }
+  footer p { display: none; }
+  footer button { width: 100%; }
 }
 </style>
