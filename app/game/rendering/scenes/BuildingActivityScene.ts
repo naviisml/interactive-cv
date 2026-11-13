@@ -112,9 +112,13 @@ export class BuildingActivityScene extends Container {
 
       this.status.position.set(410, -92)
     } else if (this.action === 'luggage') {
-      rect(this, 146, -52, 73, 7, 0x9d9d76)
+      rect(this, 146, -52, 73, 7, 0xb8a275)
+      for (const x of [151, 209]) rect(this, x, -45, 5, 45, 0x526a52)
+      rect(this, 157, -24, 55, 4, 0x89916a)
       rect(this, 179, -70, 6, 18, 0x7e8a6b)
-      this.addChild(new Graphics().ellipse(182, -59, 14, 9).fill(0xccb983))
+      this.addChild(new Graphics().ellipse(182, -59, 12, 8).fill(0xccb983))
+      rect(this, 168, -55, 28, 3, 0x6f7050)
+      rect(this, 180, -70, 4, 4, 0xe9cf8d)
       const bell = new Container()
       tapTarget(bell, start, new Rectangle(140, -100, 85, 100))
       this.addChild(bell)
@@ -139,6 +143,18 @@ export class BuildingActivityScene extends Container {
         0xc9d9ac,
         105,
       )
+      if (this.action === 'compile') {
+        this.status.visible = true
+        this.status.position.set(120, -53)
+        this.status.anchor.x = 0
+        this.status.style.fontSize = 8
+        this.status.style.fill = 0xd7e5ad
+      } else {
+        rect(this, 237, -94, 4, 86, 0x7d8a6d)
+        this.addChild(
+          new Graphics().poly([225, -96, 251, -96, 246, -116, 230, -116]).fill(0xa9af83),
+        )
+      }
       for (let i = 0; i < 3; i++) {
         const tile = new Graphics()
         tile.position.set(121 + i * 33, -66)
@@ -240,11 +256,23 @@ export class BuildingActivityScene extends Container {
           .fill(values[i] ? 0x819e67 : 0x52746a)
           .stroke({ width: 2, color: values[i] ? 0xd7d7a0 : 0x8ea68e }),
       )
+      if (this.action === 'circuit') {
+        values.forEach((value, i) => {
+          this.overlay
+            .moveTo(127 + i * 33, -58)
+            .lineTo(127 + i * 33, -47)
+            .lineTo(215, -47)
+            .stroke({ width: 2, color: value ? 0xe7d48d : 0x486b5c })
+        })
+        this.overlay.rect(231, -111, 14, 13).fill(values.every(Boolean) ? 0xffe4a4 : 0x6e8971)
+      }
       this.status.text = values.every(Boolean)
-        ? nl
-          ? 'Werkt!'
-          : 'It works!'
-        : captions[this.action][nl ? 0 : 1]
+        ? '> running_'
+        : values[1]
+          ? '> tests: OK'
+          : values[0]
+            ? '> build: OK'
+            : '> ready_'
     }
   }
 }

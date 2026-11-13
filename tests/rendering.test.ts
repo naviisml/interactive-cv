@@ -2,7 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import sharp from 'sharp'
-import { renderWindow, parallaxTiles, parallaxOffset } from '../app/game/core/worldProjection.ts'
+import {
+  worldProjection,
+  renderWindow,
+  parallaxTiles,
+  parallaxOffset,
+} from '../app/game/core/worldProjection.ts'
 import { storyParagraphs, type TimelineEvent } from '../app/content/timeline.ts'
 
 test('render bounds remain local even at the far end of a long journey', () => {
@@ -46,5 +51,14 @@ test('every exported scene decodes as a real image texture', async () => {
     assert.equal(decoded.info.width, 600, file)
     assert.equal(decoded.info.height, 310, file)
     assert.ok(decoded.data.length > 200, file)
+  }
+})
+
+test('portrait camera fits a complete landmark and its forecourt inside the phone width', () => {
+  for (const width of [320, 375, 390, 430]) {
+    const { scale, viewport } = worldProjection(width, 570)
+    assert.ok(620 * scale <= width - 16)
+    assert.ok(viewport >= 650)
+    assert.ok(scale >= 0.42)
   }
 })

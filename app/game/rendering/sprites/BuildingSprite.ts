@@ -24,13 +24,36 @@ export class BuildingSprite extends Container {
       label(this, event.period ?? event.label, 104, -175, 10, 0xc9d0b8, 140)
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
-      const title = label(this, event.title, 0, signY, 17, 0xf2e8cb, 490)
+      const title = label(this, event.title, 0, signY, 23, 0xf2e8cb, 490)
       title.anchor.x = 0.5
       const role = label(this, event.role ?? event.chapter, 0, signY + 27, 10, 0xd1d8bb, 470)
       role.anchor.x = 0.5
       const period = label(this, event.period ?? event.label, 0, signY + 44, 10, 0xc4cba9, 470)
       period.anchor.x = 0.5
     }
+    const edge =
+      this.kind === 'airport'
+        ? 285
+        : this.kind === 'hotel'
+          ? 270
+          : this.kind === 'codam'
+            ? 250
+            : 260
+    const roof =
+      this.kind === 'airport'
+        ? -178
+        : this.kind === 'hotel'
+          ? -280
+          : this.kind === 'codam'
+            ? -234
+            : this.kind === 'mobility'
+              ? -243
+              : -230
+    this.addChild(
+      new Graphics().poly([edge, roof, edge + 16, roof - 8, edge + 16, -8, edge, 0]).fill(0x385b50),
+    )
+    rect(this, -edge, -8, edge * 2, 8, 0x3c5a47)
+    rect(this, -edge - 9, -3, edge * 2 + 18, 3, 0xb8b28b)
     // Dark threshold remains fixed; the two leaves actually retract into the wall.
     rect(this, -33, -92, 66, 92, 0x203e36)
     rect(this, -39, -99, 78, 7, 0xa6ad87)
@@ -111,6 +134,23 @@ export class BuildingSprite extends Container {
     rect(this, -68, -124, 136, 7, 0x4e6c58)
     for (const x of [-66, 60]) rect(this, x, -124, 6, 124, 0xa79c75)
     rect(this, -270, -18, 540, 18, 0x69745e)
+    for (const x of [-227, -158, 111, 180]) {
+      rect(this, x - 7, -130, 60, 4, 0x485e49)
+      rect(this, x - 5, -147, 56, 3, 0xc1bb91)
+      for (let rail = 0; rail < 6; rail++) rect(this, x - 4 + rail * 10, -145, 2, 15, 0xa3aa84)
+      rect(this, x - 6, -125, 58, 7, 0x42594b)
+    }
+    this.addChild(new Graphics().poly([-75, -133, 75, -133, 89, -115, -89, -115]).fill(0xd2ba85))
+    for (let x = -73; x < 80; x += 22)
+      this.addChild(
+        new Graphics().poly([x, -132, x + 10, -132, x + 16, -115, x + 4, -115]).fill(0x6f8c70),
+      )
+    rect(this, -89, -115, 178, 6, 0x3e5d4e)
+    for (const x of [-91, 83]) {
+      rect(this, x, -99, 8, 20, 0x2e4a3e)
+      rect(this, x + 2, -96, 4, 12, 0xf3d89b)
+    }
+    for (const x of [-257, 249]) rect(this, x, -196, 8, 173, 0xaa9c78)
   }
   private school() {
     const codam = this.kind === 'codam',
@@ -155,6 +195,22 @@ export class BuildingSprite extends Container {
     rect(this, -281, -270, 68, 12, 0xb7cbbb)
     rect(this, -290, -280, 86, 6, 0xc3bc98)
     rect(this, -285, -12, 570, 12, 0x6b8274)
+    for (let x = -267; x < 280; x += 49) {
+      this.addChild(
+        new Graphics()
+          .poly([x, -100, x + 13, -100, x + 38, -20, x + 25, -20])
+          .fill({ color: 0xd5e6cd, alpha: 0.25 }),
+      )
+    }
+    this.addChild(new Graphics().poly([-299, -110, 299, -110, 317, -97, -317, -97]).fill(0xbbb99a))
+    rect(this, -317, -97, 634, 5, 0x4f7062)
+    for (const x of [-274, 265]) rect(this, x, -92, 7, 80, 0xa0b39c)
+    rect(this, -205, -69, 102, 34, 0x284a42)
+    label(this, 'DEPARTURES', -197, -63, 8, 0xe4ddae, 95)
+    for (let i = 0; i < 3; i++) {
+      rect(this, -196, -48 + i * 5, 33, 2, 0x95ad99)
+      rect(this, -148, -48 + i * 5, 35, 2, 0xc9bf84)
+    }
   }
   private mobility() {
     this.masonry(-260, -243, 520, 243, 0x8a8472)
@@ -164,7 +220,21 @@ export class BuildingSprite extends Container {
     rect(this, -72, -145, 144, 8, 0xa7ad91)
     for (const x of [-73, 67]) rect(this, x, -137, 6, 137, 0x6a8375)
     rect(this, -265, -15, 530, 15, 0x657b6e)
-    // A quieter office facade; the traffic/camera story lives on the road beside it.
+    rect(this, -254, -149, 145, 132, 0x294f4a)
+    for (const x of [-247, -203, -159]) {
+      rect(this, x, -142, 36, 116, 0x83b0a2)
+      this.addChild(
+        new Graphics()
+          .poly([x, -142, x + 9, -142, x + 34, -65, x + 25, -65])
+          .fill({ color: 0xe1e7ca, alpha: 0.3 }),
+      )
+      rect(this, x, -87, 36, 3, 0x3c6359)
+    }
+    rect(this, 101, -41, 126, 5, 0xb3b394)
+    for (let x = 106; x < 220; x += 16) rect(this, x, -34, 8, 16, 0x587b58)
+    rect(this, 94, -145, 140, 7, 0x3c5c50)
+    // The traffic story takes place in the lane in front of the office.
+
     for (const x of [-254, 245]) rect(this, x, -242, 9, 230, 0x6e8276)
   }
   update(time: number, open: number, reduced: boolean) {
