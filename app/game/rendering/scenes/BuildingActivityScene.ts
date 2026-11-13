@@ -43,6 +43,9 @@ export class BuildingActivityScene extends Container {
     // Action feedback lives above the architecture, never across its signs.
     this.status = label(this, '', 155, -278, 14, 0x274b3d, 258)
     this.status.anchor.x = 0.5
+    const feedbackY = this.action === 'luggage' ? -150 : this.action === 'departure' ? -245 : -278
+    this.status.y = feedbackY
+    this.statusPanel.y = feedbackY + 278
     this.status.visible = false
     const start = () => state.trigger(id, this.action)
     if (this.action === 'basketball') {
@@ -72,7 +75,7 @@ export class BuildingActivityScene extends Container {
       this.addChild(this.net)
       rect(this, 168, -202, 83, 30, 0x244638)
       this.score = label(this, '00', 210, -198, 19, 0xf2d995, 70)
-      this.score.anchor.x = .5
+      this.score.anchor.x = 0.5
       this.ball = new Graphics()
         .circle(0, 0, 10)
         .fill(0xc58d59)
@@ -83,15 +86,25 @@ export class BuildingActivityScene extends Container {
         .lineTo(0, 10)
         .stroke({ width: 1, color: 0x745b3e })
       this.object.addChild(this.ball)
-      holdTarget(this.ball, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-44, -44, 88, 88), () => state.cancelCharge(id))
-
+      holdTarget(
+        this.ball,
+        () => state.beginCharge(id),
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-44, -44, 88, 88),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'departure') {
       rect(this, -260, -4, 590, 15, 0x71897a)
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
       this.plane = new AircraftSprite()
       this.object.addChild(this.plane)
-      holdTarget(this.plane, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-110, -40, 220, 90), () => state.cancelCharge(id))
-
+      holdTarget(
+        this.plane,
+        () => state.beginCharge(id),
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-110, -40, 220, 90),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'camera') {
       rect(this, -280, -12, 620, 20, 0x5b7368)
       for (let x = -260; x < 320; x += 72) rect(this, x, -3, 35, 2, 0xc4c6a5)
@@ -113,8 +126,13 @@ export class BuildingActivityScene extends Container {
       rect(car, 66, -31, 10, 5, 0xe5d69b)
       this.car = car
       this.object.addChild(car)
-      holdTarget(car, () => state.beginCharge(id), () => state.releaseCharge(id, this.action), new Rectangle(-86, -66, 175, 76), () => state.cancelCharge(id))
-
+      holdTarget(
+        car,
+        () => state.beginCharge(id),
+        () => state.releaseCharge(id, this.action),
+        new Rectangle(-86, -66, 175, 76),
+        () => state.cancelCharge(id),
+      )
     } else if (this.action === 'luggage') {
       rect(this, 146, -52, 73, 7, 0xb8a275)
       for (const x of [151, 209]) rect(this, x, -45, 5, 45, 0x526a52)
@@ -132,7 +150,6 @@ export class BuildingActivityScene extends Container {
       rect(this.cart, 3, -43, 22, 28, 0x7d9783)
       for (const x of [-22, 23]) this.cart.addChild(new Graphics().circle(x, -5, 5).fill(0x35584a))
       this.object.addChild(this.cart)
-
     } else {
       this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale)
       this.addChild(this.school)
@@ -174,34 +191,54 @@ export class BuildingActivityScene extends Container {
       }
     }
     if (this.ball) {
-      const p = running ? basketballPose(age, record?.power) : { x: 16, y: -64 }
+      const pickup = charging ? Math.min(1, (charge.power * 1.75) / 0.18) : 0
+      const p = running
+        ? basketballPose(age, record?.power)
+        : { x: 65 - 49 * pickup, y: -10 - 54 * pickup }
       this.ball.position.set(p.x, p.y)
       this.ball.rotation = running ? age * 5 : 0
       this.score!.text = String(record?.successes ?? 0).padStart(2, '0')
-      const swish = running && age > 1.1 && age < 1.6 && record?.outcome === 'success' && !reduced ? Math.sin((age-1.1)*Math.PI*6)*3 : 0
+      const swish =
+        running && age > 1.1 && age < 1.6 && record?.outcome === 'success' && !reduced
+          ? Math.sin((age - 1.1) * Math.PI * 6) * 3
+          : 0
       this.net!.clear()
-      for (let i=0;i<6;i++) {
-        const x=182+i*7
-        this.net!.moveTo(x,-126).lineTo(190+i*3+swish,-104).stroke({width:1.3,color:0xe8e5c5})
+      for (let i = 0; i < 6; i++) {
+        const x = 182 + i * 7
+        this.net!.moveTo(x, -126)
+          .lineTo(190 + i * 3 + swish, -104)
+          .stroke({ width: 1.3, color: 0xe8e5c5 })
       }
-      this.net!.moveTo(187,-114).lineTo(214+swish,-114).stroke({width:1,color:0xe8e5c5})
-      if(charging) for(let i=0;i<16;i++) {
-        const aim=basketballPose(i/16*1.1,charge.power)
-        this.overlay.circle(aim.x,aim.y,1.6).fill({color:charge.power>=.52&&charge.power<=.78?0xe4dda7:0xc4c9b1,alpha:.65})
-      }
+      this.net!.moveTo(187, -114)
+        .lineTo(214 + swish, -114)
+        .stroke({ width: 1, color: 0xe8e5c5 })
+      if (charging)
+        for (let i = 0; i < 16; i++) {
+          const aim = basketballPose((i / 16) * 1.1, charge.power)
+          this.overlay.circle(aim.x, aim.y, 1.6).fill({
+            color: charge.power >= 0.52 && charge.power <= 0.78 ? 0xe4dda7 : 0xc4c9b1,
+            alpha: 0.65,
+          })
+        }
       this.status.text = charging
-        ? (nl ? 'Houd vast… laat los in de groene zone' : 'Hold… release in the target zone')
+        ? nl
+          ? 'Houd vast… laat los in de groene zone'
+          : 'Hold… release in the target zone'
         : running
-          ? (nl ? 'Schot onderweg…' : 'Shot in flight…')
+          ? nl
+            ? 'Schot onderweg…'
+            : 'Shot in flight…'
           : record?.completed
-            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : (nl ? 'Gemist · probeer opnieuw' : 'Missed · try again')}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
-            : (nl ? 'Houd de bal vast om te mikken' : 'Hold the ball to aim and release')
+            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : nl ? 'Gemist · probeer opnieuw' : 'Missed · try again'}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
+            : nl
+              ? 'Houd de bal vast om te mikken'
+              : 'Hold the ball to aim and release'
     } else if (this.plane) {
       const success = record?.outcome === 'success'
       const p = running
-        ? (success
-            ? aircraftPose(age)
-            : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 })
+        ? success
+          ? aircraftPose(age)
+          : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 }
         : { x: 130, y: -22, angle: 0, scale: 1 }
       this.plane.position.set(p.x, p.y)
       this.plane.angle = reduced ? 0 : p.angle
@@ -210,29 +247,53 @@ export class BuildingActivityScene extends Container {
       this.status.text = charging
         ? `${nl ? 'Motorvermogen' : 'Engine power'}: ${Math.round(charge.power * 100)}% — ${nl ? 'houd ingedrukt' : 'keep holding'}`
         : running
-          ? (success
-              ? (age < 1.4 ? (nl ? 'Versnelt over de baan…' : 'Accelerating down the runway…') : (nl ? 'Opgestegen!' : 'Airborne!'))
-              : (nl ? 'Niet genoeg snelheid om op te stijgen' : 'Not enough speed for take-off'))
+          ? success
+            ? age < 1.4
+              ? nl
+                ? 'Versnelt over de baan…'
+                : 'Accelerating down the runway…'
+              : nl
+                ? 'Opgestegen!'
+                : 'Airborne!'
+            : nl
+              ? 'Niet genoeg snelheid om op te stijgen'
+              : 'Not enough speed for take-off'
           : record?.completed
-            ? (success ? (nl ? 'Vlucht geslaagd · opnieuw?' : 'Take-off successful · retry?') : (nl ? 'Te weinig vermogen · opnieuw?' : 'Too little power · retry?'))
-            : (nl ? 'Houd vliegtuig vast om vermogen op te bouwen' : 'Press and hold the plane to build speed')
+            ? success
+              ? nl
+                ? 'Vlucht geslaagd · opnieuw?'
+                : 'Take-off successful · retry?'
+              : nl
+                ? 'Te weinig vermogen · opnieuw?'
+                : 'Too little power · retry?'
+            : nl
+              ? 'Houd vliegtuig vast om vermogen op te bouwen'
+              : 'Press and hold the plane to build speed'
     } else if (this.car) {
       const speed = Math.round(10 + (record?.power ?? 0.38) * 80)
-      const p = running ? cameraCarPose(age, speed) : { x: -150, flash: false }
+      const p = running ? cameraCarPose(age, speed) : { x: 70, flash: false }
       this.car.position.set(p.x, -5)
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
       this.status.text = charging
         ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(10 + charge.power * 80)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
         : running
-          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : (nl ? 'Passage…' : 'Passing camera…')}`
+          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : nl ? 'Passage…' : 'Passing camera…'}`
           : record?.completed
-            ? (record.outcome === 'success'
-                ? (nl ? 'Binnen de limiet · opnieuw?' : 'Within the limit · retry?')
-                : record.outcome === 'ticket'
-                  ? (nl ? 'Te hard gereden · probeer opnieuw' : 'Too fast · try again')
-                  : (nl ? 'Te langzaam · houd langer vast' : 'Too slow · press longer'))
-            : (nl ? 'Houd de auto vast, laat los voor 50 km/h' : 'Press and hold the car, release near 50 km/h')
+            ? record.outcome === 'success'
+              ? nl
+                ? 'Binnen de limiet · opnieuw?'
+                : 'Within the limit · retry?'
+              : record.outcome === 'ticket'
+                ? nl
+                  ? 'Te hard gereden · probeer opnieuw'
+                  : 'Too fast · try again'
+                : nl
+                  ? 'Te langzaam · houd langer vast'
+                  : 'Too slow · press longer'
+            : nl
+              ? 'Houd de auto vast, laat los voor 50 km/h'
+              : 'Press and hold the car, release near 50 km/h'
     } else if (this.cart) {
       this.cart.position.set(running ? 210 - Math.min(1, age / 3) * 210 : 210, 0)
       this.cart.alpha = running && age > 3 ? Math.max(0, 1 - (age - 3)) : 1

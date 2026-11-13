@@ -10,6 +10,7 @@ import { SkillsRoadScene } from './scenes/SkillsRoadScene'
 import { BuildingSprite } from './sprites/BuildingSprite'
 import { LevelEntranceScene } from './scenes/LevelEntranceScene'
 import { isBuilding } from '../../content/buildings'
+import { circuitConnected } from '../core/learningActivities'
 import { doorOpenness } from '../core/buildingVisit'
 
 import { CharacterSprite } from './sprites/CharacterSprite'
@@ -154,16 +155,26 @@ export class WorldRenderer {
         Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
         !frame.navigating)
     const campView = frame.activeId === 'contact' && width < 700
-    const closeView = width < 700 && (isBuilding(frame.activeId) || frame.activeId === 'skills-road' || frame.activeId === 'first-lines')
+    const closeView =
+      width < 700 &&
+      (isBuilding(frame.activeId) ||
+        frame.activeId === 'skills-road' ||
+        frame.activeId === 'first-lines')
     const targetZoom = closeView
-      ? Math.max(0.78, Math.min(isBuilding(frame.activeId) ? 0.9 : 1.1, (height - frame.groundInset - 148) / 300))
+      ? Math.max(
+          0.78,
+          Math.min(
+            isBuilding(frame.activeId) ? 0.9 : 1.1,
+            (height - frame.groundInset - 148) / 300,
+          ),
+        )
       : computerView
-      ? Math.min(frame.scale, (width - 24) / 820)
-      : campView
-        ? Math.min(frame.scale, (width - 24) / 800)
-        : isBuilding(frame.activeId)
-          ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
-          : frame.scale
+        ? Math.min(frame.scale, (width - 24) / 820)
+        : campView
+          ? Math.min(frame.scale, (width - 24) / 800)
+          : isBuilding(frame.activeId)
+            ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
+            : frame.scale
     const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : Math.max(
@@ -254,7 +265,9 @@ export class WorldRenderer {
               : 0,
           ),
           this.reduced,
-          width < 700,
+          entry.event.id === 'roc-hilversum'
+            ? circuitConnected(this.activities.circuit)
+            : entry.event.id === 'coding-college' && this.activities.rover.status === 'success',
         )
     }
     for (const [id, activity] of this.activitiesByScene) {
@@ -275,7 +288,19 @@ export class WorldRenderer {
       this.lastReadout = frame.time
       this.app.canvas.dataset.viewScale = this.zoom.toFixed(4)
       this.app.canvas.dataset.viewCamera = this.viewCamera.toFixed(2)
-      this.app.canvas.dataset.entryPositions = JSON.stringify(Object.fromEntries(this.model.entries.map(entry => [entry.event.id, { x: entry.x, ground: base + (frame.cameraY - terrainHeight(entry.x, this.model.geometry.terrain)) * this.zoom }])))
+      this.app.canvas.dataset.entryPositions = JSON.stringify(
+        Object.fromEntries(
+          this.model.entries.map((entry) => [
+            entry.event.id,
+            {
+              x: entry.x,
+              ground:
+                base +
+                (frame.cameraY - terrainHeight(entry.x, this.model.geometry.terrain)) * this.zoom,
+            },
+          ]),
+        ),
+      )
       this.app.canvas.dataset.renderedAt = frame.time.toFixed(1)
       this.app.canvas.dataset.charges = JSON.stringify(this.activities.charges)
       this.app.canvas.dataset.playerX = frame.motion.x.toFixed(1)
@@ -285,7 +310,13 @@ export class WorldRenderer {
         Object.fromEntries(
           Object.entries(this.activities.actions).map(([id, s]) => [
             id,
-            { age: s.age, running: s.running, completed: s.completed },
+            {
+              age: s.age,
+              running: s.running,
+              completed: s.completed,
+              outcome: s.outcome,
+              successes: s.successes,
+            },
           ]),
         ),
       )

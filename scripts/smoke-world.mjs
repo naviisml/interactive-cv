@@ -28,6 +28,28 @@ async function tapWorld(page, canvas, id, x, y, touch) {
   if (touch) await canvas.tap({ position: point })
   else await canvas.click({ position: point })
 }
+async function chargeWorld(page, canvas, id, x, y, ms) {
+  const point = await canvas.evaluate(
+    (el, { id, x, y }) => {
+      const entry = JSON.parse(el.dataset.entryPositions)[id],
+        scale = Number(el.dataset.viewScale)
+      return {
+        x: (entry.x + x - Number(el.dataset.viewCamera)) * scale,
+        y: entry.ground + y * scale,
+      }
+    },
+    { id, x, y },
+  )
+  const bounds = await canvas.boundingBox()
+  assert.ok(
+    bounds && point.x > 0 && point.x < bounds.width && point.y > 0 && point.y < bounds.height,
+    'charged object is visible and reachable',
+  )
+  await page.mouse.move(bounds.x + point.x, bounds.y + point.y)
+  await page.mouse.down()
+  await page.waitForTimeout(ms)
+  await page.mouse.up()
+}
 async function scenario(label, width, height, mobile) {
   const page = await browser.newPage({
     viewport: { width, height },
@@ -117,7 +139,7 @@ async function scenario(label, width, height, mobile) {
       .getByRole('heading', { name: 'RetroNet', exact: true })
       .waitFor()
     const editorLayout = await firstCode.evaluate((dialog) => {
-      const preview = dialog.querySelector('iframe').getBoundingClientRect()
+      const preview = dialog.querySelector('.lab-workbench').getBoundingClientRect()
       const footer = dialog.querySelector('footer').getBoundingClientRect()
       return { previewBottom: preview.bottom, footerTop: footer.top }
     })
@@ -413,12 +435,80 @@ async function scenario(label, width, height, mobile) {
     await page.close()
   }
 }
+async function visualAuditScenario() {
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
+  try {
+    await page.goto(base, { waitUntil: 'networkidle', timeout: 60000 })
+    const canvas = page.locator('canvas[data-renderer="pixi"]')
+    await canvas.waitFor({ state: 'visible' })
+    await page.waitForTimeout(700)
+    await page.screenshot({ path: 'test-results/world/audit-00-entrance.png' })
+    for (const [name, title] of [
+      ['01-first-code', /My first code/],
+      ['02-basket', /Panta Rhei/],
+      ['03-circuit', /ROC Hilversum/],
+      ['04-rover', /Codam Coding College/],
+      ['05-skills', /The tools I build with/],
+      ['06-hotel', /Fletcher Holdings/],
+      ['07-airport', /Get-E/],
+      ['08-office', /Appjection/],
+      ['09-company', /Navel Development/],
+      ['10-camp', /write the next chapter/i],
+    ]) {
+      const button = page.locator('.journey-footer').getByRole('button', { name: title })
+      await button.click()
+      await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
+      await page.waitForTimeout(500)
+      await page.screenshot({ path: `test-results/world/audit-${name}.png` })
+      if (name === '02-basket') {
+        await chargeWorld(page, canvas, 'panta-rhei', 65, -10, 1130)
+        await page.waitForTimeout(1200)
+        await page.screenshot({ path: 'test-results/world/audit-basket-through-net.png' })
+        await page.waitForFunction(
+          () =>
+            JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}')['panta-rhei']
+              ?.successes === 1,
+        )
+      }
+      if (name === '07-airport') {
+        await chargeWorld(page, canvas, 'get-e', 130, -22, 1500)
+        await page.waitForTimeout(2200)
+        await page.screenshot({ path: 'test-results/world/audit-aircraft-airborne.png' })
+      }
+      if (name === '08-office') {
+        await chargeWorld(page, canvas, 'appjection', 70, -30, 650)
+        await page.waitForTimeout(1100)
+        await page.screenshot({ path: 'test-results/world/audit-car-passing-camera.png' })
+      }
+    }
+    console.log('PASS_visual_audit: all mobile scenes rendered for inspection')
+  } catch (error) {
+    failures++
+    console.error('FAIL_visual_audit', error.stack || error)
+    await page.screenshot({ path: 'test-results/world/audit-failure.png' }).catch(() => {})
+  } finally {
+    await page.close()
+  }
+}
 async function readingModeScenario() {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 } })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   try {
     await page.addInitScript(() => {
+      window.__entryUrl = location.href
+      window.__historyTrace = []
+      for (const method of ['pushState', 'replaceState']) {
+        const original = history[method]
+        history[method] = function (...args) {
+          window.__historyTrace.push({ method, url: args[2], time: performance.now() })
+          return original.apply(this, args)
+        }
+      }
       window.__webglContexts = 0
       const getContext = HTMLCanvasElement.prototype.getContext
       HTMLCanvasElement.prototype.getContext = function (type, ...args) {
@@ -451,6 +541,8 @@ async function readingModeScenario() {
       'READING_DIAGNOSTICS',
       await page.evaluate(() => ({
         url: location.href,
+        entry: window.__entryUrl,
+        history: window.__historyTrace,
         text: document.body.innerText.slice(0, 1200),
       })),
     )
@@ -499,10 +591,11 @@ async function graphicsFailureScenario() {
   }
 }
 try {
+  await readingModeScenario()
   await scenario('desktop', 1440, 900, false)
   await scenario('mobile', 390, 844, true)
   await scenario('compact', 375, 667, true)
-  await readingModeScenario()
+  await visualAuditScenario()
   await graphicsFailureScenario()
 } finally {
   await browser.close()

@@ -36,8 +36,7 @@ const firstCodeOpen = ref(false)
 let interactionOpener: HTMLElement | undefined
 function rememberInteractionFocus() {
   const active = document.activeElement
-  interactionOpener = active instanceof HTMLElement && active !== document.body
-    ? active : undefined
+  interactionOpener = active instanceof HTMLElement && active !== document.body ? active : undefined
 }
 async function restoreInteractionFocus() {
   await nextTick()
@@ -146,6 +145,7 @@ function getWorldFrame() {
   }
 }
 // A direct, shareable, no-canvas entry point for recruiters and low-power devices.
+const router = useRouter()
 const listMode = useState<boolean>('journey-list-mode', () => false)
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
@@ -166,7 +166,12 @@ async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
   if (isBuilding(timeline.value[index]!.id)) {
-    buildingOpener = event?.currentTarget instanceof HTMLElement ? event.currentTarget : document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : worldRoot.value
+    buildingOpener =
+      event?.currentTarget instanceof HTMLElement
+        ? event.currentTarget
+        : document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+          ? document.activeElement
+          : worldRoot.value
     if (listMode.value) listMode.value = false
     buildingVisit.enter(index)
     return
@@ -227,22 +232,28 @@ const enterable = computed(
 )
 const current = computed(() => timeline.value[nearestIndex.value]!)
 const nearFirstComputer = computed(
-  () => current.value.id === 'first-lines' &&
+  () =>
+    current.value.id === 'first-lines' &&
     Math.abs(motion.x - (eventPosition(nearestIndex.value) + 140)) < 210,
 )
 const activeLevel = computed(() => levelForEvent(activeIndex.value))
 // Financial metadata follows the same ordered scenes as the active list/world,
 // including authored skills/contact scenes that have no separate CV record.
 const financeIndex = computed(() => activeIndex.value)
-const worldPanelOpen = computed(() => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value)
+const worldPanelOpen = computed(
+  () => !!detailEvent.value || buildingVisit.blocking.value || firstCodeOpen.value,
+)
 let buildingOpener: HTMLElement | undefined
-watch(() => visit.phase, async (phase, previous) => {
-  if (phase !== 'outside' || previous !== 'leaving') return
-  await nextTick()
-  if (buildingOpener?.isConnected) buildingOpener.focus({ preventScroll: true })
-  else worldRoot.value?.focus({ preventScroll: true })
-  buildingOpener = undefined
-})
+watch(
+  () => visit.phase,
+  async (phase, previous) => {
+    if (phase !== 'outside' || previous !== 'leaving') return
+    await nextTick()
+    if (buildingOpener?.isConnected) buildingOpener.focus({ preventScroll: true })
+    else worldRoot.value?.focus({ preventScroll: true })
+    buildingOpener = undefined
+  },
+)
 
 watch(destination, (value) => {
   if (value || pendingDetailIndex.value === null) return
@@ -264,7 +275,9 @@ let gesture:
   { id: number; startX: number; startY: number; lastX: number; horizontal: boolean } | undefined
 function gestureStart(event: PointerEvent) {
   if (
-    activities.charging || paused.value || event.pointerType !== 'pen' ||
+    activities.charging ||
+    paused.value ||
+    event.pointerType !== 'pen' ||
     !event.isPrimary ||
     (event.target as HTMLElement)?.closest(
       'button,a,input,[role="button"],[data-world-activity],[data-world-panel]',
@@ -443,10 +456,16 @@ function interact(event: KeyboardEvent) {
   )
     openDetail(nearestIndex.value)
 }
-onMounted(async () => {
+let worldDisposed = false
+onNuxtReady(async () => {
+  if (worldDisposed) return
   // A static export shares one SSR payload across query strings. Resolve the
   // reading-mode URL before mounting Pixi, rather than reusing its world payload.
-  if (new URLSearchParams(window.location.search).get('view') === 'list') listMode.value = true
+  if (
+    router.currentRoute.value.query.view === 'list' ||
+    new URLSearchParams(window.location.search).get('view') === 'list'
+  )
+    listMode.value = true
   worldReady.value = true
   if (
     !listMode.value &&
@@ -455,7 +474,12 @@ onMounted(async () => {
   )
     worldRoot.value?.focus({ preventScroll: true })
   paused.value =
-    listMode.value || rendererUnavailable.value || detailIndex.value !== null || moneyOpen.value || firstCodeOpen.value || buildingVisit.blocking.value
+    listMode.value ||
+    rendererUnavailable.value ||
+    detailIndex.value !== null ||
+    moneyOpen.value ||
+    firstCodeOpen.value ||
+    buildingVisit.blocking.value
   window.addEventListener('keydown', interact)
   window.addEventListener('scroll', queueListUpdate, { passive: true })
   window.addEventListener('resize', queueListUpdate)
@@ -465,6 +489,7 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
+  worldDisposed = true
   detachTouch(worldRoot.value)
   window.removeEventListener('keydown', interact)
   window.removeEventListener('scroll', queueListUpdate)
@@ -530,38 +555,38 @@ onBeforeUnmount(() => {
             @open-first-computer="openFirstComputer"
         /></ClientOnly>
         <div class="world-chrome" :inert="rendererUnavailable">
-        <ChapterCaption
-          :current="current"
-          :running="running"
-          :destination-title="destinationTitle"
-          :feedback="skillFeedback"
-          :enterable="enterable"
-          @enter="buildingVisit.enter(nearestIndex)"
-          @details="openDetail(nearestIndex, $event)"
-          @cancel="stop"
-        />
-        <button
-          v-if="nearFirstComputer && !running && !firstCodeOpen"
-          class="first-code-launch is-first-code"
-          @click="openFirstComputer"
-        >
-          {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
-        </button>
-        <CompanyControls
-          v-if="presentation.active"
-          :progress="presentation.progress"
-          :slides="rendererModel.slides"
-          @seek="seekPresentation"
-          @exit="exitPresentation"
-        />
-        <MovementControls
-          :near-ladder="!!nearLadder"
-          :paused="paused"
-          @direction="touchDirection = $event"
-          @vertical="touchVertical = $event"
-          @sprint="touchSprint = $event"
-          @jump="jump"
-        />
+          <ChapterCaption
+            :current="current"
+            :running="running"
+            :destination-title="destinationTitle"
+            :feedback="skillFeedback"
+            :enterable="enterable"
+            @enter="buildingVisit.enter(nearestIndex)"
+            @details="openDetail(nearestIndex, $event)"
+            @cancel="stop"
+          />
+          <button
+            v-if="nearFirstComputer && !running && !firstCodeOpen"
+            class="first-code-launch is-first-code"
+            @click="openFirstComputer"
+          >
+            {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
+          </button>
+          <CompanyControls
+            v-if="presentation.active"
+            :progress="presentation.progress"
+            :slides="rendererModel.slides"
+            @seek="seekPresentation"
+            @exit="exitPresentation"
+          />
+          <MovementControls
+            :near-ladder="!!nearLadder"
+            :paused="paused"
+            @direction="touchDirection = $event"
+            @vertical="touchVertical = $event"
+            @sprint="touchSprint = $event"
+            @jump="jump"
+          />
         </div>
       </div>
       <BuildingInterior
@@ -612,13 +637,30 @@ onBeforeUnmount(() => {
   background: #365f4c;
   border: 1px solid #c6cea6;
   border-radius: 6px;
-  box-shadow: 0 5px 20px #25473a26, 0 3px 0 #25473a44;
-  font: 600 12px 'Space Grotesk', sans-serif;
+  box-shadow:
+    0 5px 20px #25473a26,
+    0 3px 0 #25473a44;
+  font:
+    600 12px 'Space Grotesk',
+    sans-serif;
 }
-.first-code-launch:hover { background: #284c3f; }
-.first-code-launch:focus-visible { clip-path: none; width: auto; height: auto; outline: 3px solid #e1bc7f; }
+.first-code-launch:hover {
+  background: #284c3f;
+}
+.first-code-launch:focus-visible {
+  clip-path: none;
+  width: auto;
+  height: auto;
+  outline: 3px solid #e1bc7f;
+}
 @media (max-width: 700px) {
-  .first-code-launch { top: 138px; right: 16px; max-width: 185px; }
-  .first-code-launch.is-first-code { top: 233px; }
+  .first-code-launch {
+    top: 138px;
+    right: 16px;
+    max-width: 185px;
+  }
+  .first-code-launch.is-first-code {
+    top: 233px;
+  }
 }
 </style>

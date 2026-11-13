@@ -1,14 +1,19 @@
 import { skillGroups } from '../../content/skills.ts'
 import { circuitSeed, tickRover, type RoverState } from '../core/learningActivities.ts'
-import { basketballScores, advanceAction, type SceneAction, type ActionState } from '../core/sceneActivities.ts'
+import {
+  basketballScores,
+  advanceAction,
+  type SceneAction,
+  type ActionState,
+} from '../core/sceneActivities.ts'
 /** Scene state survives culling and locale changes. Renderers never own the score. */
 export class ActivitySystem {
   circuit = [...circuitSeed]
   rover: RoverState = { commands: [], age: 0, status: 'idle' }
   exploredSkills: string[] = []
-  completedWorkshops: string[] = []
-  completeWorkshop(id: string) {
-    if (!this.completedWorkshops.includes(id)) this.completedWorkshops.push(id)
+  activatedStations: string[] = []
+  completeStation(id: string) {
+    if (!this.activatedStations.includes(id)) this.activatedStations.push(id)
   }
   activateSkillGroup(index: number) {
     const group = skillGroups[index]
@@ -18,7 +23,6 @@ export class ActivitySystem {
     return true
   }
   actions: Record<string, ActionState> = {}
-  switches: Record<string, number[]> = {}
   charges: Record<string, { holding: boolean; power: number }> = {}
   get charging() {
     return Object.values(this.charges).some((charge) => charge.holding)
@@ -84,11 +88,5 @@ export class ActivitySystem {
       if (charge.holding) charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
     for (const [id, state] of Object.entries(this.actions))
       this.actions[id] = advanceAction(state, dt)
-  }
-  toggle(id: string, index: number) {
-    const values = this.switches[id] ?? [0, 0, 0]
-    values[index] = values[index] ? 0 : 1
-    this.switches[id] = values
-    return values.every(Boolean)
   }
 }

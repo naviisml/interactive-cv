@@ -205,6 +205,7 @@ export function useJourney(
     )
       return
     const key = e.key.toLowerCase()
+    if (key === ' ' && (e.target as HTMLElement)?.closest('.canvas-accessibility')) return
     if (key === 'shift') {
       sprintHeld.value = true
       return

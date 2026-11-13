@@ -150,6 +150,32 @@ export class SchoolActivityScene extends Container {
         tile.circle(0, 0, 4).fill(color)
         if (on && !reduced) tile.circle(Math.sin(time * 4 + i) * 12, 0, 2).fill(0xfff5c7)
       })
+      // Visible bridge segments agree with the electrical graph, including gaps between tiles.
+      for (let row = 0; row < 2; row++)
+        for (let col = 0; col < 2; col++) {
+          const cell = row * 3 + col,
+            next = cell + 1
+          const live =
+            powered.includes(cell) &&
+            powered.includes(next) &&
+            wireMask(cell, this.state.circuit[cell]!) & 2 &&
+            wireMask(next, this.state.circuit[next]!) & 8
+          this.dynamic
+            .moveTo(123 + col * 60, -145 + row * 47)
+            .lineTo(137 + col * 60, -145 + row * 47)
+            .stroke({ width: 5, color: live ? 0xf2d98f : 0x537565 })
+        }
+      for (let col = 0; col < 3; col++) {
+        const live =
+          powered.includes(col) &&
+          powered.includes(col + 3) &&
+          wireMask(col, this.state.circuit[col]!) & 4 &&
+          wireMask(col + 3, this.state.circuit[col + 3]!) & 1
+        this.dynamic
+          .moveTo(100 + col * 60, -123)
+          .lineTo(100 + col * 60, -120)
+          .stroke({ width: 5, color: live ? 0xf2d98f : 0x537565 })
+      }
       this.dynamic.moveTo(57, -145).lineTo(76, -145).stroke({ width: 4, color: 0xe7cd83 })
       this.dynamic
         .moveTo(76, -98)
@@ -164,11 +190,6 @@ export class SchoolActivityScene extends Container {
           .fill({ color: 0xf7df9c, alpha: 0.16 })
           .circle(329, -154, 9)
           .fill(0xffe8ab)
-        // Campus window glow is the consequence, rather than only a success label.
-        for (let i = 0; i < 4; i++)
-          this.dynamic
-            .rect(-225 + i * 58, -134, 22, 39)
-            .fill({ color: 0xffdf93, alpha: 0.42 + 0.1 * Math.sin(time * 2 + i) })
       }
     } else {
       const rover = this.state.rover,

@@ -13,7 +13,6 @@ export class SkillsRoadScene extends Container {
     x: number
     machine: Graphics
     status: Text
-    progress: number
     logos: Container[]
   }[] = []
   constructor(
@@ -79,14 +78,13 @@ export class SkillsRoadScene extends Container {
       node.addChild(plate)
       tapTarget(plate, () => this.activate(i), new Rectangle(-55, -42, 110, 44))
       this.addChild(node)
-      this.stations.push({ node, x, machine, status, progress: 0, logos })
+      this.stations.push({ node, x, machine, status, logos })
     })
   }
   activate(index: number) {
     const group = skillGroups[index]
     if (!group) return
     if (!this.activity.activateSkillGroup(index)) return
-    this.stations[index]!.progress = 0
     this.collected(
       group.title[this.locale === 'nl' ? 'nl' : 'en'],
       this.activity.exploredSkills.length,
@@ -106,7 +104,7 @@ export class SkillsRoadScene extends Container {
       if (near && onGround && !frame.navigating && !frame.paused && !action) this.activate(i)
       const active = !!action
       const p = action ? Math.min(1, action.age / 2) : 0
-      if (p === 1) this.activity.completeWorkshop(group.id)
+      if (p === 1) this.activity.completeStation(group.id)
       machine.clear()
       status.text = active
         ? i === 0

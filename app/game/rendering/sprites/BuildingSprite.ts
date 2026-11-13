@@ -10,6 +10,7 @@ export class BuildingSprite extends Container {
   private left = new Container()
   private right = new Container()
   private lights = new Graphics()
+  private panes: { x: number; y: number; w: number; h: number }[] = []
   readonly kind: BuildingKind
   constructor(event: TimelineEvent, enter: () => void, locale: string) {
     super()
@@ -130,6 +131,7 @@ export class BuildingSprite extends Container {
     this.facade.addChild(joints)
   }
   private window(x: number, y: number, w = 42, h = 44) {
+    this.panes.push({ x, y, w, h })
     rect(this.facade, x - 4, y - 4, w + 8, h + 8, 0x3c5c50)
     rect(this.facade, x, y, w, h, 0xb6cbb5)
     rect(this.facade, x + 3, y + 3, w * 0.4, h - 6, 0xdcd7a7)
@@ -260,12 +262,19 @@ export class BuildingSprite extends Container {
 
     for (const x of [-254, 245]) rect(this.facade, x, -242, 9, 230, 0x6e8276)
   }
-  update(time: number, open: number, reduced: boolean, compact = false) {
-    this.facade.scale.x = compact ? 0.72 : 1
+  update(time: number, open: number, reduced: boolean, powered = false) {
+    // Preserve the artwork and typography aspect ratio on phones too.
+    this.facade.scale.set(1)
     this.left.x = -26 * open
     this.right.x = 26 * open
     this.left.alpha = this.right.alpha = 1 - open * 0.65
     this.lights.clear()
+    if (this.kind === 'college' || this.kind === 'codam') {
+      for (const pane of this.panes)
+        this.lights
+          .rect(pane.x + 2, pane.y + 2, pane.w - 4, pane.h - 4)
+          .fill({ color: powered ? 0xffdd90 : 0x244b40, alpha: powered ? 0.6 : 0.62 })
+    }
     if (open > 0) this.lights.rect(-30, -87, 60, 85).fill({ color: 0xeee0aa, alpha: open * 0.22 })
   }
 }

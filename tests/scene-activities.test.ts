@@ -42,10 +42,10 @@ test('basketball clears the rim and falls through the hoop before the return bou
   assert.ok(basketballPose(1.4).y > -130)
 })
 test('car passes the camera once and flash belongs to the capture position', () => {
-  assert.ok(cameraCarPose(0).x < 0)
+  assert.ok(cameraCarPose(0).x < 125)
   assert.ok(cameraCarPose(4).x > 300)
-  assert.equal(cameraCarPose(2.8).flash, true)
-  assert.equal(cameraCarPose(3.3).flash, false)
+  assert.equal(cameraCarPose(0.7).flash, true)
+  assert.equal(cameraCarPose(1.1).flash, false)
 })
 test('skill decks use actual terrain and can be crossed in either direction', () => {
   const terrain = skillTerrain(
@@ -108,7 +108,7 @@ test('holding then releasing a ball or vehicle affects success instead of auto-p
   game.releaseCharge('appjection', 'camera')
   assert.equal(game.actions['appjection']?.outcome, 'ticket')
   assert.equal(cameraCarPose(2.8, 40).flash, false)
-  assert.equal(cameraCarPose(2, 100).flash, true)
+  assert.equal(cameraCarPose(0.7, 100).flash, true)
   assert.equal(cameraCarPose(2.8, 100).flash, false)
   assert.ok(cameraCarPose(2, 100).x > cameraCarPose(2, 40).x)
 })

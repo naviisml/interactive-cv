@@ -27,17 +27,40 @@ function runAccessibleAction(index = 0) {
   const id = props.activeId,
     action = buildingActions[id]
   if (!action) return
-  if (action === 'circuit') props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
+  if (action === 'circuit')
+    props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
   else if (action === 'compile') {
     const rover = props.activities.rover
     if (rover.status === 'running') return
-    if (index < 2 && rover.commands.length < 8) { rover.commands.push(index === 0 ? 'step' : 'jump'); rover.status = 'idle' }
-    if (index === 2) { rover.commands.pop(); rover.status = 'idle' }
+    if (index < 2 && rover.commands.length < 8) {
+      rover.commands.push(index === 0 ? 'step' : 'jump')
+      rover.status = 'idle'
+    }
+    if (index === 2) {
+      rover.commands.pop()
+      rover.status = 'idle'
+    }
     if (index === 3 && rover.commands.length) Object.assign(rover, { age: 0, status: 'running' })
-  } else props.activities.trigger(id, action, ['basketball', 'camera', 'departure'].includes(action) ? (action === 'departure' ? 0.85 : action === 'camera' ? 0.33 : 0.65) : undefined)
+  } else
+    props.activities.trigger(
+      id,
+      action,
+      ['basketball', 'camera', 'departure'].includes(action)
+        ? action === 'departure'
+          ? 0.85
+          : action === 'camera'
+            ? 0.33
+            : 0.65
+        : undefined,
+    )
 }
 function activateSkills(index: number) {
-  if (props.activities.activateSkillGroup(index)) emit('skill', skillGroups[index]!.title[locale.value === 'nl' ? 'nl' : 'en'], props.activities.exploredSkills.length)
+  if (props.activities.activateSkillGroup(index))
+    emit(
+      'skill',
+      skillGroups[index]!.title[locale.value === 'nl' ? 'nl' : 'en'],
+      props.activities.exploredSkills.length,
+    )
 }
 const learningStatus = ref('')
 let lastLearningReadout = 0
@@ -45,9 +68,18 @@ function readLearningStatus() {
   if (performance.now() - lastLearningReadout < 300) return
   lastLearningReadout = performance.now()
   const nl = locale.value === 'nl'
-  learningStatus.value = props.activeId === 'roc-hilversum'
-    ? (circuitConnected(props.activities.circuit) ? (nl ? 'Verbonden. De campus is verlicht.' : 'Connected. The campus is lit.') : (nl ? 'Draai de kabels om de bron met de lamp te verbinden.' : 'Rotate the wires to connect the source to the lamp.'))
-    : props.activeId === 'coding-college' ? `${props.activities.rover.commands.join(', ')} · ${props.activities.rover.status}` : ''
+  learningStatus.value =
+    props.activeId === 'roc-hilversum'
+      ? circuitConnected(props.activities.circuit)
+        ? nl
+          ? 'Verbonden. De campus is verlicht.'
+          : 'Connected. The campus is lit.'
+        : nl
+          ? 'Draai de kabels om de bron met de lamp te verbinden.'
+          : 'Rotate the wires to connect the source to the lamp.'
+      : props.activeId === 'coding-college'
+        ? `${props.activities.rover.commands.join(', ')} · ${props.activities.rover.status}`
+        : ''
 }
 
 const host = ref<HTMLElement>(),
@@ -86,7 +118,10 @@ onMounted(async () => {
     emit('availability', true)
     canvas = host.value.querySelector('canvas') ?? undefined
     canvas?.addEventListener('webglcontextlost', contextLost)
-    unsubscribe = props.subscribe(() => { renderer?.render(props.getFrame()); readLearningStatus() })
+    unsubscribe = props.subscribe(() => {
+      renderer?.render(props.getFrame())
+      readLearningStatus()
+    })
     renderer.render(props.getFrame())
   } catch (cause) {
     releaseRenderer()
@@ -107,16 +142,38 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div ref="host" class="game-canvas">
-    <div v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road'" class="canvas-accessibility">
+    <div
+      v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road'"
+      class="canvas-accessibility"
+    >
       <template v-if="currentAction === 'circuit'">
-        <button v-for="i in 6" :key="i" @click="runAccessibleAction(i - 1)">{{ locale === 'nl' ? 'Draai kabel' : 'Rotate wire' }} {{ i }}</button>
+        <button v-for="i in 6" :key="i" @click="runAccessibleAction(i - 1)">
+          {{ locale === 'nl' ? 'Draai kabel' : 'Rotate wire' }} {{ i }}
+        </button>
       </template>
       <template v-else-if="currentAction === 'compile'">
-        <button v-for="(command, index) in (locale === 'nl' ? ['Stap', 'Spring', 'Verwijder stap', 'Voer programma uit'] : ['Step', 'Jump rover', 'Undo command', 'Run program'])" :key="command" @click="runAccessibleAction(index)">{{ command }}</button>
+        <button
+          v-for="(command, index) in locale === 'nl'
+            ? ['Stap', 'Spring', 'Verwijder stap', 'Voer programma uit']
+            : ['Step', 'Jump rover', 'Undo command', 'Run program']"
+          :key="command"
+          @click="runAccessibleAction(index)"
+        >
+          {{ command }}
+        </button>
       </template>
-      <button v-else-if="currentAction" @click="runAccessibleAction()">{{ t('scene.' + currentAction) }}</button>
+      <button v-else-if="currentAction" @click="runAccessibleAction()">
+        {{ t('scene.' + currentAction) }}
+      </button>
       <template v-if="activeId === 'skills-road'">
-        <button v-for="(group, index) in skillGroups" :key="group.id" @click="activateSkills(index)">{{ locale === 'nl' ? 'Activeer' : 'Activate' }} {{ group.title[locale === 'nl' ? 'nl' : 'en'] }}</button>
+        <button
+          v-for="(group, index) in skillGroups"
+          :key="group.id"
+          @click="activateSkills(index)"
+        >
+          {{ locale === 'nl' ? 'Activeer' : 'Activate' }}
+          {{ group.title[locale === 'nl' ? 'nl' : 'en'] }}
+        </button>
       </template>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
       <button v-if="activeId === 'navel-development'" @click="emit('startComputer')">
@@ -124,7 +181,9 @@ onBeforeUnmount(() => {
       </button>
     </div>
     <div v-if="error" class="renderer-fallback" role="alert">
-      <strong>{{ locale === 'nl' ? 'Interactieve weergave niet beschikbaar' : 'Interactive view unavailable' }}</strong>
+      <strong>{{
+        locale === 'nl' ? 'Interactieve weergave niet beschikbaar' : 'Interactive view unavailable'
+      }}</strong>
       <p>{{ error }}</p>
       <button @click="emit('readFallback')">
         {{ locale === 'nl' ? 'Lees mijn CV' : 'Read my CV' }}
@@ -182,14 +241,26 @@ onBeforeUnmount(() => {
   color: #294b43;
   text-align: center;
 }
-.renderer-fallback strong { font: 600 clamp(18px, 3vw, 26px) 'Space Grotesk', sans-serif; }
-.renderer-fallback p { padding: 0; margin: 0; max-width: 480px; font-size: 14px; line-height: 1.6; }
+.renderer-fallback strong {
+  font:
+    600 clamp(18px, 3vw, 26px) 'Space Grotesk',
+    sans-serif;
+}
+.renderer-fallback p {
+  padding: 0;
+  margin: 0;
+  max-width: 480px;
+  font-size: 14px;
+  line-height: 1.6;
+}
 .renderer-fallback button {
   min-height: 46px;
   padding: 12px 20px;
   border-radius: 6px;
   background: #315747;
   color: #f9f5e9;
-  font: 600 13px 'Space Grotesk', sans-serif;
+  font:
+    600 13px 'Space Grotesk',
+    sans-serif;
 }
 </style>
