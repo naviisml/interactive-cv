@@ -189,7 +189,8 @@ export class WorldRenderer {
     return true
   }
   private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
-    const candidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const hintCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const actionCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
     const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
     for (const [id, { node, entry }] of this.cues) {
       const x = entry.x + node.spec.x
@@ -211,13 +212,17 @@ export class WorldRenderer {
       const hovered = !!this.pointer && visible &&
         Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
       const used = this.activities.wasCueUsed(entry.event.id, node.spec.key)
-      const near = !used && visible && (hovered || distance < node.spec.radius)
+      const actionable = visible && (hovered || distance < node.spec.radius)
+      const near = !used && actionable
       positions.set(id, { screenX: projectedX, screenY: projectedY, near })
-      if (near) candidates.push({ id, distance, radius: node.spec.radius, hovered })
+      if (actionable) actionCandidates.push({ id, distance, radius: node.spec.radius, hovered })
+      if (near) hintCandidates.push({ id, distance, radius: node.spec.radius, hovered })
     }
-    const selected = frame.visit.phase === 'outside' && !frame.paused
-      ? selectWorldCue(candidates)
-      : undefined
+    const activeWorld = frame.visit.phase === 'outside' && !frame.paused
+    const selected = activeWorld ? selectWorldCue(hintCandidates) : undefined
+    // E keeps activating already-discovered objects even when their hint is gone.
+    // An actual visible hint wins so its keyboard action always matches the label.
+    const actionable = activeWorld ? (selected ?? selectWorldCue(actionCandidates)) : undefined
     // Only the selected, never-used prop illuminates. No free-standing rings.
     for (const [id, sprite] of this.scenes) {
       if (sprite instanceof BuildingSprite)
@@ -245,7 +250,7 @@ export class WorldRenderer {
         selected !== id + ':door'
       activity.setInteractionGlow(!!selectedActivity, frame.time, this.reduced)
     }
-    const picked = selected ? this.cues.get(selected) : undefined
+    const picked = actionable ? this.cues.get(actionable) : undefined
     this.currentCue = picked ? { entry: picked.entry, action: picked.node.spec.action } : undefined
     const nl = this.model.locale === 'nl'
     for (const [id, { node, entry }] of this.cues) {
@@ -287,8 +292,7 @@ export class WorldRenderer {
         feedback, (safeX - p.screenX) / this.zoom, pushDown)
     }
     if (frame.paused) this.currentCue = undefined
-    this.app.canvas.dataset.cue = this.currentCue
-      ? `${this.currentCue.entry.event.id}:${picked!.node.spec.key}` : ''
+    this.app.canvas.dataset.cue = selected ?? ''
   }
   render(frame: WorldFrame) {
     if (this.disposed || !this.app.renderer) return
