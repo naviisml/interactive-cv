@@ -125,18 +125,21 @@ export class WorldRenderer {
       (frame.activeId === 'navel-development' &&
         Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
         !frame.navigating)
+    const campView = frame.activeId === 'contact' && width < 700
     const targetZoom = computerView
       ? Math.min(frame.scale, (width - 24) / 820)
-      : isBuilding(frame.activeId)
-        ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
-        : frame.scale
+      : campView
+        ? Math.min(frame.scale, (width - 24) / 800)
+        : isBuilding(frame.activeId)
+          ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
+          : frame.scale
     const targetCamera = computerView
       ? frame.presentation.center + 15 - width / (2 * targetZoom)
       : Math.max(
           0,
           Math.min(
             this.model.width - width / targetZoom,
-            frame.motion.x - (width / targetZoom) * (width < 700 ? 0.5 : 0.38),
+            frame.motion.x - (width / targetZoom) * (campView ? 0.65 : width < 700 ? 0.5 : 0.38),
           ),
         )
     if (!this.initialized) {

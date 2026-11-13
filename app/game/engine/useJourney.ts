@@ -150,9 +150,11 @@ export function useJourney(
       eventPosition(index) +
       (timeline[index]?.id === 'navel-development'
         ? COMPUTER_WATCH_OFFSET
-        : timeline[index]?.id === 'skills-road'
-          ? -(timeline[index]?.span ?? 3000) / 2 + 250
-          : 0)
+        : timeline[index]?.id === 'contact'
+          ? 65
+          : timeline[index]?.id === 'skills-road'
+            ? -(timeline[index]?.span ?? 3000) / 2 + 250
+            : 0)
     if (Math.abs(toX - motion.x) < 2) return
     destination.value = {
       index,

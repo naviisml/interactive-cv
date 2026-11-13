@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle } from 'pixi.js'
-import { rect, label } from '../drawing'
+import { rect } from '../drawing'
 import { tapTarget } from '../interactions'
 import type { WorldFrame } from '../types'
 /** A walkable ending, rather than an overlay or a finish screen. */
@@ -11,7 +11,8 @@ export class CampsiteScene extends Container {
   private canvas = new Container()
   private tucked = false
   private zip = new Graphics()
-  private status
+  private heatUntil = 0
+  private time = 0
   constructor(locale: string) {
     super()
     this.addChild(new Graphics().ellipse(0, 6, 390, 17).fill({ color: 0x6c805c, alpha: 0.3 }))
@@ -38,13 +39,6 @@ export class CampsiteScene extends Container {
       this.canvas,
       () => {
         this.tucked = !this.tucked
-        this.status.text = this.tucked
-          ? locale === 'nl'
-            ? 'Tent dicht.'
-            : 'Tent zipped.'
-          : locale === 'nl'
-            ? 'Blijf gerust even hangen.'
-            : 'Stay a little longer.'
       },
       new Rectangle(-310, -165, 360, 170),
     )
@@ -68,27 +62,20 @@ export class CampsiteScene extends Container {
       () => {
         this.lit = !this.lit
       },
-      new Rectangle(232, -105, 49, 115),
+      new Rectangle(211, -110, 88, 115),
     )
-    this.status = label(
-      this,
-      locale === 'nl' ? 'Blijf gerust even hangen.' : 'Stay a little longer.',
-      -5,
-      -200,
-      13,
-      0x365b47,
-      420,
-    )
-    this.status.anchor.x = 0.5
     tapTarget(
       this.flame,
       () => {
-        this.status.text = locale === 'nl' ? 'Het vuur brandt.' : 'The fire is burning.'
+        this.heatUntil = this.time + 1800
       },
       new Rectangle(-43, -80, 88, 88),
     )
   }
   update(frame: WorldFrame, reduced: boolean) {
+    this.time = frame.time
+    const heat = Math.max(0, (this.heatUntil - frame.time) / 1800)
+    this.flame.scale.y = 1 + heat * 0.45
     const t = reduced ? 0 : frame.time
     this.flame.clear().ellipse(0, -20, 68, 22).fill({ color: 0xdfbc72, alpha: 0.1 })
     for (let i = 0; i < 3; i++) {
@@ -110,7 +97,7 @@ export class CampsiteScene extends Container {
     }
     this.stars.clear()
     if (!reduced)
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < (heat > 0 ? 18 : 9); i++) {
         const age = (t / 2200 + i / 9) % 1
         this.stars
           .rect(Math.sin(i + age) * 18, -35 - age * 70, 2, 2)
