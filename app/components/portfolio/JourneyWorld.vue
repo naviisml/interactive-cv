@@ -521,6 +521,7 @@ onBeforeUnmount(() => {
             @details="handleSceneDetails"
             @seek="seekPresentation"
             @start-computer="startPresentation"
+            @read-fallback="toggleList"
             @open-first-computer="openFirstComputer"
             @open-workshop="openWorkshop"
         /></ClientOnly>
