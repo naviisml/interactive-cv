@@ -47,6 +47,7 @@ async function scenario(label, width, height, mobile) {
 
     // Skills are now task-driven, not simply collected logos.
     const skillsLaunch = page.getByRole('button', { name: 'Skills', exact: true })
+    if (mobile) await page.locator('.menu-toggle').click()
     await skillsLaunch.click()
     await page.locator('.caption-travel').waitFor({ state: 'hidden', timeout: 20000 })
     await page.getByRole('button', { name: 'Open the workstations' }).click()
