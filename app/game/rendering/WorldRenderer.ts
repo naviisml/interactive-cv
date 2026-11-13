@@ -531,6 +531,11 @@ export class WorldRenderer {
       this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
       this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
       this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
+      this.app.canvas.dataset.telemetry = JSON.stringify(
+        Object.fromEntries(
+          [...this.activitiesByScene].map(([id, activity]) => [id, activity.getTelemetry()]),
+        ),
+      )
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.visit = frame.visit.phase
       this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)
