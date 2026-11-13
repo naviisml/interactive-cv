@@ -255,14 +255,25 @@ async function scenario(label, width, height, mobile) {
   }
 }
 async function fallbackScenario() {
-  const page = await browser.newPage({ viewport: { width: 900, height: 700 } })
+  const fallbackBrowser = await chromium.launch({
+    channel: 'chrome',
+    headless: true,
+    args: ['--no-sandbox', '--disable-webgl', '--disable-webgpu', '--disable-software-rasterizer'],
+  })
+  const page = await fallbackBrowser.newPage({ viewport: { width: 900, height: 700 } })
   try {
     await page.addInitScript(() => {
-      const getContext = HTMLCanvasElement.prototype.getContext
-      HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
-        if (['webgl', 'webgl2', 'experimental-webgl'].includes(kind)) return null
-        return getContext.call(this, kind, ...args)
+      // Both regular and off-screen canvases must be unavailable. Pixi may
+      // feature-detect an OffscreenCanvas instead of a DOM canvas.
+      function withoutWebGL(original) {
+        return function (kind, ...args) {
+          if (['webgl', 'webgl2', 'experimental-webgl'].includes(kind)) return null
+          return original.call(this, kind, ...args)
+        }
       }
+      HTMLCanvasElement.prototype.getContext = withoutWebGL(HTMLCanvasElement.prototype.getContext)
+      if (typeof OffscreenCanvas !== 'undefined')
+        OffscreenCanvas.prototype.getContext = withoutWebGL(OffscreenCanvas.prototype.getContext)
     })
     await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const fallback = page.locator('.renderer-fallback')
@@ -275,6 +286,7 @@ async function fallbackScenario() {
     console.error(`FAIL_fallback: ${error.stack || error}`)
   } finally {
     await page.close()
+    await fallbackBrowser.close()
   }
 }
 try {
