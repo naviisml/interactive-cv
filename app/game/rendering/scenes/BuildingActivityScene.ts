@@ -201,10 +201,10 @@ export class BuildingActivityScene extends Container {
       this.ball.rotation = running ? age * 5 : 0
       this.status.text = `${nl ? 'Raak' : 'Baskets'}: ${record?.completed ?? 0}`
     } else if (this.plane) {
-      const p = running ? aircraftPose(age) : { x: 130, y: -12, angle: 0, scale: 0.78 }
+      const p = running ? aircraftPose(age) : { x: 130, y: -22, angle: 0, scale: 1 }
       this.plane.position.set(p.x, p.y)
       this.plane.angle = reduced ? 0 : p.angle
-      this.plane.scale.set(p.scale * 0.78)
+      this.plane.scale.set(p.scale * 0.95)
       this.plane.visible = true
       this.status.text = running
         ? age < 1.4

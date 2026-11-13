@@ -14,12 +14,12 @@ export class AircraftSprite extends Container {
     )
     this.addChild(
       new Graphics()
-        .poly([-24, 8, 4, 8, -36, 37, -58, 37])
+        .poly([-24, 8, 4, 8, -36, 17, -58, 17])
         .fill(0x9eb6aa)
         .poly([-96, 4, -65, 4, -82, 17, -106, 17])
         .fill(0xb5c4b4),
     )
-    this.addChild(new Graphics().ellipse(0, 19, 18, 7).fill(0x7e9990))
+    this.addChild(new Graphics().ellipse(0, 12, 18, 7).fill(0x7e9990))
     for (let x = -50; x < 64; x += 13) rect(this, x, 2, 5, 4, 0x537e7b)
     this.addChild(new Graphics().poly([69, 1, 81, 4, 87, 8, 68, 8]).fill(0x527a78))
     rect(this, -74, -19, 8, 13, 0x648c7d)

@@ -25,7 +25,7 @@ export function aircraftPose(age: number) {
     flight = Math.max(0, age - 1.4)
   return {
     x: 130 + taxi * taxi * 28 + flight * 190,
-    y: -12 - Math.pow(flight, 1.5) * 41,
+    y: -22 - Math.pow(flight, 1.5) * 41,
     angle: -Math.min(12, flight * 8),
     scale: Math.max(0.48, 1 - flight * 0.075),
   }
