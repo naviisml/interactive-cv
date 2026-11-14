@@ -13,6 +13,7 @@ import type { WorldFrame } from '../types'
 export class SkillsRoadScene extends Container {
   private pipelineChangeAt = 0
   private pipelinePrevious = -1
+  private selectedLogos: { index: number; at: number }[] = []
   private stations: {
     node: Container
     x: number
@@ -107,6 +108,7 @@ export class SkillsRoadScene extends Container {
           badge,
           () => {
             this.activate(i)
+            this.selectedLogos[i] = { index: j, at: performance.now() }
             if (i === 1) {
               if (id === 'html') this.activity.web.records = 0
               else if (id === 'css') this.activity.web.theme = (this.activity.web.theme + 1) % 3
@@ -425,6 +427,27 @@ export class SkillsRoadScene extends Container {
               .roundRect(px, -18 - (n % 2) * 3, 9, 6, 1.5)
               .fill(completed ? 0xb9db9a : 0xe1c787)
           }
+      }
+      // A selected technology sends a visible data pulse into its actual
+      // machine. Each logo has a response even if the current settings match.
+      const selection = this.selectedLogos[i]
+      if (selection) {
+        const age = frame.time - selection.at
+        if (age < 1450) {
+          const source = station.logos[selection.index]
+          if (source) {
+            const startY = source.y + 22
+            const endY = -73
+            const travel = Math.min(1, age / 900)
+            const easing = 1 - Math.pow(1 - travel, 2)
+            machine
+              .moveTo(source.x, startY)
+              .bezierCurveTo(source.x, startY + 26, 0, -114, 0, endY)
+              .stroke({ width: 2.8, color: 0xe6cb87, alpha: 0.8 * (1 - age / 1450) })
+              .circle(source.x * (1 - easing), startY + (endY - startY) * easing, 5)
+              .fill({ color: 0xf4e2b4, alpha: 1 - age / 1450 })
+          }
+        }
       }
       station.logos.forEach((badge, j) => {
         badge.y =
