@@ -813,6 +813,11 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
 }
+/* Opening the story must not allow fading hero text above the world panel. */
+.about-visible .intro-hero {
+  visibility: hidden;
+  transition: none;
+}
 @media (pointer: coarse) {
   .intro-desktop {
     display: none;
