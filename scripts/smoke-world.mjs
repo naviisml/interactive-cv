@@ -1,16 +1,19 @@
 import assert from 'node:assert/strict'
-import { chromium } from 'playwright'
+import { chromium, webkit } from 'playwright'
 import { SCHOOL_LAB_OFFSET } from '../app/game/core/learningActivities.ts'
 import { mkdir } from 'node:fs/promises'
 await mkdir('test-results/world', { recursive: true })
 const base = process.env.SMOKE_URL || 'http://127.0.0.1:3000'
-const browser = await chromium.launch({
-  ...(process.env.CHROMIUM_EXECUTABLE
-    ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
-    : { channel: 'chrome' }),
-  headless: true,
-  args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
-})
+const browser =
+  process.env.BROWSER_ENGINE === 'webkit'
+    ? await webkit.launch({ headless: true })
+    : await chromium.launch({
+        ...(process.env.CHROMIUM_EXECUTABLE
+          ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
+          : { channel: 'chrome' }),
+        headless: true,
+        args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
+      })
 let failures = 0
 async function waitForArrival(page, scene) {
   await page.waitForFunction(
@@ -84,6 +87,14 @@ async function chargeWorld(page, canvas, id, x, y, ms) {
     { id, power: ms / 1750 },
     { timeout: 6000 },
   )
+  if (id === 'appjection') {
+    await page.waitForFunction(() =>
+      /km\/h/.test(
+        JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection || '',
+      ),
+    )
+    await page.screenshot({ path: 'test-results/world/held-car-speed.png' })
+  }
   await page.mouse.up()
 }
 async function scenario(label, width, height, mobile) {
@@ -102,6 +113,7 @@ async function scenario(label, width, height, mobile) {
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
     await page.locator('.intro-hero h1').waitFor({ state: 'visible' })
     await page.screenshot({ path: `test-results/world/${label}-intro.png` })
+    const openingWorld = await page.locator('.world').boundingBox()
     await page.locator('.world').focus()
     await page.keyboard.down('ArrowRight')
     await page.waitForTimeout(180)
@@ -121,11 +133,8 @@ async function scenario(label, width, height, mobile) {
       'true',
       'walking back never restores the intro',
     )
-    const intro = await page.locator('.intro-hero').boundingBox()
-    assert.ok(
-      mobile ? intro.height < 1 : intro.width < 1,
-      'the dismissed intro occupies no layout space',
-    )
+    const afterHero = await page.locator('.world').boundingBox()
+    assert.deepEqual(afterHero, openingWorld, 'hero dismissal never moves or resizes the game')
     const header = await page.locator('.portfolio-header').boundingBox(),
       stage = await page.locator('.world').boundingBox(),
       footer = await page.locator('.journey-footer').boundingBox()
@@ -572,21 +581,15 @@ async function scenario(label, width, height, mobile) {
       () => document.querySelector('canvas')?.dataset.circuit === '[0,0,0,0,0,1]',
     )
     await page.screenshot({ path: `test-results/world/${label}-circuit-powered.png` })
-    const enterSchool = page
-      .locator('.canvas-accessibility')
-      .getByRole('button', { name: 'Enter building', exact: true })
-    await enterSchool.focus()
-    await enterSchool.press('Enter')
-    const school = page.locator('.building-interior')
-    await school.waitFor({ state: 'visible' })
     assert.equal(
-      await school.locator('.room-tabs').count(),
+      await page
+        .locator('.canvas-accessibility')
+        .getByRole('button', { name: 'Enter building', exact: true })
+        .count(),
       0,
-      'school information is a single card',
     )
-    assert.ok(await school.locator('.room-board').innerText())
-    await school.locator('.room-exit').click()
-    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.visit === 'outside')
+    assert.equal(await page.locator('.building-interior').count(), 0)
+    assert.match(await page.locator('.school-inscription').innerText(), /2017/)
 
     await page
       .locator('.journey-footer')
@@ -786,26 +789,10 @@ async function visualAuditScenario() {
             !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').appjection
               ?.completed,
         )
-        await chargeWorld(page, canvas, 'appjection', 70, -30, 650)
+        await chargeWorld(page, canvas, 'appjection', 225, -30, 650)
         await page.waitForFunction(
-          () =>
-            /km\/h/.test(
-              JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection ||
-                '',
-            ),
-          {},
-          { timeout: 4000 },
+          () => !JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection,
         )
-        await page.waitForTimeout(1100)
-        const bounds = await canvas.evaluate(
-          (el) => JSON.parse(el.dataset.telemetryBounds || '{}').appjection,
-        )
-        if (bounds) {
-          assert.ok(
-            bounds.left >= -1 && bounds.right <= 391,
-            'moving speed telemetry must remain inside the mobile viewport',
-          )
-        }
         await page.screenshot({ path: 'test-results/world/audit-car-passing-camera.png' })
       }
     }
@@ -845,8 +832,17 @@ async function mobileArchiveScenario(label, width, height) {
     const bounds = await archive.boundingBox()
     const world = await page.locator('.world').boundingBox()
     assert.ok(bounds && world, 'project archive fits within the world')
-    assert.ok(Math.abs(bounds.width - world.width) < 2)
-    assert.ok(Math.abs(bounds.height - world.height) < 2)
+    const monitor = JSON.parse(await page.locator('canvas').getAttribute('data-monitor'))
+    assert.ok(
+      Math.abs(bounds.width - monitor.width) < 2 && Math.abs(bounds.height - monitor.height) < 2,
+    )
+    assert.ok(
+      Math.abs(bounds.x - world.x - monitor.x) < 2 && Math.abs(bounds.y - world.y - monitor.y) < 2,
+    )
+    assert.ok(
+      bounds.height < world.height - 60,
+      'the desk and world remain visible around the expanded monitor',
+    )
     const geometry = await archive.evaluate((el) => {
       const frame = el.getBoundingClientRect()
       const selectors = [
@@ -1023,8 +1019,165 @@ async function graphicsFailureScenario() {
     await page.close()
   }
 }
+async function assertWorldMonitor(page, selector) {
+  await page.waitForFunction(
+    () => JSON.parse(document.querySelector('canvas')?.dataset.monitor || '{}').ready,
+  )
+  const app = await page.locator(selector).boundingBox()
+  const world = await page.locator('.world').boundingBox()
+  const surface = JSON.parse(await page.locator('canvas').getAttribute('data-monitor'))
+  assert.ok(app && world && surface)
+  for (const [actual, expected] of [
+    [app.x - world.x, surface.x],
+    [app.y - world.y, surface.y],
+    [app.width, surface.width],
+    [app.height, surface.height],
+  ])
+    assert.ok(
+      Math.abs(actual - expected) < 2,
+      'the app must remain inside the world-rendered monitor surface',
+    )
+  assert.ok(app.height < world.height - 60, 'the actual desk and ground stay visible')
+  assert.equal(await page.locator('.archive-scrim,.world-modal').count(), 0)
+}
+async function polishScenario(label, width, height, mobile) {
+  const page = await browser.newPage({
+    viewport: { width, height },
+    isMobile: mobile,
+    hasTouch: mobile,
+    deviceScaleFactor: 1,
+  })
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  try {
+    await page.goto(base, { waitUntil: 'networkidle' })
+    const canvas = page.locator('canvas[data-renderer="pixi"]')
+    await canvas.waitFor()
+    await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
+    const initial = await page.locator('.world').boundingBox()
+    const stage = await page.locator('.explore-stage').boundingBox()
+    assert.ok(
+      Math.abs(initial.width - stage.width) < 1 && Math.abs(initial.height - stage.height) < 1,
+      'hero overlays a full-sized scene',
+    )
+    await page.screenshot({ path: `test-results/world/${label}-overlay-hero.png` })
+    await page.locator('.world').focus()
+    await page.keyboard.down('ArrowRight')
+    await page.waitForTimeout(220)
+    await page.keyboard.up('ArrowRight')
+    await page.waitForFunction(
+      () => getComputedStyle(document.querySelector('.intro-hero')).opacity === '0',
+    )
+    assert.deepEqual(
+      await page.locator('.world').boundingBox(),
+      initial,
+      'world geometry stays fixed during the fade',
+    )
+    for (const resized of mobile ? [height - 100, height] : [height]) {
+      await page.setViewportSize({ width, height: resized })
+      await page.waitForTimeout(350)
+      const footer = await page.locator('.journey-footer').boundingBox()
+      assert.ok(
+        Math.abs(footer.y + footer.height - resized) < 2,
+        'timeline follows the visible browser bottom',
+      )
+      assert.ok(
+        await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1),
+        'no white page below the timeline',
+      )
+    }
+    const go = async (name) => {
+      await page.locator('.journey-footer').getByRole('button', { name }).click()
+    }
+    await go(/Panta Rhei/)
+    await waitForArrival(page, 'panta-rhei')
+    assert.equal(
+      await page
+        .locator('.canvas-accessibility')
+        .getByRole('button', { name: 'Enter building', exact: true })
+        .count(),
+      0,
+    )
+    assert.equal(await page.locator('.building-interior').count(), 0)
+    assert.match(await page.locator('.school-inscription').innerText(), /2013/)
+    await page.screenshot({ path: `test-results/world/${label}-school-facade.png` })
+    await go(/My first code/)
+    await waitForArrival(page, 'first-lines')
+    await tapWorld(page, canvas, 'first-lines', 150, -140, mobile)
+    await page.locator('.first-code-lab').waitFor({ timeout: 15000 })
+    await assertWorldMonitor(page, '.first-code-lab')
+    await page.screenshot({ path: `test-results/world/${label}-world-code-monitor.png` })
+    await page.locator('.first-code-lab .code-close').click()
+    await page.waitForTimeout(900)
+    await go(/Navel Development/)
+    await waitForArrival(page, 'navel-development')
+    const projects = page
+      .locator('.canvas-accessibility')
+      .getByRole('button', { name: 'Explore my projects', exact: true })
+    await projects.focus()
+    await projects.press('Enter')
+    await page.locator('.archive-shell').waitFor({ timeout: 15000 })
+    await assertWorldMonitor(page, '.archive-shell')
+    await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
+    await page.getByRole('button', { name: 'Return to world', exact: true }).click()
+    await page.waitForTimeout(900)
+    if (label === 'phone') {
+      await go(/Get-E/)
+      await waitForArrival(page, 'get-e')
+      await page.waitForFunction(
+        () =>
+          !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}')['get-e']
+            ?.completed,
+      )
+      await page.waitForTimeout(200)
+      const taxi = JSON.parse(await canvas.getAttribute('data-props'))['get-e']
+      assert.deepEqual(
+        taxi,
+        { x: 100, y: -5, alpha: 1, interactive: true },
+        'taxi returns to its visible pickup target',
+      )
+      assert.equal(JSON.parse(await canvas.getAttribute('data-telemetry'))['get-e'], '')
+      await page.screenshot({ path: 'test-results/world/taxi-reset-curb.png' })
+      await go(/Appjection/)
+      await waitForArrival(page, 'appjection')
+      assert.equal(JSON.parse(await canvas.getAttribute('data-telemetry')).appjection, '')
+      await page.waitForFunction(
+        () =>
+          !!JSON.parse(document.querySelector('canvas')?.dataset.actions || '{}').appjection
+            ?.completed,
+      )
+      await chargeWorld(page, canvas, 'appjection', 225, -30, 900)
+      await page.waitForFunction(
+        () => !JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}').appjection,
+      )
+      await page.screenshot({ path: 'test-results/world/car-clear-of-door.png' })
+      await go(/Fletcher Holdings/)
+      await waitForArrival(page, 'fletcher')
+      await tapWorld(page, canvas, 'fletcher', 182, -62, mobile)
+      assert.equal(JSON.parse(await canvas.getAttribute('data-telemetry')).fletcher, '')
+      await page.screenshot({ path: 'test-results/world/fletcher-transparent-logo.png' })
+    }
+    assert.deepEqual(errors, [])
+    console.log(
+      `PASS_${label}_polish: stationary hero, visible viewport, school facade and world monitor surfaces`,
+    )
+  } catch (e) {
+    failures++
+    console.error(`FAIL_${label}_polish`, e.stack || e)
+    await page
+      .screenshot({ path: `test-results/world/${label}-polish-failure.png` })
+      .catch(() => {})
+  } finally {
+    await page.close()
+  }
+}
+
 try {
-  if (process.env.SMOKE_ARCHIVE_ONLY === '1') {
+  if (process.env.SMOKE_POLISH_ONLY === '1') {
+    await polishScenario('desktop', 1440, 900, false)
+    await polishScenario('phone', 390, 844, true)
+    await polishScenario('compact', 375, 667, true)
+  } else if (process.env.SMOKE_ARCHIVE_ONLY === '1') {
     await mobileArchiveScenario('mobile', 390, 844)
     await mobileArchiveScenario('compact', 375, 667)
   } else {

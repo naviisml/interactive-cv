@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [v1]
     paths:
+      - 'app/**'
       - 'app/components/game/ProjectArchive.vue'
       - 'app/components/game/ProjectArtifact.vue'
       - 'scripts/smoke-world.mjs'
@@ -19,7 +20,11 @@ concurrency:
 jobs:
   mobile-workspace:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,9 +33,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate
-      - name: Check mobile document bounds and controls
+      - name: Install WebKit
+        if: matrix.engine == 'webkit'
+        run: npx playwright install --with-deps webkit
+      - name: Check stationary hero, world monitors and scene interactions
         env:
-          SMOKE_ARCHIVE_ONLY: '1'
+          SMOKE_POLISH_ONLY: '1'
+          BROWSER_ENGINE: ${{ matrix.engine }}
+          LIBGL_ALWAYS_SOFTWARE: 'true'
+          WEBKIT_DISABLE_DMABUF_RENDERER: '1'
         run: |
           npm run serve:generated > /tmp/portfolio-static.log 2>&1 &
           SERVER_PID=$!
@@ -43,6 +54,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mobile-workspace-scenes
+          name: mobile-workspace-scenes-${{ matrix.engine }}
           path: test-results/world
           retention-days: 7

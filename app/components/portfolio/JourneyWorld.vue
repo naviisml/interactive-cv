@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBuildingVisit } from '~/game/engine/useBuildingVisit'
-import { isBuilding } from '~/content/buildings'
+import { canEnterBuilding } from '~/content/buildings'
 import { useJourney } from '~/game/engine/useJourney'
 import { useWorldViewport } from '~/game/engine/useWorldViewport'
 import { companySlides } from '~/content/company'
@@ -10,6 +10,19 @@ import { journeyEvents, levelForEvent, firstInLevel, type LevelId } from '~/cont
 import { sceneryTransition } from '~/game/core/sceneryTransition'
 import { readingProgress } from '~/game/core/readingProgress'
 import { lockSwipeAxis, type SwipeAxis } from '~/game/core/swipeDirection'
+import type { ScreenViewport } from '~/game/core/monitorSurface'
+const visibleHeight = useVisibleViewport()
+const screenViewport = shallowRef<ScreenViewport | null>(null)
+const monitorStyle = computed(() =>
+  screenViewport.value
+    ? {
+        left: `${screenViewport.value.x}px`,
+        top: `${screenViewport.value.y}px`,
+        width: `${screenViewport.value.width}px`,
+        height: `${screenViewport.value.height}px`,
+      }
+    : {},
+)
 const { t, locale } = useI18n()
 const localized = usePortfolioContent()
 const timeline = computed(() => localized.timeline.value)
@@ -135,6 +148,7 @@ const rendererModel = computed(() => ({
 function getWorldFrame() {
   return {
     time: performance.now(),
+    codeOpen: firstCodeOpen.value,
     motion: { ...motion },
     camera: camera.value,
     cameraY: cameraY.value,
@@ -181,7 +195,11 @@ watch(
 async function openDetail(index: number, event?: MouseEvent) {
   if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
   event?.preventDefault()
-  if (isBuilding(timeline.value[index]!.id)) {
+  if (timeline.value[index]?.category === 'school' && !listMode.value) {
+    goTo(index)
+    return
+  }
+  if (canEnterBuilding(timeline.value[index]!.id)) {
     enterBuilding(index, event)
     return
   }
@@ -535,7 +553,11 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <main class="journey-shell" :class="{ 'is-list': listMode, 'scene-changing': sceneChanging }">
+  <main
+    :style="{ '--visible-viewport-height': visibleHeight ? `${visibleHeight}px` : undefined }"
+    class="journey-shell"
+    :class="{ 'is-list': listMode, 'scene-changing': sceneChanging }"
+  >
     <PortfolioHeader
       :inert="worldPanelOpen"
       :active="activeLevel.id"
@@ -612,6 +634,7 @@ onBeforeUnmount(() => {
               v-if="worldReady"
               ref="worldCanvas"
               @availability="rendererUnavailable = !$event"
+              @screen="screenViewport = $event"
               :model="rendererModel"
               :active-id="current.id"
               :show-tooltips="tooltipsEnabled"
@@ -638,13 +661,6 @@ onBeforeUnmount(() => {
               @sprint="touchSprint = $event"
               @jump="jump"
             />
-            <ProjectArchive
-              v-if="presentation.active"
-              :progress="presentation.progress"
-              :slides="rendererModel.slides"
-              @seek="seekPresentation"
-              @exit="closeProjectArchive"
-            />
           </div>
         </div>
         <BuildingInterior
@@ -653,7 +669,22 @@ onBeforeUnmount(() => {
           @leave="buildingVisit.leave"
         />
         <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
-        <FirstCodeLab v-if="firstCodeOpen" @close="closeFirstComputer" />
+        <div
+          v-if="(firstCodeOpen || presentation.active) && screenViewport"
+          class="monitor-app"
+          :data-computer="screenViewport.kind"
+          :style="monitorStyle"
+          data-world-panel
+        >
+          <FirstCodeLab v-if="firstCodeOpen && screenViewport.ready" @close="closeFirstComputer" />
+          <ProjectArchive
+            v-if="presentation.active && screenViewport.ready"
+            :progress="presentation.progress"
+            :slides="rendererModel.slides"
+            @seek="seekPresentation"
+            @exit="closeProjectArchive"
+          />
+        </div>
       </section>
     </div>
     <section v-else ref="listRoot" class="timeline-list" aria-label="Read the timeline">
@@ -681,6 +712,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.monitor-app {
+  position: absolute;
+  z-index: 28;
+  overflow: hidden;
+  background: #e8ecdf;
+  touch-action: pan-y;
+}
 .explore-stage {
   position: relative;
   display: flex;
@@ -693,22 +731,22 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .intro-hero {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 66%;
   min-height: 0;
-  flex: 0 0 50%;
+  pointer-events: none;
   min-width: 0;
   display: grid;
   align-items: center;
   overflow: hidden;
   z-index: 2;
-  background:
-    linear-gradient(90deg, #f8f5ed 50%, #f8f5ed00), linear-gradient(#ded5be, #bbc7bc 48%, #77978b);
-  transition:
-    flex-basis 0.75s ease,
-    opacity 0.35s ease;
+  background: linear-gradient(90deg, #f8f5edf5 8%, #f8f5eddd 48%, #f8f5ed00 100%);
+  transition: opacity 0.6s ease;
 }
 .intro-copy {
-  width: 100%;
-  min-width: 320px;
+  width: min(640px, 90%);
+  min-width: 0;
   padding: 28px clamp(24px, 4vw, 72px);
   box-sizing: border-box;
 }
@@ -736,6 +774,7 @@ onBeforeUnmount(() => {
   display: none;
 }
 .intro-start {
+  pointer-events: auto;
   min-height: 46px;
   padding: 10px 16px;
   border: 1px solid #587b64;
@@ -746,7 +785,6 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 .intro-dismissed .intro-hero {
-  flex-basis: 0%;
   opacity: 0;
   pointer-events: none;
 }
@@ -759,17 +797,14 @@ onBeforeUnmount(() => {
   }
 }
 @media (max-width: 700px) {
-  .explore-stage {
-    flex-direction: column;
-  }
   .intro-hero {
-    flex-basis: 43%;
-    background: linear-gradient(#f8f5ed 65%, #ded5be);
-    transition:
-      flex-basis 0.65s ease,
-      opacity 0.25s ease;
+    width: 100%;
+    inset: 0 0 auto;
+    background: linear-gradient(115deg, #f8f5edf2 5%, #f8f5edcc 60%, #f8f5ed00);
+    align-items: start;
   }
   .intro-copy {
+    width: 100%;
     min-width: 0;
     padding: 12px 22px 18px;
   }
@@ -801,7 +836,7 @@ onBeforeUnmount(() => {
 }
 @media (max-height: 740px) and (max-width: 700px) {
   .intro-hero {
-    flex-basis: 49%;
+    max-height: 55%;
   }
   .intro-long {
     display: none;

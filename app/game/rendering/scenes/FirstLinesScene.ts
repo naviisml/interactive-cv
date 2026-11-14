@@ -1,9 +1,11 @@
 import { Container, Graphics, Rectangle } from 'pixi.js'
+import type { SurfaceRect } from '../../core/monitorSurface'
 import { tapTarget } from '../interactions'
 import { label, rect } from '../drawing'
 /** A readable CRT and desk, drawn in the same coordinate system as its hit area. */
 export class FirstLinesScene extends Container {
   private pixels = new Graphics()
+  private bezel = new Graphics()
   private screenGlow = new Graphics()
   constructor(open: () => void) {
     super()
@@ -13,15 +15,7 @@ export class FirstLinesScene extends Container {
       rect(this, x, -61, 8, 61, 0x73876b)
       rect(this, x + 2, -61, 2, 57, 0xa8b288)
     }
-    this.addChild(
-      new Graphics()
-        .poly([90, -184, 209, -184, 221, -172, 221, -84, 88, -84, 80, -94, 80, -173])
-        .fill(0x9fae8e)
-        .rect(88, -176, 124, 83)
-        .fill(0xcccfad)
-        .rect(97, -168, 105, 65)
-        .fill(0x153d35),
-    )
+    this.addChild(this.bezel)
     rect(this, 140, -84, 24, 10, 0x859a7e)
     rect(this, 124, -75, 57, 5, 0xa7b491)
     rect(this, 105, -69, 96, 4, 0xd4c49a)
@@ -38,6 +32,17 @@ export class FirstLinesScene extends Container {
     screen.cursor = 'pointer'
     this.addChild(screen)
   }
+  setSurface(rect: SurfaceRect, expanded: boolean) {
+    this.bezel
+      .clear()
+      .roundRect(rect.x - 12, rect.y - 12, rect.width + 24, rect.height + 24, 6)
+      .fill(0x9fae8e)
+      .stroke({ width: 4, color: 0xcccfad })
+      .rect(rect.x, rect.y, rect.width, rect.height)
+      .fill(0x153d35)
+    this.pixels.visible = !expanded
+    this.screenGlow.visible = !expanded
+  }
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.screenGlow.clear()
     if (!active) return
@@ -45,13 +50,15 @@ export class FirstLinesScene extends Container {
     const gleam = reduced ? 0 : (time / 28) % 115
     this.screenGlow
       .roundRect(85, -180, 131, 91, 4)
-      .stroke({ color: 0xffd99e, width: 11, alpha: 0.10 + pulse * 0.11 })
+      .stroke({ color: 0xffd99e, width: 11, alpha: 0.1 + pulse * 0.11 })
       .roundRect(85, -180, 131, 91, 4)
       .stroke({ color: 0xffe9bc, width: 3, alpha: 0.67 + pulse * 0.27 })
       .rect(98, -168, 104, 65)
       .fill({ color: 0xffe2a6, alpha: 0.028 + pulse * 0.045 })
-    if (!reduced) this.screenGlow.rect(90 + gleam, -179, 16, 3)
-      .fill({ color: 0xffffdf, alpha: 0.48 + pulse * 0.3 })
+    if (!reduced)
+      this.screenGlow
+        .rect(90 + gleam, -179, 16, 3)
+        .fill({ color: 0xffffdf, alpha: 0.48 + pulse * 0.3 })
   }
   update(time: number, reduced: boolean) {
     this.pixels.clear()

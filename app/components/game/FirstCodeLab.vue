@@ -155,12 +155,10 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   z-index: 28;
   display: grid;
   place-items: center;
-  padding: 20px;
-  background:
-    radial-gradient(ellipse at 80% 10%, #8baa94, transparent 65%),
-    linear-gradient(130deg, #315c51, #789581);
-  border: 8px solid #29463e;
-  border-radius: 12px;
+  padding: 0;
+  background: #223b35;
+  border: 0;
+  border-radius: 0;
   overflow: auto;
   color: #d7e5d2;
   user-select: text;
@@ -174,8 +172,8 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   display: flex;
   flex-direction: column;
   background: #223b35;
-  border: 2px solid #8daa92;
-  box-shadow: 0 20px 80px #0c211f80;
+  border: 0;
+  box-shadow: none;
   overflow-x: hidden;
   overflow-y: hidden;
   overscroll-behavior: contain;
@@ -334,7 +332,7 @@ textarea:focus-visible {
 }
 @media (max-width: 680px) {
   .first-code-lab {
-    padding: 8px;
+    padding: 0;
   }
   .lab-window {
     min-height: 0;

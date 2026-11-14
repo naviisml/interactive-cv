@@ -280,12 +280,10 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   position: absolute;
   inset: 0;
   z-index: 18;
-  padding: 48px clamp(10px, 2.5vw, 40px) 40px;
-  background:
-    radial-gradient(ellipse at 80% 10%, #9cbaa0, transparent 65%),
-    linear-gradient(130deg, #315c51, #789581);
-  border: 10px solid #29463e;
-  border-radius: 12px;
+  padding: 32px 0 0;
+  background: #e8ecdf;
+  border: 0;
+  border-radius: 0;
   display: grid;
   place-items: center;
   grid-template-columns: minmax(0, 1fr);
@@ -318,11 +316,10 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   min-height: 0;
   background: #f5f3e9;
   color: #274c3d;
-  box-shadow: 0 20px 70px #0e292a5c;
-  border: 1px solid #d2dccb;
-  border-radius: 12px;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
-  animation: archive-enter 0.25s cubic-bezier(0.16, 0.8, 0.24, 1) both;
 }
 .archive-topbar {
   display: flex;
@@ -826,7 +823,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
 @media (max-width: 560px) {
   .archive-shell {
     padding: 32px 0 0;
-    border-width: 3px;
+    border-width: 0;
     border-radius: 0;
   }
   .archive-window {

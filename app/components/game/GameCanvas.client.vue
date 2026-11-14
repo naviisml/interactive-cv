@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { ScreenViewport } from '~/game/core/monitorSurface'
 import { skillGroups } from '~/content/skills'
 import { circuitConnected, pipelineSteps, type PipelineStep } from '~/game/core/learningActivities'
+import { canEnterBuilding } from '~/content/buildings'
 import { buildingActions } from '~/game/core/sceneActivities'
 import type { ActivitySystem } from '~/game/engine/ActivitySystem'
 import type { WorldModel, WorldFrame } from '~/game/rendering/types'
@@ -14,6 +16,7 @@ const props = defineProps<{
   subscribe: (callback: () => void) => () => void
 }>()
 const emit = defineEmits<{
+  screen: [viewport: ScreenViewport | null]
   startComputer: []
   readFallback: []
   availability: [available: boolean]
@@ -141,6 +144,7 @@ onMounted(async () => {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
+      screen: (viewport) => emit('screen', viewport),
       startComputer: () => emit('startComputer'),
       openFirstComputer: () => emit('openFirstComputer'),
       skill: (name, count) => emit('skill', name, count),
@@ -196,7 +200,10 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       <button v-if="activeId === 'first-lines'" @click="openFirstComputer">
         {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
       </button>
-      <button v-if="currentAction && currentIndex !== undefined" @click="enterCurrentBuilding">
+      <button
+        v-if="canEnterBuilding(activeId) && currentIndex !== undefined"
+        @click="enterCurrentBuilding"
+      >
         {{ t('building.enter') }}
       </button>
       <template v-if="currentAction === 'circuit'">
@@ -252,6 +259,17 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       <a v-if="activeId === 'contact'" href="mailto:contact@navel.dev">
         {{ locale === 'nl' ? 'Stuur me een e-mail' : 'Send me an email' }}
       </a>
+      <p
+        v-if="
+          activeId &&
+          model.entries.find((entry) => entry.event.id === activeId)?.event.category === 'school'
+        "
+        class="school-inscription"
+      >
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.period }} ·
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.role }} ·
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.location }}
+      </p>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
       <button v-if="activeId === 'navel-development'" @click="openProjects">
         {{ t('company.start') }}
