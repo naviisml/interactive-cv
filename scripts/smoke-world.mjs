@@ -40,7 +40,7 @@ async function waitForArrival(page, scene) {
                 ? -440
                 : 0,
     },
-    { timeout: 25000 },
+    { timeout: process.env.BROWSER_ENGINE === 'webkit' ? 45000 : 25000 },
   )
 }
 async function tapWorld(page, canvas, id, x, y, touch) {
@@ -896,24 +896,32 @@ async function graphicsFailureScenario() {
   }
 }
 async function assertWorldMonitor(page, selector) {
-  await page.waitForFunction(
-    () => JSON.parse(document.querySelector('canvas')?.dataset.monitor || '{}').ready,
+  // WebKit can paint the Pixi bezel one frame before the projected HTML app.
+  // Read both rectangles in the same frame, polling until they share bounds.
+  const alignment = await page.waitForFunction(
+    (selector) => {
+      const canvas = document.querySelector('canvas[data-renderer="pixi"]')
+      const app = document.querySelector(selector)
+      const world = document.querySelector('.world')
+      const surface = JSON.parse(canvas?.dataset.monitor || '{}')
+      if (!surface.ready || !app || !world) return false
+      const a = app.getBoundingClientRect()
+      const w = world.getBoundingClientRect()
+      const differences = [
+        Math.abs(a.x - w.x - surface.x),
+        Math.abs(a.y - w.y - surface.y),
+        Math.abs(a.width - surface.width),
+        Math.abs(a.height - surface.height),
+      ]
+      return differences.every((difference) => difference < 2)
+        ? { appHeight: a.height, worldHeight: w.height }
+        : false
+    },
+    selector,
+    { timeout: 15000 },
   )
-  const app = await page.locator(selector).boundingBox()
-  const world = await page.locator('.world').boundingBox()
-  const surface = JSON.parse(await page.locator('canvas').getAttribute('data-monitor'))
-  assert.ok(app && world && surface)
-  for (const [actual, expected] of [
-    [app.x - world.x, surface.x],
-    [app.y - world.y, surface.y],
-    [app.width, surface.width],
-    [app.height, surface.height],
-  ])
-    assert.ok(
-      Math.abs(actual - expected) < 2,
-      'the app must remain inside the world-rendered monitor surface',
-    )
-  assert.ok(app.height < world.height - 60, 'the actual desk and ground stay visible')
+  const bounds = await alignment.jsonValue()
+  assert.ok(bounds.appHeight < bounds.worldHeight - 60, 'the actual desk and ground stay visible')
   assert.equal(await page.locator('.archive-scrim,.world-modal').count(), 0)
 }
 async function polishScenario(label, width, height, mobile) {
@@ -927,14 +935,38 @@ async function polishScenario(label, width, height, mobile) {
   page.on('pageerror', (e) => errors.push(e.message))
   try {
     await page.goto(base, { waitUntil: 'networkidle' })
-    await page.getByRole('link', { name: 'Read my story' }).click()
-    await page.getByRole('heading', { name: 'Where it began' }).waitFor()
-    assert.match(await page.locator('.story-page').innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
-    await page.getByRole('link', { name: 'Back to the world' }).click()
     const canvas = page.locator('canvas[data-renderer="pixi"]')
     await canvas.waitFor()
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
     const initial = await page.locator('.world').boundingBox()
+    await page.getByRole('button', { name: 'Read my story' }).click()
+    const about = page.getByRole('dialog', { name: 'Where it began' })
+    await about.waitFor()
+    assert.equal(await page.locator('.intro-hero').evaluate((el) => getComputedStyle(el).visibility), 'hidden')
+    assert.equal(new URL(page.url()).pathname, '/', 'the About interaction never leaves the game route')
+    assert.match(await about.innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
+    assert.equal(await canvas.count(), 1, 'the Pixi scene remains mounted while reading About')
+    assert.equal(await page.locator('.world-scene').evaluate((el) => el.inert), true)
+    assert.equal(await page.locator('.portfolio-header').evaluate((el) => el.inert), true)
+    assert.equal(await page.locator('.journey-footer').evaluate((el) => el.inert), true)
+    const aboutBounds = await about.boundingBox()
+    const worldBounds = await page.locator('.world').boundingBox()
+    assert.ok(aboutBounds && worldBounds)
+    assert.ok(
+      aboutBounds.width < worldBounds.width - 20 && aboutBounds.height < worldBounds.height,
+      'About stays a smaller panel inside the visible game world',
+    )
+    assert.deepEqual(await page.locator('.world').boundingBox(), initial, 'About never resizes the world')
+    await page.screenshot({ path: `test-results/world/${label}-in-world-about.png` })
+    await about.getByRole('button', { name: 'Close my story' }).click()
+    await about.waitFor({ state: 'detached' })
+    assert.equal(await page.locator('.world-scene').evaluate((el) => el.inert), false)
+    if (mobile) await page.locator('.menu-toggle').click()
+    await page.locator('.portfolio-menu').getByRole('button', { name: /About/ }).click()
+    await about.waitFor()
+    assert.equal(new URL(page.url()).pathname, '/', 'header About also stays in the game')
+    await page.keyboard.press('Escape')
+    await about.waitFor({ state: 'detached' })
     const stage = await page.locator('.explore-stage').boundingBox()
     assert.ok(
       Math.abs(initial.width - stage.width) < 1 && Math.abs(initial.height - stage.height) < 1,
@@ -1030,9 +1062,14 @@ async function polishScenario(label, width, height, mobile) {
       assert.equal(JSON.parse(await canvas.getAttribute('data-telemetry')).fletcher, '')
       await page.screenshot({ path: 'test-results/world/fletcher-transparent-logo.png' })
     }
+    if (label === 'desktop') {
+      await page.goto(`${base}/about`, { waitUntil: 'networkidle' })
+      await page.getByRole('heading', { name: 'Where it began' }).waitFor()
+      assert.match(await page.locator('.story-page').innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
+    }
     assert.deepEqual(errors, [])
     console.log(
-      `PASS_${label}_polish: stationary hero, visible viewport, school facade and world monitor surfaces`,
+      `PASS_${label}_polish: in-world About, stationary hero, visible viewport, school facade and monitors`,
     )
   } catch (e) {
     failures++

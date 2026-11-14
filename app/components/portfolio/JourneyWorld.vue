@@ -46,6 +46,7 @@ const detailEvent = computed(() =>
   detailIndex.value === null ? undefined : timeline.value[detailIndex.value],
 )
 const firstCodeOpen = ref(false)
+const aboutOpen = ref(false)
 let interactionOpener: HTMLElement | undefined
 async function restoreInteractionFocus() {
   await nextTick()
@@ -67,6 +68,33 @@ function openFirstComputer(event?: MouseEvent) {
 async function closeFirstComputer() {
   firstCodeOpen.value = false
   await restoreInteractionFocus()
+}
+let aboutOpener: HTMLElement | undefined
+async function openAbout(event?: MouseEvent) {
+  if (aboutOpen.value) return
+  if (selectedFilter.value !== 'all') await changeFilter('all')
+  if (listMode.value) {
+    listMode.value = false
+    await nextTick()
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  buildingVisit.cancel()
+  detailIndex.value = null
+  pendingDetailIndex.value = null
+  stop()
+  aboutOpener = event?.currentTarget instanceof HTMLElement ? event.currentTarget : worldRoot.value
+  aboutOpen.value = true
+}
+async function closeAbout() {
+  aboutOpen.value = false
+  await nextTick()
+  if (aboutOpener?.isConnected) aboutOpener.focus({ preventScroll: true })
+  else worldRoot.value?.focus({ preventScroll: true })
+  aboutOpener = undefined
+}
+async function goFromAboutToComputer() {
+  await closeAbout()
+  goTo(firstInLevel('about'))
 }
 let detailOpener: HTMLElement | undefined
 const worldRoot = ref<HTMLElement>()
@@ -170,13 +198,14 @@ function setTooltips(enabled: boolean) {
 const listActive = useState<number>('journey-list-active', () => 0)
 const listProgress = useState<number>('journey-list-progress', () => 0)
 watch(
-  [listMode, detailIndex, buildingVisit.blocking, firstCodeOpen, rendererUnavailable],
+  [listMode, detailIndex, buildingVisit.blocking, firstCodeOpen, aboutOpen, rendererUnavailable],
   () => {
     paused.value =
       listMode.value ||
       rendererUnavailable.value ||
       detailIndex.value !== null ||
       firstCodeOpen.value ||
+      aboutOpen.value ||
       buildingVisit.blocking.value
   },
   { immediate: true },
@@ -246,7 +275,8 @@ const worldPanelOpen = computed(
   () =>
     !!detailEvent.value ||
     buildingVisit.blocking.value ||
-    firstCodeOpen.value,
+    firstCodeOpen.value ||
+    aboutOpen.value,
 )
 let buildingOpener: HTMLElement | undefined
 function enterBuilding(index: number, event?: MouseEvent) {
@@ -274,7 +304,7 @@ watch(destination, (value) => {
 })
 async function navigateLevel(id: LevelId) {
   if (id === 'about') {
-    await navigateTo('/about')
+    await openAbout()
     return
   }
   buildingVisit.cancel()
@@ -440,6 +470,7 @@ function scrollToEvent(index: number) {
   queueListUpdate()
 }
 async function toggleList() {
+  aboutOpen.value = false
   buildingVisit.cancel()
   detailIndex.value = null
   pendingDetailIndex.value = null
@@ -517,6 +548,7 @@ onNuxtReady(async () => {
     rendererUnavailable.value ||
     detailIndex.value !== null ||
     firstCodeOpen.value ||
+    aboutOpen.value ||
     buildingVisit.blocking.value
   window.addEventListener('keydown', aimKeyboard, true)
   window.addEventListener('keydown', interact)
@@ -564,8 +596,8 @@ onBeforeUnmount(() => {
         ><small>{{ filteredIndexes(filter).length }}</small>
       </button>
     </nav>
-    <div v-if="!listMode" class="explore-stage" :class="{ 'intro-dismissed': introDismissed }">
-      <aside :style="{ opacity: introOpacity }" class="intro-hero" :inert="introDismissed" :aria-hidden="introDismissed">
+    <div v-if="!listMode" class="explore-stage" :class="{ 'intro-dismissed': introDismissed, 'about-visible': aboutOpen }">
+      <aside :style="{ opacity: aboutOpen ? 0 : introOpacity }" class="intro-hero" :inert="aboutOpen || introDismissed" :aria-hidden="aboutOpen || introDismissed">
         <div class="intro-copy">
           <p class="eyebrow">NAVARONE ISMAIL / SOFTWARE DEVELOPER</p>
           <h1>{{ locale === 'nl' ? 'Welkom in mijn portfolio.' : 'Welcome to my portfolio.' }}</h1>
@@ -594,7 +626,7 @@ onBeforeUnmount(() => {
                 : 'Swipe through the world or use the arrows. Tap objects to discover what they do.'
             }}
           </p>
-          <NuxtLink class="intro-story" to="/about">{{ locale === 'nl' ? 'Lees mijn verhaal' : 'Read my story' }}</NuxtLink>
+          <button type="button" class="intro-story" @click="openAbout">{{ locale === 'nl' ? 'Lees mijn verhaal' : 'Read my story' }}</button>
           <button class="intro-start" @click="dismissIntro">
             {{ locale === 'nl' ? 'Begin met ontdekken' : 'Start exploring' }} →
           </button>
@@ -613,6 +645,7 @@ onBeforeUnmount(() => {
         @pointercancel="gestureEnd"
         @lostpointercapture="gestureEnd"
         @wheel="wheelTravel"
+        @click.self="aboutOpen && closeAbout()"
       >
         <div class="world-scene" :inert="worldPanelOpen">
           <ClientOnly
@@ -652,9 +685,11 @@ onBeforeUnmount(() => {
           @leave="buildingVisit.leave"
         />
         <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
+        <AboutStoryPanel v-if="aboutOpen" @close="closeAbout" @first-computer="goFromAboutToComputer" />
         <div
           v-if="screenViewport && (firstCodeOpen || screenViewport.kind === 'projects')"
           class="monitor-app"
+          :inert="aboutOpen"
           :data-computer="screenViewport.kind"
           :style="monitorStyle"
           data-world-panel
@@ -761,7 +796,7 @@ onBeforeUnmount(() => {
 .intro-short {
   display: none;
 }
-.intro-story { display: inline-flex; align-items: center; min-height: 44px; margin-right: 14px; pointer-events: auto; text-decoration: underline; }
+.intro-story { display: inline-flex; align-items: center; min-height: 44px; margin-right: 14px; padding: 0; pointer-events: auto; text-align: left; text-decoration: underline; }
 .intro-start {
   pointer-events: auto;
   min-height: 46px;
@@ -773,9 +808,15 @@ onBeforeUnmount(() => {
   color: #f8f5ed;
   font-size: 13px;
 }
+.about-visible .intro-hero,
 .intro-dismissed .intro-hero {
   opacity: 0;
   pointer-events: none;
+}
+/* Opening the story must not allow fading hero text above the world panel. */
+.about-visible .intro-hero {
+  visibility: hidden;
+  transition: none;
 }
 @media (pointer: coarse) {
   .intro-desktop {
