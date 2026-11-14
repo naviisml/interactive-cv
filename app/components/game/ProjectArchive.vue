@@ -288,6 +288,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   border-radius: 12px;
   display: grid;
   place-items: center;
+  grid-template-columns: minmax(0, 1fr);
   outline: none;
   touch-action: pan-y;
   isolation: isolate;
@@ -309,6 +310,8 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
 .archive-window {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   width: 100%;
   height: 100%;
   max-height: none;
@@ -374,6 +377,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   color: #6c8571;
 }
 .archive-top-actions {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 21px;
@@ -411,11 +415,13 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   background: #e3e9dc;
 }
 .archive-workspace {
+  min-width: 0;
   display: grid;
   grid-template-columns: 247px minmax(0, 1fr);
   min-height: 0;
 }
 .archive-index {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -514,6 +520,8 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   color: #75907a;
 }
 .archive-main-scroll {
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
   overscroll-behavior: contain;
@@ -521,6 +529,8 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   scroll-behavior: auto;
 }
 .archive-document {
+  min-width: 0;
+  width: 100%;
   max-width: 900px;
   margin: 0 auto;
   padding: clamp(18px, 3vw, 39px) clamp(18px, 3.3vw, 44px) 42px;
@@ -544,6 +554,8 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
   min-height: 155px;
 }
 .archive-hero-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
   position: relative;
   z-index: 1;
   max-width: 630px;
@@ -757,7 +769,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
 }
 @media (max-width: 800px) {
   .archive-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
   .archive-index {

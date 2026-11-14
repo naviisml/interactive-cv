@@ -847,6 +847,35 @@ async function mobileArchiveScenario(label, width, height) {
     assert.ok(bounds && world, 'project archive fits within the world')
     assert.ok(Math.abs(bounds.width - world.width) < 2)
     assert.ok(Math.abs(bounds.height - world.height) < 2)
+    const geometry = await archive.evaluate((el) => {
+      const frame = el.getBoundingClientRect()
+      const selectors = [
+        '.archive-window',
+        '.archive-topbar',
+        '.archive-workspace',
+        '.archive-main-scroll',
+        '.archive-document',
+        '.archive-close',
+        '.archive-footer-nav',
+      ]
+      return selectors.map((selector) => {
+        const node = el.querySelector(selector)
+        const box = node.getBoundingClientRect()
+        return { selector, left: box.left - frame.left, right: box.right - frame.right }
+      })
+    })
+    for (const node of geometry)
+      assert.ok(
+        node.left >= -1 && node.right <= 1,
+        `${node.selector} must fit inside the mobile screen: ${JSON.stringify(node)}`,
+      )
+    assert.ok(
+      await archive
+        .locator('.archive-summary')
+        .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+      'project summaries wrap within the mobile document',
+    )
+
     assert.equal(await archive.locator('.archive-file').count(), 7)
     await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
     await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
@@ -995,14 +1024,19 @@ async function graphicsFailureScenario() {
   }
 }
 try {
-  await readingModeScenario()
-  await scenario('desktop', 1440, 900, false)
-  await scenario('mobile', 390, 844, true)
-  await scenario('compact', 375, 667, true)
-  await mobileArchiveScenario('mobile', 390, 844)
-  await mobileArchiveScenario('compact', 375, 667)
-  await visualAuditScenario()
-  await graphicsFailureScenario()
+  if (process.env.SMOKE_ARCHIVE_ONLY === '1') {
+    await mobileArchiveScenario('mobile', 390, 844)
+    await mobileArchiveScenario('compact', 375, 667)
+  } else {
+    await readingModeScenario()
+    await scenario('desktop', 1440, 900, false)
+    await scenario('mobile', 390, 844, true)
+    await scenario('compact', 375, 667, true)
+    await mobileArchiveScenario('mobile', 390, 844)
+    await mobileArchiveScenario('compact', 375, 667)
+    await visualAuditScenario()
+    await graphicsFailureScenario()
+  }
 } finally {
   await browser.close()
 }
