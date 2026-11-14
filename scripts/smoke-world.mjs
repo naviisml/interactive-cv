@@ -1122,16 +1122,17 @@ async function polishScenario(label, width, height, mobile) {
     await assertWorldMonitor(page, '.archive-shell')
     await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
     if (mobile) {
-      console.log('MONITOR_DESK', label, await page.evaluate(() => {
-        const world = document.querySelector('.world').getBoundingClientRect()
-        return document.elementsFromPoint(world.x + world.width / 2, world.bottom - 40).map(el => ({
-          tag: el.tagName, class: el.className, background: getComputedStyle(el).background,
-          clip: getComputedStyle(el).clipPath, bounds: el.getBoundingClientRect().toJSON(),
-        }))
-      }))
+      const world = await page.locator('.world').boundingBox()
+      const monitor = await page.locator('.monitor-app').boundingBox()
+      const y = Math.ceil(monitor.y + monitor.height + 16)
+      const clip = { x: 16, y, width: width - 32, height: Math.min(100, Math.floor(world.y + world.height - y - 8)) }
+      assert.ok(clip.height > 30, 'the expanded screen leaves the desk in view')
+      const deskWithApp = await page.screenshot({ clip })
       await page.locator('.monitor-app').evaluate(el => { el.style.visibility = 'hidden' })
+      const deskWithoutApp = await page.screenshot({ clip })
       await page.screenshot({ path: `test-results/world/${label}-monitor-desk-diagnostic.png` })
       await page.locator('.monitor-app').evaluate(el => { el.style.visibility = '' })
+      assert.deepEqual(deskWithApp, deskWithoutApp, 'the HTML screen never erases canvas pixels below the bezel')
     }
     await page.getByRole('button', { name: 'Return to world', exact: true }).click()
     await page.waitForTimeout(900)

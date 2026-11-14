@@ -96,6 +96,8 @@ export class WorldRenderer {
       autoDensity: true,
       autoStart: false,
       preference: 'webgl',
+      // Computer apps pause drawing while their HTML layer changes above the canvas.
+      preserveDrawingBuffer: true,
     })
     if (this.disposed) {
       this.app.destroy(true, { children: true })
