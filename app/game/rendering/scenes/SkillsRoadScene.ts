@@ -11,6 +11,8 @@ import type { WorldFrame } from '../types'
 
 /** A working line: source → build → browser → workers. The road is the interaction. */
 export class SkillsRoadScene extends Container {
+  private pipelineChangeAt = 0
+  private pipelinePrevious = -1
   private stations: {
     node: Container
     x: number
@@ -250,11 +252,12 @@ export class SkillsRoadScene extends Container {
               : `${nl ? 'PIPELINE' : 'PIPELINE'} · ${pipeline.completed}/4 · ${(pipelineSteps[pipeline.completed] ?? 'done').toUpperCase()}`
         station.pipelineControls.forEach((control, step) => {
           const passed = pipeline.completed > step
+          const next = pipeline.completed === step
           control
             .clear()
             .roundRect(-31, -5, 62, 28, 4)
-            .fill(passed ? 0x5b8066 : 0x315b4c)
-            .stroke({ width: 1.5, color: passed ? 0xcbdba9 : 0xb0c09e })
+            .fill(passed ? 0x426e59 : next ? 0x9c7547 : 0x315b4c)
+            .stroke({ width: next ? 2.5 : 1.5, color: passed ? 0xcbdba9 : next ? 0xf5dca1 : 0x779985 })
         })
       }
       if (i === 1)
@@ -265,8 +268,17 @@ export class SkillsRoadScene extends Container {
       if (i === 0) {
         machine.roundRect(-130, -59, 260, 18, 5).fill(0x35594b)
         for (let n = 0; n < 10; n++) machine.circle(-117 + n * 25, -50, 4).fill(0x89a480)
-        const demo = active && !reduced && this.activity.pipeline.status !== 'success'
-        const travel = demo ? (time * 0.28) % 1 : p
+        // Each successful stage advances one real package. The conveyor does
+        // not pretend to deploy by looping endlessly when no step was taken.
+        if (this.pipelinePrevious !== this.activity.pipeline.completed) {
+          this.pipelinePrevious = this.activity.pipeline.completed
+          this.pipelineChangeAt = frame.time
+        }
+        const stage = this.activity.pipeline.completed
+        const elapsed = reduced ? 1 : Math.min(1, (frame.time - this.pipelineChangeAt) / 650)
+        const eased = 1 - Math.pow(1 - elapsed, 3)
+        const from = Math.max(0, stage - 1) / pipelineSteps.length
+        const travel = from + (stage / pipelineSteps.length - from) * eased
         const bx = -112 + travel * 218
         if (active) {
           for (let n = 0; n < 4; n++) {
@@ -291,8 +303,10 @@ export class SkillsRoadScene extends Container {
           .fill(active ? 0xc9af7a : 0x78967b)
           .rect(bx - 3, -86, 6, 26)
           .fill(0xeee0ae)
-        for (let n = 0; n < 3; n++)
-          machine.circle(-85 + n * 85, -96, 5).fill(p > (n + 1) / 4 ? 0xb5d48e : 0x668772)
+        for (let n = 0; n < 4; n++)
+          machine
+            .circle(-103 + n * 67, -96, 5)
+            .fill(this.activity.pipeline.completed > n ? 0xb5d48e : n === stage ? 0xf2d28e : 0x668772)
         if (active && !reduced)
           for (let n = 0; n < 5; n++)
             machine
