@@ -313,43 +313,109 @@ export class SkillsRoadScene extends Container {
               .rect(bx - 20 + ((n * 13) % 40), -95 - ((time * 26 + n * 8) % 35), 2, 3)
               .fill(0xe2cc8c)
       } else if (i === 1) {
+        // Browser mockup: clicking its screen or a language logo really changes
+        // the stylesheet or the cards loaded by the pretend API.
+        const colors = [0x648d73, 0xaf775e, 0x6487a0] as const
+        const tint = colors[this.activity.web.theme]!
         machine
-          .roundRect(-118, -103, 236, 64, 4)
-          .fill(0x234b40)
-          .rect(-111, -96, 222, 49)
-          .fill(0xdce1c8)
+          .roundRect(-121, -109, 242, 76, 6)
+          .fill(0x23483d)
+          .stroke({ color: 0x8ca792, width: 2 })
+          .roundRect(-114, -102, 228, 63, 3)
+          .fill(0xf3f1e6)
+          .roundRect(-114, -102, 228, 15, 3)
+          .fill(tint)
+          .circle(-105, -95, 2.6)
+          .circle(-96, -95, 2.6)
+          .circle(-87, -95, 2.6)
+          .fill(0xefe9cd)
+          .roundRect(-77, -99, 114, 8, 3)
+          .fill({ color: 0xfaf9f1, alpha: 0.9 })
+        // The hero, card layout and call to action all respond to CSS.
         machine
-          .rect(-111, -96, 222, 8)
-          .fill([0x8aaa91, 0xb1846c, 0x6e859f][this.activity.web.theme]!)
-        if (p > 0.15) machine.rect(-101, -81, 62, 27).fill(0xa7b185)
-        if (p > 0.4)
-          machine.rect(-29, -81, 128, 6).fill(0x456e59).rect(-29, -70, 96, 4).fill(0x90a482)
-        for (let card = 0; card < this.activity.web.records; card++)
+          .roundRect(-107, -81, 67, 34, 3)
+          .fill(tint)
+          .rect(-98, -73, 44, 3)
+          .fill(0xf9f5e9)
+          .rect(-98, -65, 34, 2)
+          .fill({ color: 0xf9f5e9, alpha: 0.66 })
+          .roundRect(-98, -57, 23, 5, 2)
+          .fill(0xe9dbad)
+          .rect(-31, -81, 79, 5)
+          .fill(0x345949)
+          .rect(-31, -71, 106, 3)
+          .fill(0x829d87)
+          .rect(-31, -63, 69, 3)
+          .fill(0xb6c6af)
+        for (let card = 0; card < this.activity.web.records; card++) {
+          const px = 48 + card * 20
+          const pulse = reduced ? 0.3 : Math.sin(time * 4 + card) * 0.1 + 0.2
           machine
-            .rect(30 + card * 24, -59, 18, 10)
-            .fill([0x8fa488, 0xb39768, 0x7d9b9e][this.activity.web.theme]!)
-        if (p > 0.7) machine.roundRect(-29, -60, 48, 9, 2).fill(0xb39362)
-        machine.rect(-5, -39, 10, 9).rect(-29, -31, 58, 4).fill(0x6f886a)
+            .roundRect(px, -60, 17, 17, 2)
+            .fill({ color: tint, alpha: 0.75 + pulse })
+            .rect(px + 3, -56, 11, 2)
+            .fill(0xfaf6e9)
+            .rect(px + 3, -51, 8, 2)
+            .fill(0xe9dbad)
+        }
+        // A successful response indicator moves only while the station is live.
+        machine.circle(105, -95, 3.5).fill(active ? 0xc7dc93 : 0x8c9d86)
+        if (active && !reduced) {
+          const scanX = -114 + ((time * 44) % 228)
+          machine.rect(scanX, -41, 9, 2).fill({ color: tint, alpha: 0.85 })
+        }
+        machine
+          .rect(-5, -33, 10, 9)
+          .rect(-29, -25, 58, 4)
+          .fill(0x6f886a)
       } else {
-        // Live packets continuously enter the workers and leave as completed jobs.
+        // Live queue: incoming work crosses the conveyor, active racks process
+        // jobs and completed packets leave on the right. The queue and processed
+        // counters are driven by ActivitySystem, not a decorative animation.
+        const count = this.activity.cloud.workers
+        const backlog = this.activity.cloud.queued
         for (let n = 0; n < 3; n++) {
+          const x = -120 + n * 86
+          const online = active && n < count
+          const pulse = reduced ? 0.65 : Math.sin(time * 7 - n * 1.6) * 0.25 + 0.7
           machine
-            .roundRect(-120 + n * 86, -103, 68, 58, 4)
-            .fill(0x284c42)
-            .stroke({ width: 1, color: 0x9cad88 })
-          for (let r = 0; r < 3; r++)
-            machine.rect(-111 + n * 86, -94 + r * 13, 49, 7).fill(0x163e34)
-          machine
-            .circle(-64 + n * 86, -90, 2)
-            .fill(active && n < this.activity.cloud.workers ? 0xccdc9a : 0x668775)
+            .roundRect(x, -108, 68, 66, 5)
+            .fill(online ? 0x325b4c : 0x28473f)
+            .stroke({ width: online ? 2 : 1.2, color: online ? 0xc6dca1 : 0x7e9b86 })
+          for (let line = 0; line < 3; line++) {
+            machine
+              .roundRect(x + 8, -98 + line * 16, 52, 12, 2)
+              .fill(0x193d34)
+              .rect(x + 12, -94 + line * 16, 29, 3)
+              .fill(online ? 0x719b7d : 0x4b7363)
+              .circle(x + 52, -92 + line * 16, 2.5)
+              .fill(online ? (pulse > 0.7 ? 0xd9e99f : 0x8ab28b) : 0x677f71)
+          }
+        }
+        // Queue-depth meter; moving packets show the difference between one
+        // saturated worker and three draining the same incoming requests.
+        machine
+          .roundRect(-132, -32, 264, 11, 4)
+          .fill(0x284c42)
+          .roundRect(-129, -29, Math.max(3, Math.min(1, backlog / 50) * 258), 5, 2)
+          .fill(backlog > 35 ? 0xd89d70 : 0xdcc98b)
+        for (let n = 0; n < 3; n++) {
+          const lane = -112 + n * 86
+          const enabled = active && n < count
+          if (enabled)
+            machine
+              .moveTo(lane + 20, -42)
+              .lineTo(lane + 20, -30)
+              .stroke({ color: 0xb9d994, width: 2, alpha: 0.7 })
         }
         if (active)
-          for (let n = 0; n < 7; n++) {
-            const phase = reduced
-                ? 0.5
-                : (time * (0.15 + this.activity.cloud.workers * 0.12) + n / 7) % 1,
-              px = -136 + phase * 270
-            machine.rect(px, -35, 6, 4).fill(phase > 0.65 ? 0xc6db9c : 0xe0c782)
+          for (let n = 0; n < 9; n++) {
+            const phase = reduced ? n / 9 : (time * (0.22 + count * 0.13) + n / 9) % 1
+            const px = -130 + phase * 258
+            const completed = phase > 0.68
+            machine
+              .roundRect(px, -18 - (n % 2) * 3, 9, 6, 1.5)
+              .fill(completed ? 0xb9db9a : 0xe1c787)
           }
       }
       station.logos.forEach((badge, j) => {
