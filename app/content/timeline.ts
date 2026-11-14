@@ -49,9 +49,9 @@ export const timeline: TimelineEvent[] = [
     accent: '#e3c17b',
     summary: 'From Habbo retro servers to understanding PHP and building my first CMS.',
     body: [
-      'It started with Habbo. Friends and I wanted to understand how retro servers worked. Initially I changed things using Inspect Element, and later in HTML and CSS files, but PHP was still a mystery.',
-      'I studied three existing CMS projects from their entry points, followed their logic and rewrote the code myself to understand it. On RetroNet, we shared what we built. Eventually I developed and sold my own CMS.',
-      'We also sold in-game credits purchased by phone or text. Hosting the VPS cost money, so I put the surplus aside rather than spending it.',
+      "I’m Navarone Ismail, a developer from Amsterdam with Dutch and Egyptian roots. At eleven, I mostly wanted a place where my friends and I could play Habbo together. We found an emulator that let us run our own hotel. Once it was running, I wanted ours to look different.",
+      "I would press F12, change something on the page and see what happened. A refresh wiped it out, so I went looking for the same piece of HTML or CSS in the files. Getting a change to stick was my first small win. PHP took more work. I picked three existing content management systems, opened each one at its index file and followed the requests through the code. I rewrote the pieces myself until I could explain why they worked.",
+      "On the RetroNet forums we showed each other what we had made and shared code. I built a CMS of my own and sold it there. We also ran a server where players could buy credits by phone or text. Suddenly there were people using what I had written, and a hosting bill to pay. That was my first experience of keeping something I’d built running for someone else.",
     ],
   },
   {

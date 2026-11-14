@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cuesForScene, selectWorldCue } from '../app/game/core/worldCues.ts'
+import { cuesForScene, selectWorldCue, showsWorldHint } from '../app/game/core/worldCues.ts'
 import { ActivitySystem } from '../app/game/engine/ActivitySystem.ts'
 
 test('interaction anchors belong to real objects rather than a chapter overlay', () => {
@@ -15,7 +15,7 @@ test('interaction anchors belong to real objects rather than a chapter overlay',
   )
   assert.equal(hotel[0]!.title.nl, 'Ga naar binnen')
   assert.equal(cuesForScene('first-lines')[0]?.action, 'first-code')
-  assert.equal(cuesForScene('navel-development')[0]?.action, 'projects')
+  assert.deepEqual(cuesForScene('navel-development'), [])
   assert.equal(cuesForScene('skills-road').length, 3)
   assert.equal(cuesForScene('contact').length, 4)
   assert.deepEqual(cuesForScene('unlisted-scene'), [])
@@ -55,4 +55,10 @@ test('first interaction suppresses hints for that individual object on later vis
   assert.equal(actions.wasCueUsed('roc-hilversum', 'door'), false)
   actions.markCueUsed('panta-rhei', 'door')
   assert.equal(actions.usedCues.size, 2, 'repeated clicks do not create duplicate discoveries')
+})
+
+test('only the first entrance teaches doors, and the campsite keeps all four actions without hints', () => {
+  assert.equal(showsWorldHint('fletcher', 'door'), true)
+  for (const id of ['get-e', 'appjection']) assert.equal(showsWorldHint(id, 'door'), false)
+  for (const cue of cuesForScene('contact')) assert.equal(showsWorldHint('contact', cue.key), false)
 })

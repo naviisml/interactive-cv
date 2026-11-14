@@ -15,6 +15,8 @@ import {
   motionConfig,
   type Motion,
 } from '../core/physics'
+export const JOURNEY_START_X = 170
+
 export function useJourney(
   trackIndices: ComputedRef<number[]>,
   view?: ComputedRef<{ viewport: number; scale: number }>,
@@ -50,17 +52,13 @@ export function useJourney(
   const worldWidth = computed(() => scene.value.width)
   const eventPosition = (index: number) =>
     slots.value.find((slot) => slot.index === index)?.x ?? 780
-  const presentation = reactive({ active: false, started: false, progress: 0, center: 0 })
-  const seekPresentation = (progress: number) => {
-    presentation.progress = Math.max(0, Math.min(1, progress))
-  }
   const destination = ref<JourneyDestination | null>(null)
   const running = computed(() => !!destination.value)
   const destinationTitle = computed(() =>
     destination.value ? timeline[destination.value.index]?.title : '',
   )
   const saved = useState<Motion>('journey-motion', () => ({
-    x: 170,
+    x: JOURNEY_START_X,
     y: 0,
     vx: 0,
     vy: 0,
@@ -108,22 +106,9 @@ export function useJourney(
   const nearLadder = computed(() => findLadder(motion, worldGeometry.value.ladders))
   const progress = computed(() =>
     Math.round(
-      Math.max(0, Math.min(1, (motion.x - 170) / ((slots.value.at(-1)?.x ?? 780) - 170))) * 100,
+      Math.max(0, Math.min(1, (motion.x - JOURNEY_START_X) / ((slots.value.at(-1)?.x ?? 780) - JOURNEY_START_X))) * 100,
     ),
   )
-  function startPresentation() {
-    const index = timeline.findIndex((event) => event.id === 'navel-development')
-    if (index < 0) return
-    if (presentation.progress >= 1) presentation.progress = 0
-    presentation.started = true
-    goTo(index)
-  }
-  function exitPresentation() {
-    presentation.started = false
-    presentation.active = false
-    presentation.progress = 1
-    stop()
-  }
   function jump() {
     if (!paused.value) {
       destination.value = null
@@ -142,7 +127,6 @@ export function useJourney(
     motion.vx = 0
   }
   function goTo(index: number, exactX?: number) {
-    if (timeline[index]?.id !== 'navel-development') presentation.started = false
     if (!trackIndices.value.includes(index)) return
     stop()
     const toX =
@@ -203,12 +187,11 @@ export function useJourney(
   function keydown(e: KeyboardEvent) {
     if (
       paused.value ||
-      presentation.active ||
       (e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable]')
     )
       return
     const key = e.key.toLowerCase()
-    if (key === ' ' && (e.target as HTMLElement)?.closest('.canvas-accessibility')) return
+    if (key === ' ' && (e.target as HTMLElement)?.closest('.canvas-accessibility, .project-screen')) return
     if (key === 'shift') {
       sprintHeld.value = true
       return
@@ -247,17 +230,6 @@ export function useJourney(
           Number(keys.has('arrowup') || keys.has('w'))
       const oldX = motion.x,
         oldY = motion.y
-      const company = slots.value.find((slot) => timeline[slot.index]?.id === 'navel-development')
-      const watchX = (company?.x ?? 0) + COMPUTER_WATCH_OFFSET
-      const atComputer =
-        company &&
-        presentation.started &&
-        !destination.value &&
-        Math.abs(motion.x - watchX) < Math.max(18, Math.abs(motion.vx) * dt + 4) &&
-        motion.grounded &&
-        !jumpQueued
-      presentation.active = !!atComputer
-      if (company) presentation.center = company.x
       if (destination.value && (manualDirection || scrollDistance || vertical || jumpQueued))
         destination.value = null
       if (destination.value) {
@@ -268,18 +240,6 @@ export function useJourney(
           destination.value = null
           motion.vx = 0
         }
-      } else if (atComputer) {
-        // The character stays at the workstation. Projects are selected in the
-        // actual archive UI instead of being cycled by walking or swiping.
-        Object.assign(motion, {
-          x: watchX,
-          y: -terrainHeight(watchX, worldGeometry.value.terrain),
-          vx: 0,
-          vy: 0,
-          grounded: true,
-          mode: 'walking',
-        })
-        facing.value = 1
       } else {
         if (direction) facing.value = Math.sign(direction)
         Object.assign(
@@ -344,10 +304,6 @@ export function useJourney(
     stop()
   })
   return {
-    presentation,
-    startPresentation,
-    exitPresentation,
-    seekPresentation,
     subscribe,
     sprinting,
     touchSprint,
