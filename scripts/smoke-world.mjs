@@ -927,14 +927,37 @@ async function polishScenario(label, width, height, mobile) {
   page.on('pageerror', (e) => errors.push(e.message))
   try {
     await page.goto(base, { waitUntil: 'networkidle' })
-    await page.getByRole('link', { name: 'Read my story' }).click()
-    await page.getByRole('heading', { name: 'Where it began' }).waitFor()
-    assert.match(await page.locator('.story-page').innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
-    await page.getByRole('link', { name: 'Back to the world' }).click()
     const canvas = page.locator('canvas[data-renderer="pixi"]')
     await canvas.waitFor()
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
     const initial = await page.locator('.world').boundingBox()
+    await page.getByRole('button', { name: 'Read my story' }).click()
+    const about = page.getByRole('dialog', { name: 'Where it began' })
+    await about.waitFor()
+    assert.equal(new URL(page.url()).pathname, '/', 'the About interaction never leaves the game route')
+    assert.match(await about.innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
+    assert.equal(await canvas.count(), 1, 'the Pixi scene remains mounted while reading About')
+    assert.equal(await page.locator('.world-scene').evaluate((el) => el.inert), true)
+    assert.equal(await page.locator('.portfolio-header').evaluate((el) => el.inert), true)
+    assert.equal(await page.locator('.journey-footer').evaluate((el) => el.inert), true)
+    const aboutBounds = await about.boundingBox()
+    const worldBounds = await page.locator('.world').boundingBox()
+    assert.ok(aboutBounds && worldBounds)
+    assert.ok(
+      aboutBounds.width < worldBounds.width - 20 && aboutBounds.height < worldBounds.height,
+      'About stays a smaller panel inside the visible game world',
+    )
+    assert.deepEqual(await page.locator('.world').boundingBox(), initial, 'About never resizes the world')
+    await page.screenshot({ path: `test-results/world/${label}-in-world-about.png` })
+    await about.getByRole('button', { name: 'Close my story' }).click()
+    await about.waitFor({ state: 'detached' })
+    assert.equal(await page.locator('.world-scene').evaluate((el) => el.inert), false)
+    if (mobile) await page.locator('.menu-toggle').click()
+    await page.locator('.portfolio-menu').getByRole('button', { name: /About/ }).click()
+    await about.waitFor()
+    assert.equal(new URL(page.url()).pathname, '/', 'header About also stays in the game')
+    await page.keyboard.press('Escape')
+    await about.waitFor({ state: 'detached' })
     const stage = await page.locator('.explore-stage').boundingBox()
     assert.ok(
       Math.abs(initial.width - stage.width) < 1 && Math.abs(initial.height - stage.height) < 1,
@@ -1030,9 +1053,14 @@ async function polishScenario(label, width, height, mobile) {
       assert.equal(JSON.parse(await canvas.getAttribute('data-telemetry')).fletcher, '')
       await page.screenshot({ path: 'test-results/world/fletcher-transparent-logo.png' })
     }
+    if (label === 'desktop') {
+      await page.goto(`${base}/about`, { waitUntil: 'networkidle' })
+      await page.getByRole('heading', { name: 'Where it began' }).waitFor()
+      assert.match(await page.locator('.story-page').innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
+    }
     assert.deepEqual(errors, [])
     console.log(
-      `PASS_${label}_polish: stationary hero, visible viewport, school facade and world monitor surfaces`,
+      `PASS_${label}_polish: in-world About, stationary hero, visible viewport, school facade and monitors`,
     )
   } catch (e) {
     failures++
