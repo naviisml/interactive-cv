@@ -156,11 +156,11 @@ export function cuesForScene(id: string): WorldCueSpec[] {
     'enter',
     0,
     -52,
-    'Enter building',
-    'Ga naar binnen',
-    'Tap doorway or press E',
-    'Tik op deur of druk op E',
-    175,
+    'Explore this job',
+    'Ontdek deze baan',
+    'Enter the door to see my work · Tap or E',
+    'Ga naar binnen voor mijn werk · Tik of E',
+    225,
   )
   const actions: Record<string, WorldCueSpec> = {
     'panta-rhei': cue(
@@ -250,14 +250,21 @@ export interface CueCandidate {
   hovered?: boolean
 }
 
-/** Only one tooltip can be in focus; a pointer hover takes precedence over proximity. */
-export function selectWorldCue(candidates: CueCandidate[]): string | undefined {
+/** One introductory door takes precedence over nearby props until entered.
+ * A deliberate pointer hover still targets the object under the cursor.
+ */
+export function selectWorldCue(candidates: CueCandidate[], firstDoor?: string): string | undefined {
   const eligible = candidates.filter((c) => c.hovered || c.distance <= c.radius)
   eligible.sort((a, b) => Number(!!b.hovered) - Number(!!a.hovered) || a.distance - b.distance)
+  if (!eligible[0]?.hovered && firstDoor && eligible.some((cue) => cue.id === firstDoor))
+    return firstDoor
   return eligible[0]?.id
 }
 
 export function showsWorldHint(scene: string, key: string) {
+  // The first job entrance is the only door tutorial; basketball has physical
+  // aim dots and a scoreboard rather than repeated instructional bubbles.
   if (key === 'door') return scene === 'fletcher'
+  if (scene === 'panta-rhei' && key === 'ball') return false
   return !['contact', 'fletcher', 'get-e', 'appjection'].includes(scene)
 }
