@@ -689,6 +689,7 @@ onBeforeUnmount(() => {
         <div
           v-if="screenViewport && (firstCodeOpen || screenViewport.kind === 'projects')"
           class="monitor-app"
+          :inert="aboutOpen"
           :data-computer="screenViewport.kind"
           :style="monitorStyle"
           data-world-panel
