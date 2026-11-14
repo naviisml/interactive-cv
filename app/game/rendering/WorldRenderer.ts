@@ -639,6 +639,10 @@ export class WorldRenderer {
       )
       this.app.canvas.dataset.pipeline = JSON.stringify(this.activities.pipeline)
       this.app.canvas.dataset.workerQueue = JSON.stringify(this.activities.cloud)
+      const skillsScene = this.scenes.get('skills-road')
+      this.app.canvas.dataset.skillReadouts = JSON.stringify(
+        skillsScene instanceof SkillsRoadScene ? skillsScene.getReadouts() : [],
+      )
       this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
       this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
       this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
