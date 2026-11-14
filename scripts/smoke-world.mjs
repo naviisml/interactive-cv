@@ -1121,6 +1121,18 @@ async function polishScenario(label, width, height, mobile) {
     await page.locator('.archive-shell').waitFor({ timeout: 15000 })
     await assertWorldMonitor(page, '.archive-shell')
     await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
+    if (mobile) {
+      console.log('MONITOR_DESK', label, await page.evaluate(() => {
+        const world = document.querySelector('.world').getBoundingClientRect()
+        return document.elementsFromPoint(world.x + world.width / 2, world.bottom - 40).map(el => ({
+          tag: el.tagName, class: el.className, background: getComputedStyle(el).background,
+          clip: getComputedStyle(el).clipPath, bounds: el.getBoundingClientRect().toJSON(),
+        }))
+      }))
+      await page.locator('.monitor-app').evaluate(el => { el.style.visibility = 'hidden' })
+      await page.screenshot({ path: `test-results/world/${label}-monitor-desk-diagnostic.png` })
+      await page.locator('.monitor-app').evaluate(el => { el.style.visibility = '' })
+    }
     await page.getByRole('button', { name: 'Return to world', exact: true }).click()
     await page.waitForTimeout(900)
     if (label === 'phone') {
