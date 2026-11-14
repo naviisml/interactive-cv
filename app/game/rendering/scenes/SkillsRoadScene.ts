@@ -180,6 +180,14 @@ export class SkillsRoadScene extends Container {
       })
     })
   }
+  /** Expose the same instrument readouts painted in Pixi for browser QA. */
+  getReadouts() {
+    return this.stations.map((station, index) => ({
+      id: skillGroups[index]!.id,
+      visible: station.status.visible && station.statusBackdrop.visible,
+      text: station.status.text,
+    }))
+  }
   activate(index: number) {
     const group = skillGroups[index]
     if (!group) return
