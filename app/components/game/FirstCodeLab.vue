@@ -464,7 +464,7 @@ textarea:focus-visible {
     width: 100%;
   }
 }
-@container code-window (max-height: 420px) {
+@container code-window (max-height: 520px) {
   .lab-intro {
     position: absolute;
     width: 1px;
