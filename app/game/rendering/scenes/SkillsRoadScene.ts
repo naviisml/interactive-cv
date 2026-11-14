@@ -55,10 +55,11 @@ export class SkillsRoadScene extends Container {
       node.addChild(statusBackdrop)
       const status = label(node, '', 0, -240, 12, 0x274c3e, 276)
       status.anchor.x = 0.5
-      // The nearest object now owns a world-anchored tooltip. No permanent
-      // status banner should obscure tool icons or machine controls.
-      statusBackdrop.visible = false
-      status.visible = false
+      // This is the machine's own instrument panel, not a floating tooltip.
+      // It stays visible so the queue, deployed code and live page have readable state.
+      statusBackdrop.visible = true
+      status.visible = true
+      status.style.fontWeight = '600'
       const pipelineControls: Graphics[] = []
       if (i === 0) {
         pipelineSteps.forEach((step, index) => {
@@ -123,20 +124,44 @@ export class SkillsRoadScene extends Container {
         .fill(0xdfd4a0)
       node.addChild(plate)
       tapTarget(plate, () => this.activate(i), new Rectangle(-55, -42, 110, 44))
-      if (i === 2)
+      if (i === 0) {
+        // The conveyor itself is a replayable stepper in addition to the four keys.
+        tapTarget(machine, () => {
+          this.activate(0)
+          const step = pipelineSteps[this.activity.pipeline.completed] ?? pipelineSteps[0]!
+          this.activity.playPipelineStep(step)
+        }, new Rectangle(-131, -61, 262, 24))
+      } else if (i === 1) {
+        // A click on the actual browser refreshes both theme and API cards.
+        tapTarget(machine, () => {
+          this.activate(1)
+          this.activity.setWebTheme((this.activity.web.theme + 1) % 3)
+          this.activity.setWebRecords((this.activity.web.records % 3) + 1)
+        }, new Rectangle(-119, -104, 238, 67))
+      } else {
+        // Real, visible, selectable server racks. The rack hit area must match
+        // the painted rack rather than an invisible offset target.
         for (let worker = 0; worker < 3; worker++) {
           const rack = new Container()
           rack.x = -120 + worker * 86
+          const number = label(rack, `${worker + 1}`, 34, -72, 12, 0xf7efc9, 42)
+          number.anchor.x = 0.5
           tapTarget(
             rack,
             () => {
               this.activate(i)
-              this.activity.cloud.workers = worker + 1
+              this.activity.setWorkers(worker + 1)
             },
             new Rectangle(0, -106, 68, 65),
           )
           node.addChild(rack)
         }
+        // The packet belt itself cycles the deployment size on tap.
+        tapTarget(machine, () => {
+          this.activate(2)
+          this.activity.setWorkers((this.activity.cloud.workers % 3) + 1)
+        }, new Rectangle(-130, -39, 260, 36))
+      }
       const glow = new Graphics()
       glow.eventMode = 'none'
       node.addChild(glow)
@@ -192,7 +217,7 @@ export class SkillsRoadScene extends Container {
       const floor = ground - terrainHeight(this.x + x, terrain)
       node.y = floor
       const near = Math.abs(frame.motion.x - (this.x + x)) < 65
-      const onGround = Math.abs(frame.motion.y + ground - floor) < 15
+      const onGround = frame.motion.grounded && Math.abs(frame.motion.y + ground - floor) < 18
       const action = this.activity.actions['skill-' + group.id]
       if (near && onGround && !frame.paused && !action) this.activate(i)
       const active = !!action
@@ -213,46 +238,16 @@ export class SkillsRoadScene extends Container {
         .rect(-143, -253, 4, 33)
         .fill(pipelineFailed ? 0xb17b5d : active ? 0x527e66 : 0xb79c6a)
       status.text = active
-        ? i === 0
-          ? p < 1
-            ? nl
-              ? 'Code wordt gebouwd en getest…'
-              : 'Building and testing your code…'
-            : nl
-              ? 'Build geslaagd. Container onderweg.'
-              : 'Build passed. Container shipped.'
-          : i === 1
-            ? p < 1
-              ? nl
-                ? 'HTML + CSS + API → live pagina'
-                : 'HTML + CSS + API → live page'
-              : nl
-                ? 'CSS: kies een stijl. PHP: laad data.'
-                : 'CSS: change theme. PHP: load data.'
-            : nl
-              ? 'Workers verwerken de wachtrij.'
-              : 'Workers are draining the queue.'
-        : nl
-          ? 'Loop over de lichtplaat om te starten.'
-          : 'Walk over the light plate to start.'
+        ? nl ? 'Actief' : 'Live'
+        : nl ? 'Stap op de plaat of tik op de machine' : 'Step on the plate or tap the machine'
       if (i === 0) {
         const pipeline = this.activity.pipeline
         status.text =
           pipeline.status === 'success'
-            ? nl
-              ? 'Pipeline geslaagd. Klaar voor productie.'
-              : 'Pipeline passed. Deployed to production.'
+            ? nl ? 'LIVE · 4/4 stappen gedeployed' : 'LIVE · 4/4 stages deployed'
             : pipeline.status === 'error'
-              ? nl
-                ? 'Verkeerde volgorde. Start opnieuw met Commit.'
-                : 'Wrong order. Restart at Commit.'
-              : active
-                ? nl
-                  ? 'Kies Commit → Test → Build → Deploy.'
-                  : 'Select Commit → Test → Build → Deploy.'
-                : nl
-                  ? 'Loop over de lichtplaat om te starten.'
-                  : 'Walk over the light plate to start.'
+              ? nl ? 'FOUT · herstart bij COMMIT' : 'ERROR · restart at COMMIT'
+              : `${nl ? 'PIPELINE' : 'PIPELINE'} · ${pipeline.completed}/4 · ${(pipelineSteps[pipeline.completed] ?? 'done').toUpperCase()}`
         station.pipelineControls.forEach((control, step) => {
           const passed = pipeline.completed > step
           control
@@ -262,8 +257,10 @@ export class SkillsRoadScene extends Container {
             .stroke({ width: 1.5, color: passed ? 0xcbdba9 : 0xb0c09e })
         })
       }
-      if (i === 2 && active)
-        status.text = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activity.cloud.queued)} · ${this.activity.cloud.workers}/3 workers · ${nl ? 'tik op rack' : 'tap rack'}`
+      if (i === 1)
+        status.text = `${nl ? 'LIVE PAGINA' : 'LIVE PAGE'} · CSS ${this.activity.web.theme + 1}/3 · API ${this.activity.web.records}`
+      if (i === 2)
+        status.text = `${nl ? 'WACHTRIJ' : 'QUEUE'} ${Math.ceil(this.activity.cloud.queued)} · ${nl ? 'KLAAR' : 'DONE'} ${Math.floor(this.activity.cloud.processed)} · ${this.activity.cloud.workers}/3 ${nl ? 'ACTIEF' : 'LIVE'}`
       // Conveyor and package: the commit really travels through build/test/deploy.
       if (i === 0) {
         machine.roundRect(-130, -59, 260, 18, 5).fill(0x35594b)
