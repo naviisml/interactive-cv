@@ -244,7 +244,7 @@ export class BuildingActivityScene extends Container {
     this.previousCompletions = completed
     const active =
       this.action === 'basketball'
-        ? !!charge?.holding || !!record?.running || frame.time < this.telemetryUntil
+        ? !!charge?.holding
         : this.action === 'camera' && !!charge?.holding
     this.telemetry.visible = active && frame.visit.phase === 'outside' && !frame.paused
     if (!this.telemetry.visible) return
@@ -268,22 +268,16 @@ export class BuildingActivityScene extends Container {
         .rect(0, 18, 2, 14)
         .fill(0x315b47)
     } else if (this.action === 'basketball') {
-      const power = charge?.holding ? charge.power : (record?.power ?? 0)
-      message = charge?.holding
-        ? `${nl ? 'Booghoogte' : 'Shot arc'}: ${Math.round(power * 100)}%\n${nl ? 'Laat los om te schieten' : 'Release to shoot'}`
-        : record?.running
-          ? nl
-            ? 'Bal onderweg'
-            : 'Ball in flight'
-          : record?.outcome === 'success'
-            ? nl
-              ? 'Raak!'
-              : 'Scored!'
-            : nl
-              ? 'Mis · probeer opnieuw'
-              : 'Missed · try again'
+      // The arc is useful during aiming; the shot and scoreboard show the outcome.
+      // No secondary release, flight or success explainer over the court.
+      message = `${nl ? 'Boog' : 'Arc'} ${Math.round((charge?.power ?? 0.65) * 100)}%`
+      this.telemetryPanel
+        .clear()
+        .roundRect(-60, -20, 120, 40, 6)
+        .fill({ color: 0x173c34, alpha: 0.92 })
+        .stroke({ color: 0xe0d49e, width: 1.2 })
       x = this.ball?.x ?? 65
-      y = Math.min(-260, (this.ball?.y ?? -10) - 82)
+      y = Math.min(-220, (this.ball?.y ?? -10) - 65)
     } else {
       this.telemetry.visible = false
       return

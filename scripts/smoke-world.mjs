@@ -323,6 +323,11 @@ async function scenario(label, width, height, mobile) {
     if (mobile) await page.locator('.menu-toggle').click()
     await page.getByRole('button', { name: 'Skills', exact: true }).click()
     await waitForArrival(page, 'skills-road')
+    await page.waitForFunction(() => JSON.parse(document.querySelector('canvas')?.dataset.skillReadouts || '[]').length === 3)
+    const readouts = await canvas.evaluate(el => JSON.parse(el.dataset.skillReadouts || '[]'))
+    assert.deepEqual(readouts.map(r => r.id), ['tooling', 'web', 'systems'])
+    assert.ok(readouts.every(r => r.visible && r.text.length > 5), 'all three machines show their own readable status')
+    await page.screenshot({ path: `test-results/world/${label}-skills-status-initial.png` })
     for (const name of [
       'Activate Tooling',
       'Activate Web development',
@@ -362,6 +367,11 @@ async function scenario(label, width, height, mobile) {
     const scale = page.getByRole('button', { name: '3 workers', exact: true })
     await scale.focus()
     await scale.click()
+    await page.waitForFunction(() => {
+      const readouts = JSON.parse(document.querySelector('canvas')?.dataset.skillReadouts || '[]')
+      return /3\/3/.test(readouts.find(s => s.id === 'systems')?.text || '') &&
+        readouts.find(s => s.id === 'systems')?.visible
+    })
     const queue = await canvas.evaluate((el) => JSON.parse(el.dataset.workerQueue).queued)
     await page.waitForFunction(
       (before) =>
@@ -370,6 +380,13 @@ async function scenario(label, width, height, mobile) {
       queue,
       { timeout: 6000 },
     )
+    await page.waitForFunction(() => {
+      const station = JSON.parse(document.querySelector('canvas')?.dataset.skillReadouts || '[]')
+        .find(s => s.id === 'systems')
+      const cloud = JSON.parse(document.querySelector('canvas')?.dataset.workerQueue || '{}')
+      return station?.visible && station.text.includes(String(Math.floor(cloud.processed))) &&
+        cloud.processed > 0
+    })
     await page.waitForTimeout(2700)
     await page.locator('.world').focus()
     await page.screenshot({ path: `test-results/world/${label}-skills-road.png` })
@@ -707,7 +724,11 @@ async function visualAuditScenario() {
         )
       }
       if (name === '02-basket') {
+        assert.notEqual(await canvas.getAttribute('data-cue'), 'panta-rhei:ball')
         await chargeWorld(page, canvas, 'panta-rhei', 65, -10, 1130)
+        await page.waitForFunction(() =>
+          !JSON.parse(document.querySelector('canvas')?.dataset.telemetry || '{}')['panta-rhei'],
+        )
         await page.waitForTimeout(1200)
         await page.screenshot({ path: 'test-results/world/audit-basket-through-net.png' })
         await page.waitForFunction(
@@ -1003,6 +1024,7 @@ async function polishScenario(label, width, height, mobile) {
     }
     await go(/Panta Rhei/)
     await waitForArrival(page, 'panta-rhei')
+    assert.notEqual(await canvas.getAttribute('data-cue'), 'panta-rhei:ball', 'basketball has no instruction bubble')
     assert.equal(
       await page
         .locator('.canvas-accessibility')

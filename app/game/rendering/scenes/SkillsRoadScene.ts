@@ -11,6 +11,9 @@ import type { WorldFrame } from '../types'
 
 /** A working line: source → build → browser → workers. The road is the interaction. */
 export class SkillsRoadScene extends Container {
+  private pipelineChangeAt = 0
+  private pipelinePrevious = -1
+  private selectedLogos: { index: number; at: number }[] = []
   private stations: {
     node: Container
     x: number
@@ -55,10 +58,11 @@ export class SkillsRoadScene extends Container {
       node.addChild(statusBackdrop)
       const status = label(node, '', 0, -240, 12, 0x274c3e, 276)
       status.anchor.x = 0.5
-      // The nearest object now owns a world-anchored tooltip. No permanent
-      // status banner should obscure tool icons or machine controls.
-      statusBackdrop.visible = false
-      status.visible = false
+      // This is the machine's own instrument panel, not a floating tooltip.
+      // It stays visible so the queue, deployed code and live page have readable state.
+      statusBackdrop.visible = true
+      status.visible = true
+      status.style.fontWeight = '600'
       const pipelineControls: Graphics[] = []
       if (i === 0) {
         pipelineSteps.forEach((step, index) => {
@@ -104,6 +108,7 @@ export class SkillsRoadScene extends Container {
           badge,
           () => {
             this.activate(i)
+            this.selectedLogos[i] = { index: j, at: performance.now() }
             if (i === 1) {
               if (id === 'html') this.activity.web.records = 0
               else if (id === 'css') this.activity.web.theme = (this.activity.web.theme + 1) % 3
@@ -123,20 +128,44 @@ export class SkillsRoadScene extends Container {
         .fill(0xdfd4a0)
       node.addChild(plate)
       tapTarget(plate, () => this.activate(i), new Rectangle(-55, -42, 110, 44))
-      if (i === 2)
+      if (i === 0) {
+        // The conveyor itself is a replayable stepper in addition to the four keys.
+        tapTarget(machine, () => {
+          this.activate(0)
+          const step = pipelineSteps[this.activity.pipeline.completed] ?? pipelineSteps[0]!
+          this.activity.playPipelineStep(step)
+        }, new Rectangle(-131, -61, 262, 24))
+      } else if (i === 1) {
+        // A click on the actual browser refreshes both theme and API cards.
+        tapTarget(machine, () => {
+          this.activate(1)
+          this.activity.setWebTheme((this.activity.web.theme + 1) % 3)
+          this.activity.setWebRecords((this.activity.web.records % 3) + 1)
+        }, new Rectangle(-119, -104, 238, 67))
+      } else {
+        // Real, visible, selectable server racks. The rack hit area must match
+        // the painted rack rather than an invisible offset target.
         for (let worker = 0; worker < 3; worker++) {
           const rack = new Container()
           rack.x = -120 + worker * 86
+          const number = label(rack, `${worker + 1}`, 34, -72, 12, 0xf7efc9, 42)
+          number.anchor.x = 0.5
           tapTarget(
             rack,
             () => {
               this.activate(i)
-              this.activity.cloud.workers = worker + 1
+              this.activity.setWorkers(worker + 1)
             },
             new Rectangle(0, -106, 68, 65),
           )
           node.addChild(rack)
         }
+        // The packet belt itself cycles the deployment size on tap.
+        tapTarget(machine, () => {
+          this.activate(2)
+          this.activity.setWorkers((this.activity.cloud.workers % 3) + 1)
+        }, new Rectangle(-130, -39, 260, 36))
+      }
       const glow = new Graphics()
       glow.eventMode = 'none'
       node.addChild(glow)
@@ -152,6 +181,14 @@ export class SkillsRoadScene extends Container {
         logos,
       })
     })
+  }
+  /** Expose the same instrument readouts painted in Pixi for browser QA. */
+  getReadouts() {
+    return this.stations.map((station, index) => ({
+      id: skillGroups[index]!.id,
+      visible: station.status.visible && station.statusBackdrop.visible,
+      text: station.status.text,
+    }))
   }
   activate(index: number) {
     const group = skillGroups[index]
@@ -192,7 +229,7 @@ export class SkillsRoadScene extends Container {
       const floor = ground - terrainHeight(this.x + x, terrain)
       node.y = floor
       const near = Math.abs(frame.motion.x - (this.x + x)) < 65
-      const onGround = Math.abs(frame.motion.y + ground - floor) < 15
+      const onGround = frame.motion.grounded && Math.abs(frame.motion.y + ground - floor) < 18
       const action = this.activity.actions['skill-' + group.id]
       if (near && onGround && !frame.paused && !action) this.activate(i)
       const active = !!action
@@ -213,63 +250,45 @@ export class SkillsRoadScene extends Container {
         .rect(-143, -253, 4, 33)
         .fill(pipelineFailed ? 0xb17b5d : active ? 0x527e66 : 0xb79c6a)
       status.text = active
-        ? i === 0
-          ? p < 1
-            ? nl
-              ? 'Code wordt gebouwd en getest…'
-              : 'Building and testing your code…'
-            : nl
-              ? 'Build geslaagd. Container onderweg.'
-              : 'Build passed. Container shipped.'
-          : i === 1
-            ? p < 1
-              ? nl
-                ? 'HTML + CSS + API → live pagina'
-                : 'HTML + CSS + API → live page'
-              : nl
-                ? 'CSS: kies een stijl. PHP: laad data.'
-                : 'CSS: change theme. PHP: load data.'
-            : nl
-              ? 'Workers verwerken de wachtrij.'
-              : 'Workers are draining the queue.'
-        : nl
-          ? 'Loop over de lichtplaat om te starten.'
-          : 'Walk over the light plate to start.'
+        ? nl ? 'Actief' : 'Live'
+        : nl ? 'Stap op de plaat of tik op de machine' : 'Step on the plate or tap the machine'
       if (i === 0) {
         const pipeline = this.activity.pipeline
         status.text =
           pipeline.status === 'success'
-            ? nl
-              ? 'Pipeline geslaagd. Klaar voor productie.'
-              : 'Pipeline passed. Deployed to production.'
+            ? nl ? 'LIVE · 4/4 stappen gedeployed' : 'LIVE · 4/4 stages deployed'
             : pipeline.status === 'error'
-              ? nl
-                ? 'Verkeerde volgorde. Start opnieuw met Commit.'
-                : 'Wrong order. Restart at Commit.'
-              : active
-                ? nl
-                  ? 'Kies Commit → Test → Build → Deploy.'
-                  : 'Select Commit → Test → Build → Deploy.'
-                : nl
-                  ? 'Loop over de lichtplaat om te starten.'
-                  : 'Walk over the light plate to start.'
+              ? nl ? 'FOUT · herstart bij COMMIT' : 'ERROR · restart at COMMIT'
+              : `${nl ? 'PIPELINE' : 'PIPELINE'} · ${pipeline.completed}/4 · ${(pipelineSteps[pipeline.completed] ?? 'done').toUpperCase()}`
         station.pipelineControls.forEach((control, step) => {
           const passed = pipeline.completed > step
+          const next = pipeline.completed === step
           control
             .clear()
             .roundRect(-31, -5, 62, 28, 4)
-            .fill(passed ? 0x5b8066 : 0x315b4c)
-            .stroke({ width: 1.5, color: passed ? 0xcbdba9 : 0xb0c09e })
+            .fill(passed ? 0x426e59 : next ? 0x9c7547 : 0x315b4c)
+            .stroke({ width: next ? 2.5 : 1.5, color: passed ? 0xcbdba9 : next ? 0xf5dca1 : 0x779985 })
         })
       }
-      if (i === 2 && active)
-        status.text = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activity.cloud.queued)} · ${this.activity.cloud.workers}/3 workers · ${nl ? 'tik op rack' : 'tap rack'}`
+      if (i === 1)
+        status.text = `${nl ? 'LIVE PAGINA' : 'LIVE PAGE'} · CSS ${this.activity.web.theme + 1}/3 · API ${this.activity.web.records}`
+      if (i === 2)
+        status.text = `${nl ? 'WACHTRIJ' : 'QUEUE'} ${Math.ceil(this.activity.cloud.queued)} · ${nl ? 'KLAAR' : 'DONE'} ${Math.floor(this.activity.cloud.processed)} · ${this.activity.cloud.workers}/3 ${nl ? 'ACTIEF' : 'LIVE'}`
       // Conveyor and package: the commit really travels through build/test/deploy.
       if (i === 0) {
         machine.roundRect(-130, -59, 260, 18, 5).fill(0x35594b)
         for (let n = 0; n < 10; n++) machine.circle(-117 + n * 25, -50, 4).fill(0x89a480)
-        const demo = active && !reduced && this.activity.pipeline.status !== 'success'
-        const travel = demo ? (time * 0.28) % 1 : p
+        // Each successful stage advances one real package. The conveyor does
+        // not pretend to deploy by looping endlessly when no step was taken.
+        if (this.pipelinePrevious !== this.activity.pipeline.completed) {
+          this.pipelinePrevious = this.activity.pipeline.completed
+          this.pipelineChangeAt = frame.time
+        }
+        const stage = this.activity.pipeline.completed
+        const elapsed = reduced ? 1 : Math.min(1, (frame.time - this.pipelineChangeAt) / 650)
+        const eased = 1 - Math.pow(1 - elapsed, 3)
+        const from = Math.max(0, stage - 1) / pipelineSteps.length
+        const travel = from + (stage / pipelineSteps.length - from) * eased
         const bx = -112 + travel * 218
         if (active) {
           for (let n = 0; n < 4; n++) {
@@ -294,52 +313,141 @@ export class SkillsRoadScene extends Container {
           .fill(active ? 0xc9af7a : 0x78967b)
           .rect(bx - 3, -86, 6, 26)
           .fill(0xeee0ae)
-        for (let n = 0; n < 3; n++)
-          machine.circle(-85 + n * 85, -96, 5).fill(p > (n + 1) / 4 ? 0xb5d48e : 0x668772)
+        for (let n = 0; n < 4; n++)
+          machine
+            .circle(-103 + n * 67, -96, 5)
+            .fill(this.activity.pipeline.completed > n ? 0xb5d48e : n === stage ? 0xf2d28e : 0x668772)
         if (active && !reduced)
           for (let n = 0; n < 5; n++)
             machine
               .rect(bx - 20 + ((n * 13) % 40), -95 - ((time * 26 + n * 8) % 35), 2, 3)
               .fill(0xe2cc8c)
       } else if (i === 1) {
+        // Browser mockup: clicking its screen or a language logo really changes
+        // the stylesheet or the cards loaded by the pretend API.
+        const colors = [0x648d73, 0xaf775e, 0x6487a0] as const
+        const tint = colors[this.activity.web.theme]!
         machine
-          .roundRect(-118, -103, 236, 64, 4)
-          .fill(0x234b40)
-          .rect(-111, -96, 222, 49)
-          .fill(0xdce1c8)
+          .roundRect(-121, -109, 242, 76, 6)
+          .fill(0x23483d)
+          .stroke({ color: 0x8ca792, width: 2 })
+          .roundRect(-114, -102, 228, 63, 3)
+          .fill(0xf3f1e6)
+          .roundRect(-114, -102, 228, 15, 3)
+          .fill(tint)
+          .circle(-105, -95, 2.6)
+          .circle(-96, -95, 2.6)
+          .circle(-87, -95, 2.6)
+          .fill(0xefe9cd)
+          .roundRect(-77, -99, 114, 8, 3)
+          .fill({ color: 0xfaf9f1, alpha: 0.9 })
+        // The hero, card layout and call to action all respond to CSS.
         machine
-          .rect(-111, -96, 222, 8)
-          .fill([0x8aaa91, 0xb1846c, 0x6e859f][this.activity.web.theme]!)
-        if (p > 0.15) machine.rect(-101, -81, 62, 27).fill(0xa7b185)
-        if (p > 0.4)
-          machine.rect(-29, -81, 128, 6).fill(0x456e59).rect(-29, -70, 96, 4).fill(0x90a482)
-        for (let card = 0; card < this.activity.web.records; card++)
+          .roundRect(-107, -81, 67, 34, 3)
+          .fill(tint)
+          .rect(-98, -73, 44, 3)
+          .fill(0xf9f5e9)
+          .rect(-98, -65, 34, 2)
+          .fill({ color: 0xf9f5e9, alpha: 0.66 })
+          .roundRect(-98, -57, 23, 5, 2)
+          .fill(0xe9dbad)
+          .rect(-31, -81, 79, 5)
+          .fill(0x345949)
+          .rect(-31, -71, 106, 3)
+          .fill(0x829d87)
+          .rect(-31, -63, 69, 3)
+          .fill(0xb6c6af)
+        for (let card = 0; card < this.activity.web.records; card++) {
+          const px = 48 + card * 20
+          const pulse = reduced ? 0.3 : Math.sin(time * 4 + card) * 0.1 + 0.2
           machine
-            .rect(30 + card * 24, -59, 18, 10)
-            .fill([0x8fa488, 0xb39768, 0x7d9b9e][this.activity.web.theme]!)
-        if (p > 0.7) machine.roundRect(-29, -60, 48, 9, 2).fill(0xb39362)
-        machine.rect(-5, -39, 10, 9).rect(-29, -31, 58, 4).fill(0x6f886a)
+            .roundRect(px, -60, 17, 17, 2)
+            .fill({ color: tint, alpha: 0.75 + pulse })
+            .rect(px + 3, -56, 11, 2)
+            .fill(0xfaf6e9)
+            .rect(px + 3, -51, 8, 2)
+            .fill(0xe9dbad)
+        }
+        // A successful response indicator moves only while the station is live.
+        machine.circle(105, -95, 3.5).fill(active ? 0xc7dc93 : 0x8c9d86)
+        if (active && !reduced) {
+          const scanX = -114 + ((time * 44) % 228)
+          machine.rect(scanX, -41, 9, 2).fill({ color: tint, alpha: 0.85 })
+        }
+        machine
+          .rect(-5, -33, 10, 9)
+          .rect(-29, -25, 58, 4)
+          .fill(0x6f886a)
       } else {
-        // Live packets continuously enter the workers and leave as completed jobs.
+        // Live queue: incoming work crosses the conveyor, active racks process
+        // jobs and completed packets leave on the right. The queue and processed
+        // counters are driven by ActivitySystem, not a decorative animation.
+        const count = this.activity.cloud.workers
+        const backlog = this.activity.cloud.queued
         for (let n = 0; n < 3; n++) {
+          const x = -120 + n * 86
+          const online = active && n < count
+          const pulse = reduced ? 0.65 : Math.sin(time * 7 - n * 1.6) * 0.25 + 0.7
           machine
-            .roundRect(-120 + n * 86, -103, 68, 58, 4)
-            .fill(0x284c42)
-            .stroke({ width: 1, color: 0x9cad88 })
-          for (let r = 0; r < 3; r++)
-            machine.rect(-111 + n * 86, -94 + r * 13, 49, 7).fill(0x163e34)
-          machine
-            .circle(-64 + n * 86, -90, 2)
-            .fill(active && n < this.activity.cloud.workers ? 0xccdc9a : 0x668775)
+            .roundRect(x, -108, 68, 66, 5)
+            .fill(online ? 0x325b4c : 0x28473f)
+            .stroke({ width: online ? 2 : 1.2, color: online ? 0xc6dca1 : 0x7e9b86 })
+          for (let line = 0; line < 3; line++) {
+            machine
+              .roundRect(x + 8, -98 + line * 16, 52, 12, 2)
+              .fill(0x193d34)
+              .rect(x + 12, -94 + line * 16, 29, 3)
+              .fill(online ? 0x719b7d : 0x4b7363)
+              .circle(x + 52, -92 + line * 16, 2.5)
+              .fill(online ? (pulse > 0.7 ? 0xd9e99f : 0x8ab28b) : 0x677f71)
+          }
+        }
+        // Queue-depth meter; moving packets show the difference between one
+        // saturated worker and three draining the same incoming requests.
+        machine
+          .roundRect(-132, -32, 264, 11, 4)
+          .fill(0x284c42)
+          .roundRect(-129, -29, Math.max(3, Math.min(1, backlog / 50) * 258), 5, 2)
+          .fill(backlog > 35 ? 0xd89d70 : 0xdcc98b)
+        for (let n = 0; n < 3; n++) {
+          const lane = -112 + n * 86
+          const enabled = active && n < count
+          if (enabled)
+            machine
+              .moveTo(lane + 20, -42)
+              .lineTo(lane + 20, -30)
+              .stroke({ color: 0xb9d994, width: 2, alpha: 0.7 })
         }
         if (active)
-          for (let n = 0; n < 7; n++) {
-            const phase = reduced
-                ? 0.5
-                : (time * (0.15 + this.activity.cloud.workers * 0.12) + n / 7) % 1,
-              px = -136 + phase * 270
-            machine.rect(px, -35, 6, 4).fill(phase > 0.65 ? 0xc6db9c : 0xe0c782)
+          for (let n = 0; n < 9; n++) {
+            const phase = reduced ? n / 9 : (time * (0.22 + count * 0.13) + n / 9) % 1
+            const px = -130 + phase * 258
+            const completed = phase > 0.68
+            machine
+              .roundRect(px, -18 - (n % 2) * 3, 9, 6, 1.5)
+              .fill(completed ? 0xb9db9a : 0xe1c787)
           }
+      }
+      // A selected technology sends a visible data pulse into its actual
+      // machine. Each logo has a response even if the current settings match.
+      const selection = this.selectedLogos[i]
+      if (selection) {
+        const age = frame.time - selection.at
+        if (age < 1450) {
+          const source = station.logos[selection.index]
+          if (source) {
+            const startY = source.y + 22
+            const endY = -73
+            const travel = Math.min(1, age / 900)
+            const easing = 1 - Math.pow(1 - travel, 2)
+            machine
+              .moveTo(source.x, startY)
+              .bezierCurveTo(source.x, startY + 26, 0, -114, 0, endY)
+              .stroke({ width: 2.8, color: 0xe6cb87, alpha: 0.8 * (1 - age / 1450) })
+              .circle(source.x * (1 - easing), startY + (endY - startY) * easing, 5)
+              .fill({ color: 0xf4e2b4, alpha: 1 - age / 1450 })
+          }
+        }
       }
       station.logos.forEach((badge, j) => {
         badge.y =
