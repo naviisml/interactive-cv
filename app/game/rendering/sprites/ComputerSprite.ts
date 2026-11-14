@@ -6,7 +6,6 @@ import { label, rect } from '../drawing'
 export class ComputerSprite extends Container {
   private screen = new Container()
   private bezel = new Graphics()
-  private surfaceMask = new Graphics()
   private track = new Graphics()
   private lamp = new Graphics()
   private bezelGlow = new Graphics()
@@ -40,9 +39,8 @@ export class ComputerSprite extends Container {
         .bezierCurveTo(205, -118, 287, -85, 295, -125)
         .stroke({ width: 2, color: 0x54725c }),
     )
-    this.screen.mask = this.surfaceMask
     this.bezelGlow.eventMode = 'none'
-    this.addChild(this.screen, this.surfaceMask, this.track, this.lamp, this.bezelGlow)
+    this.addChild(this.screen, this.track, this.lamp, this.bezelGlow)
     this.update(0, 1, false, 0, true)
   }
   setSurface(rect: SurfaceRect, expanded: boolean) {
@@ -53,8 +51,6 @@ export class ComputerSprite extends Container {
       .stroke({ width: 5, color: 0x7c9588 })
       .rect(rect.x, rect.y, rect.width, rect.height)
       .fill(0xe8ecdf)
-    this.surfaceMask.clear().rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff)
-    this.surfaceMask.visible = !expanded
     this.screen.visible = !expanded
     this.bezelGlow.visible = !expanded
   }
