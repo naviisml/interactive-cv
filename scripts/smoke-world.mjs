@@ -222,7 +222,10 @@ async function scenario(label, width, height, mobile) {
     const editorLayout = await firstCode.evaluate((dialog) => {
       const preview = dialog.querySelector('.lab-workbench').getBoundingClientRect()
       const footer = dialog.querySelector('footer').getBoundingClientRect()
-      return { previewBottom: preview.bottom, footerTop: footer.top }
+      return {
+        previewBottom: preview.bottom,
+        footerTop: footer.height ? footer.top : dialog.getBoundingClientRect().bottom,
+      }
     })
     assert.ok(
       editorLayout.footerTop >= editorLayout.previewBottom - 2,
@@ -246,7 +249,7 @@ async function scenario(label, width, height, mobile) {
         )
       }
     })
-    await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
+    await firstCode.locator('.code-close').click()
     await firstCode.waitFor({ state: 'hidden' })
     await page.waitForFunction(
       () =>
@@ -260,7 +263,7 @@ async function scenario(label, width, height, mobile) {
     await firstCode
       .getByRole('textbox', { name: 'CSS editor' })
       .fill('body { background: lavender; }')
-    await firstCode.getByRole('button', { name: 'Back to the journey' }).click()
+    await firstCode.locator('.code-close').click()
     await openFirst.focus()
     await page.keyboard.press('Enter')
     await firstCode.getByRole('button', { name: 'style.css' }).click()
