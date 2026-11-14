@@ -1120,6 +1120,7 @@ async function polishScenario(label, width, height, mobile) {
     await projects.press('Enter')
     await page.locator('.archive-shell').waitFor({ timeout: 15000 })
     await assertWorldMonitor(page, '.archive-shell')
+    await page.waitForTimeout(200)
     await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
     if (mobile) {
       const world = await page.locator('.world').boundingBox()

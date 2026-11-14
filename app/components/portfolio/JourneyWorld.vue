@@ -713,6 +713,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   contain: layout paint;
   clip-path: inset(0);
+  transform: translateZ(0);
   background: #e8ecdf;
   touch-action: pan-y;
 }

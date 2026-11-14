@@ -96,8 +96,6 @@ export class WorldRenderer {
       autoDensity: true,
       autoStart: false,
       preference: 'webgl',
-      // Computer apps pause drawing while their HTML layer changes above the canvas.
-      preserveDrawingBuffer: true,
     })
     if (this.disposed) {
       this.app.destroy(true, { children: true })
@@ -377,7 +375,9 @@ export class WorldRenderer {
       this.codeWasOpen = !!frame.codeOpen
     }
     const freeze =
-      frame.paused && ['outside', 'inside'].includes(frame.visit.phase) && !this.screenAnimating
+      (frame.paused || frame.presentation.active) &&
+      ['outside', 'inside'].includes(frame.visit.phase) &&
+      !this.screenAnimating
     if (freeze && this.frozen && !this.dirty) {
       this.previous = frame.time
       return
