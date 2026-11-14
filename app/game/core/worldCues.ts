@@ -242,7 +242,7 @@ export function cuesForScene(id: string): WorldCueSpec[] {
     appjection: cue(
       'car',
       'camera',
-      70,
+      225,
       -40,
       'Try the speed camera',
       'Test de flitspaal',
@@ -251,7 +251,11 @@ export function cuesForScene(id: string): WorldCueSpec[] {
       180,
     ),
   }
-  return actions[id] ? [door, actions[id]] : []
+  return actions[id]
+    ? ['panta-rhei', 'roc-hilversum', 'coding-college'].includes(id)
+      ? [actions[id]]
+      : [door, actions[id]]
+    : []
 }
 
 export interface CueCandidate {

@@ -1,4 +1,5 @@
-import { Assets, Container, Graphics, Rectangle, Sprite, Texture, Text } from 'pixi.js'
+import type { Texture, Text } from 'pixi.js';
+import { Assets, Container, Graphics, Rectangle, Sprite } from 'pixi.js'
 import { skillLogos, skillGroups } from '../../../content/skills'
 import { skillDecks } from '../../core/sceneActivities'
 import { pipelineSteps } from '../../core/learningActivities'

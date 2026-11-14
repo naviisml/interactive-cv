@@ -1,9 +1,10 @@
-import { Assets, Container, Graphics, TilingSprite, Texture } from 'pixi.js'
+import type { Texture } from 'pixi.js';
+import { Assets, Container, Graphics, TilingSprite } from 'pixi.js'
 import { terrainPose, awayFromTerrainCorners } from '../../core/terrainPlacement'
 import { terrainHeight } from '../../core/physics'
 import type { WorldModel } from '../types'
 import { BushSprite } from '../sprites/NatureSprites'
-import { polygon, rect, label } from '../drawing'
+import { polygon, rect } from '../drawing'
 export class TerrainScene extends Container {
   private bushes: BushSprite[] = []
   private buildVersion = 0

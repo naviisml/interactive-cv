@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { categoryNames, categoryColors, type EventCategory } from '~/content/timeline'
+import { categoryColors, type EventCategory } from '~/content/timeline'
 const { t } = useI18n()
 defineProps<{ category: EventCategory }>()
 </script>

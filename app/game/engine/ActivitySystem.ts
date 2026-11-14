@@ -46,6 +46,14 @@ export class ActivitySystem {
     }
   }
   circuit = [...circuitSeed]
+  rotateWire(index: number) {
+    if (this.circuit[index] === undefined) return false
+    this.circuit[index] = (this.circuit[index]! + 1) % 4
+    return true
+  }
+  setWebTheme(theme: number) { this.web.theme = Math.max(0, Math.min(2, theme)) }
+  setWebRecords(records: number) { this.web.records = Math.max(0, Math.min(3, records)) }
+  setWorkers(workers: number) { this.cloud.workers = Math.max(1, Math.min(3, workers)) }
   rover: RoverState = { commands: [], age: 0, status: 'idle' }
   editRover(command: RoverCommand | 'undo') {
     if (this.rover.status === 'running') return false

@@ -8,6 +8,7 @@ export interface SceneEntry {
   x: number
 }
 export interface WorldFrame {
+  codeOpen?: boolean
   time: number
   motion: Motion
   camera: number
@@ -36,6 +37,7 @@ export interface WorldModel {
 }
 
 export interface RendererCallbacks {
+  screen?: (rect: import('../core/monitorSurface').ScreenViewport | null) => void
   startComputer: () => void
   openFirstComputer: () => void
   skill: (name: string, count: number) => void

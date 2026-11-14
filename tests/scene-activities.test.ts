@@ -41,7 +41,7 @@ test('basketball clears the rim and falls through the hoop before the return bou
   assert.ok(basketballPose(1.4).y > -130)
 })
 test('car passes the camera once and flash belongs to the capture position', () => {
-  assert.ok(cameraCarPose(0).x < 125)
+  assert.ok(cameraCarPose(0).x < 280)
   assert.ok(cameraCarPose(4).x > 300)
   assert.equal(cameraCarPose(0.7).flash, true)
   assert.equal(cameraCarPose(1.1).flash, false)

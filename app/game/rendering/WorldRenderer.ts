@@ -1,3 +1,10 @@
+import {
+  approachSurface,
+  surfaceDistance,
+  projectScreen,
+  firstCodeScreen,
+  type SurfaceRect,
+} from '../core/monitorSurface'
 import { Application, Container, Rectangle } from 'pixi.js'
 import { BuildingActivityScene } from './scenes/BuildingActivityScene'
 import { CampsiteScene } from './scenes/CampsiteScene'
@@ -19,7 +26,7 @@ import { doorOpenness } from '../core/buildingVisit'
 import { CharacterSprite } from './sprites/CharacterSprite'
 import { ComputerSprite } from './sprites/ComputerSprite'
 
-import { terrainHeight, cameraTarget } from '../core/physics'
+import { terrainHeight } from '../core/physics'
 import type { ActivitySystem } from '../engine/ActivitySystem'
 import type { RendererCallbacks, SceneEntry, WorldFrame, WorldModel } from './types'
 export class WorldRenderer {
@@ -58,6 +65,10 @@ export class WorldRenderer {
   }
   private dirty = true
   private frozen = false
+  private codeWasOpen = false
+  private screenAnimating = false
+  private surfaces = new Map<string, SurfaceRect>()
+  private lastScreen = ''
   private cancelCharges = () => this.activities.cancelCharges()
   private visibilityChanged = () => {
     if (document.hidden) this.cancelCharges()
@@ -129,6 +140,7 @@ export class WorldRenderer {
     this.gates.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
+    this.surfaces.clear()
     this.cues.clear()
     this.currentCue = undefined
     this.activitiesByScene.clear()
@@ -183,11 +195,10 @@ export class WorldRenderer {
     else if (action === 'camera') this.activities.trigger(id, 'camera', 0.36)
     else if (action === 'circuit')
       this.activities.circuit[0] = (this.activities.circuit[0]! + 1) % 4
-    else if (action === 'rover')
-      this.activities.rover.commands.length
-        ? this.activities.runRover()
-        : this.activities.editRover('step')
-    else if (action.startsWith('skill-')) {
+    else if (action === 'rover') {
+      if (this.activities.rover.commands.length) this.activities.runRover()
+      else this.activities.editRover('step')
+    } else if (action.startsWith('skill-')) {
       const index = Number(action.slice(6))
       if (this.activities.activateSkillGroup(index)) {
         const group = skillGroups[index]
@@ -238,6 +249,7 @@ export class WorldRenderer {
       this.showTooltips &&
       focusedCue &&
       focusedCue.node.spec.key !== 'door' &&
+      !['get-e', 'fletcher', 'appjection'].includes(focusedCue.entry.event.id) &&
       !this.activities.wasCueUsed(focusedCue.entry.event.id, focusedCue.node.spec.key)
         ? selected
         : undefined
@@ -357,7 +369,15 @@ export class WorldRenderer {
     if (frame.paused) this.activities.cancelCharges()
     // Keep drawing entry/exit animations, but retain the GPU frame behind a
     // stationary dialog. A resize, locale or motion preference invalidates it.
-    const freeze = frame.paused && ['outside', 'inside'].includes(frame.visit.phase)
+    if (!!frame.codeOpen !== this.codeWasOpen) {
+      this.dirty = true
+      this.screenAnimating = true
+      this.codeWasOpen = !!frame.codeOpen
+    }
+    const freeze =
+      (frame.paused || frame.presentation.active) &&
+      ['outside', 'inside'].includes(frame.visit.phase) &&
+      !this.screenAnimating
     if (freeze && this.frozen && !this.dirty) {
       this.previous = frame.time
       return
@@ -373,6 +393,7 @@ export class WorldRenderer {
     this.previous = frame.time
     this.activities.tick(dt, frame.paused)
     const computerView =
+      frame.codeOpen ||
       frame.presentation.active ||
       (frame.activeId === 'navel-development' &&
         Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
@@ -411,7 +432,8 @@ export class WorldRenderer {
               ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
               : frame.scale
     const targetCamera = computerView
-      ? frame.presentation.center + 15 - width / (2 * targetZoom)
+      ? (frame.codeOpen ? (firstEntry?.x ?? 780) + 149 : frame.presentation.center + 15) -
+        width / (2 * targetZoom)
       : Math.max(
           0,
           Math.min(
@@ -443,9 +465,12 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
+        this.surfaces.delete(id)
         for (const key of this.cues.keys()) if (key.startsWith(id + ':')) this.cues.delete(key)
         this.activitiesByScene.delete(id)
       }
+    this.screenAnimating = false
+    let openScreen = false
     for (const entry of visible) {
       let node = this.scenes.get(entry.event.id)
       if (!node) {
@@ -502,6 +527,56 @@ export class WorldRenderer {
           frame.time,
           this.reduced,
         )
+      if (node instanceof ComputerSprite || node instanceof FirstLinesScene) {
+        const isProject = node instanceof ComputerSprite
+        const expanded = isProject ? frame.presentation.active : !!frame.codeOpen
+        const idle = isProject ? projectScreen : firstCodeScreen
+        const padding = width < 700 ? 8 : 24
+        const ground = terrainHeight(entry.x, this.model.geometry.terrain)
+        // The lower screen edge remains attached to the original stand.
+        const screenBottom =
+          height < 350
+            ? height - 16
+            : Math.min(
+                height - 32,
+                base + (frame.cameraY - ground + idle.y + idle.height) * this.zoom,
+              )
+        const desired = expanded
+          ? {
+              x: this.viewCamera + padding / this.zoom - entry.x,
+              y: (16 - base) / this.zoom - frame.cameraY + ground,
+              width: (width - padding * 2) / this.zoom,
+              height: Math.max(80, screenBottom - 16) / this.zoom,
+            }
+          : idle
+        const area = approachSurface(
+          this.surfaces.get(entry.event.id) ?? idle,
+          desired,
+          dt,
+          this.reduced,
+        )
+        this.surfaces.set(entry.event.id, area)
+        const moving = surfaceDistance(area, desired) > 0.2
+        this.screenAnimating ||= moving
+        node.setSurface(area, expanded)
+        if (expanded) {
+          openScreen = true
+          const viewport = {
+            kind: isProject ? ('projects' as const) : ('code' as const),
+            x: Math.round((entry.x + area.x - this.viewCamera) * this.zoom * 10) / 10,
+            y: Math.round((area.y + frame.cameraY - ground) * this.zoom * 10 + base * 10) / 10,
+            width: Math.round(area.width * this.zoom * 10) / 10,
+            height: Math.round(area.height * this.zoom * 10) / 10,
+            ready: !moving,
+          }
+          const key = JSON.stringify(viewport)
+          if (key !== this.lastScreen) {
+            this.lastScreen = key
+            this.callbacks.screen?.(viewport)
+          }
+          this.app.canvas.dataset.monitor = key
+        }
+      }
       if (node instanceof BuildingSprite)
         node.update(
           frame.time,
@@ -519,6 +594,11 @@ export class WorldRenderer {
             ? circuitConnected(this.activities.circuit)
             : entry.event.id === 'coding-college' && this.activities.rover.status === 'success',
         )
+    }
+    if (!openScreen && this.lastScreen) {
+      this.lastScreen = ''
+      this.callbacks.screen?.(null)
+      delete this.app.canvas.dataset.monitor
     }
     for (const [id, activity] of this.activitiesByScene) {
       const entry = this.model.entries.find((e) => e.event.id === id)
@@ -586,6 +666,11 @@ export class WorldRenderer {
       this.app.canvas.dataset.webPage = JSON.stringify(this.activities.web)
       this.app.canvas.dataset.circuit = JSON.stringify(this.activities.circuit)
       this.app.canvas.dataset.rover = JSON.stringify(this.activities.rover)
+      this.app.canvas.dataset.props = JSON.stringify(
+        Object.fromEntries(
+          [...this.activitiesByScene].map(([id, activity]) => [id, activity.getPropState()]),
+        ),
+      )
       this.app.canvas.dataset.telemetry = JSON.stringify(
         Object.fromEntries(
           [...this.activitiesByScene].map(([id, activity]) => [id, activity.getTelemetry()]),

@@ -1,9 +1,11 @@
-import { Assets, Sprite, Texture, Container, Graphics } from 'pixi.js'
+import { Container, Graphics } from 'pixi.js'
+import type { SurfaceRect } from '../../core/monitorSurface'
 import type { companySlides } from '../../../content/company'
 import { label, rect } from '../drawing'
 /** A workstation with an explicit idle/start state; not an unexplained text rectangle. */
 export class ComputerSprite extends Container {
   private screen = new Container()
+  private bezel = new Graphics()
   private track = new Graphics()
   private lamp = new Graphics()
   private bezelGlow = new Graphics()
@@ -13,31 +15,6 @@ export class ComputerSprite extends Container {
     private locale: string,
   ) {
     super()
-    // Aquablu's client office sits beside the independent-work desktop.
-    const office = new Container()
-    office.position.set(670, 0)
-    rect(office, -135, -225, 270, 225, 0x668b82)
-    rect(office, -145, -234, 290, 10, 0x355e53)
-    rect(office, -120, -210, 240, 43, 0xf5f3e8)
-    for (const x of [-109, 64]) {
-      rect(office, x, -145, 45, 63, 0xabc9bb)
-      rect(office, x + 21, -145, 3, 63, 0x426d62)
-      rect(office, x, -114, 45, 3, 0x426d62)
-    }
-    rect(office, -26, -93, 52, 93, 0x31574e)
-    rect(office, -19, -86, 38, 55, 0x9bbfb2)
-    rect(office, -145, -5, 290, 5, 0x385d4d)
-    void Assets.load<Texture>('/companies/aquablu.png')
-      .then((texture) => {
-        if (this.destroyed) return
-        const logo = new Sprite(texture)
-        logo.anchor.set(0.5)
-        logo.scale.set(Math.min(192 / texture.width, 30 / texture.height))
-        logo.position.set(0, -188)
-        office.addChild(logo)
-      })
-      .catch(() => {})
-    this.addChild(office)
     // Desk, legs, tower, keyboard and mouse establish scale before the monitor wakes.
     rect(this, -337, -80, 785, 12, 0xa99b72)
     this.addChild(new Graphics().poly([-337, -80, -310, -94, 426, -94, 448, -80]).fill(0xc0ad7d))
@@ -49,13 +26,7 @@ export class ComputerSprite extends Container {
     rect(this, 380, -200, 45, 93, 0x47695b)
     rect(this, 387, -189, 31, 4, 0x8ba58d)
     for (let y = -155; y < -117; y += 8) rect(this, 389, y, 27, 2, 0x294a3f)
-    this.addChild(
-      new Graphics()
-        .roundRect(-313, -369, 675, 247, 9)
-        .fill(0x29463e)
-        .stroke({ width: 7, color: 0x7c9588 }),
-    )
-    rect(this, -296, -350, 640, 211, 0xeee8d1)
+    this.addChild(this.bezel)
     rect(this, 0, -121, 55, 31, 0x718e7b)
     rect(this, -54, -92, 166, 7, 0x8fa58b)
     this.addChild(new Graphics().poly([-167, -80, -151, -92, 118, -92, 142, -80]).fill(0x4a6957))
@@ -68,11 +39,20 @@ export class ComputerSprite extends Container {
         .bezierCurveTo(205, -118, 287, -85, 295, -125)
         .stroke({ width: 2, color: 0x54725c }),
     )
-    const mask = new Graphics().rect(-296, -350, 640, 211).fill(0xffffff)
-    this.screen.mask = mask
     this.bezelGlow.eventMode = 'none'
-    this.addChild(this.screen, mask, this.track, this.lamp, this.bezelGlow)
+    this.addChild(this.screen, this.track, this.lamp, this.bezelGlow)
     this.update(0, 1, false, 0, true)
+  }
+  setSurface(rect: SurfaceRect, expanded: boolean) {
+    this.bezel
+      .clear()
+      .roundRect(rect.x - 12, rect.y - 12, rect.width + 24, rect.height + 24, 8)
+      .fill(0x29463e)
+      .stroke({ width: 5, color: 0x7c9588 })
+      .rect(rect.x, rect.y, rect.width, rect.height)
+      .fill(0xe8ecdf)
+    this.screen.visible = !expanded
+    this.bezelGlow.visible = !expanded
   }
   setInteractionGlow(active: boolean, time: number, reduced: boolean) {
     this.bezelGlow.clear()

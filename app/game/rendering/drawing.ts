@@ -1,4 +1,5 @@
-import { Container, Graphics, Text } from 'pixi.js'
+import type { Container} from 'pixi.js';
+import { Graphics, Text } from 'pixi.js'
 export function rect(
   parent: Container,
   x: number,

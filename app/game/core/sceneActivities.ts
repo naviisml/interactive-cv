@@ -44,8 +44,8 @@ export function taxiPose(age: number) {
 }
 export function cameraCarPose(age: number, speed = 62) {
   // The chosen speed changes when the car reaches the actual camera, not just its label.
-  const x = 70 + age * 110 * (0.4 + speed / 100)
-  return { x, flash: speed > 50 && x >= 125 && x < 180 }
+  const x = 225 + age * 110 * (0.4 + speed / 100)
+  return { x, flash: speed > 50 && x >= 280 && x < 335 }
 }
 export const basketballCourt = { hoopX: 200, hoopY: -130, rimRadius: 20, ballRadius: 10 }
 export function basketballLandingX(power: number) {

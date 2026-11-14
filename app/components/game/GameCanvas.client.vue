@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { ScreenViewport } from '~/game/core/monitorSurface'
 import { skillGroups } from '~/content/skills'
 import { circuitConnected, pipelineSteps, type PipelineStep } from '~/game/core/learningActivities'
+import { canEnterBuilding } from '~/content/buildings'
 import { buildingActions } from '~/game/core/sceneActivities'
 import type { ActivitySystem } from '~/game/engine/ActivitySystem'
 import type { WorldModel, WorldFrame } from '~/game/rendering/types'
@@ -14,6 +16,7 @@ const props = defineProps<{
   subscribe: (callback: () => void) => () => void
 }>()
 const emit = defineEmits<{
+  screen: [viewport: ScreenViewport | null]
   startComputer: []
   readFallback: []
   availability: [available: boolean]
@@ -56,7 +59,7 @@ function runAccessibleAction(index = 0) {
   }[action]
   if (cue) props.activities.markCueUsed(id, cue)
   if (action === 'circuit')
-    props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
+    props.activities.rotateWire(index)
   else if (action === 'compile') {
     if (index === 3) props.activities.runRover()
     else props.activities.editRover((['step', 'jump', 'undo'] as const)[index]!)
@@ -88,12 +91,12 @@ function runPipelineStep(step: PipelineStep) {
 }
 function adjustWeb(action: 'theme' | 'data') {
   activateSkills(1)
-  if (action === 'theme') props.activities.web.theme = (props.activities.web.theme + 1) % 3
-  else props.activities.web.records = (props.activities.web.records % 3) + 1
+  if (action === 'theme') props.activities.setWebTheme((props.activities.web.theme + 1) % 3)
+  else props.activities.setWebRecords((props.activities.web.records % 3) + 1)
 }
 function scaleWorkers(workers: number) {
   activateSkills(2)
-  props.activities.cloud.workers = workers
+  props.activities.setWorkers(workers)
 }
 const learningStatus = ref('')
 let lastLearningReadout = 0
@@ -141,6 +144,7 @@ onMounted(async () => {
     const { WorldRenderer } = await import('~/game/rendering/WorldRenderer')
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
+      screen: (viewport) => emit('screen', viewport),
       startComputer: () => emit('startComputer'),
       openFirstComputer: () => emit('openFirstComputer'),
       skill: (name, count) => emit('skill', name, count),
@@ -196,7 +200,10 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       <button v-if="activeId === 'first-lines'" @click="openFirstComputer">
         {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
       </button>
-      <button v-if="currentAction && currentIndex !== undefined" @click="enterCurrentBuilding">
+      <button
+        v-if="canEnterBuilding(activeId) && currentIndex !== undefined"
+        @click="enterCurrentBuilding"
+      >
         {{ t('building.enter') }}
       </button>
       <template v-if="currentAction === 'circuit'">
@@ -217,7 +224,7 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       </template>
       <label v-if="currentAction === 'basketball'" class="accessible-aim">
         {{ locale === 'nl' ? 'Booghoogte' : 'Shot arc' }}
-        <input v-model.number="accessibleArc" type="range" min="0" max="1" step="0.05" />
+        <input v-model.number="accessibleArc" type="range" min="0" max="1" step="0.05" >
       </label>
       <button
         v-if="currentAction && !['circuit', 'compile'].includes(currentAction)"
@@ -252,6 +259,17 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       <a v-if="activeId === 'contact'" href="mailto:contact@navel.dev">
         {{ locale === 'nl' ? 'Stuur me een e-mail' : 'Send me an email' }}
       </a>
+      <p
+        v-if="
+          activeId &&
+          model.entries.find((entry) => entry.event.id === activeId)?.event.category === 'school'
+        "
+        class="school-inscription"
+      >
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.period }} ·
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.role }} ·
+        {{ model.entries.find((entry) => entry.event.id === activeId)?.event.location }}
+      </p>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
       <button v-if="activeId === 'navel-development'" @click="openProjects">
         {{ t('company.start') }}

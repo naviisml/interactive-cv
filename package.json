@@ -15,7 +15,9 @@
     "art:export": "node scripts/art/export-scenes.mjs",
     "art:skills": "node scripts/art/prepare-skills.mjs",
     "serve:generated": "serve .output/public --listen tcp://127.0.0.1:3000",
-    "test:browser": "node scripts/smoke-world.mjs"
+    "test:browser": "node scripts/smoke-world.mjs",
+    "lint": "nuxt prepare && eslint . --max-warnings=0",
+    "lint:fix": "nuxt prepare && eslint . --fix"
   },
   "dependencies": {
     "@lucide/vue": "^1.72.0",
@@ -26,6 +28,9 @@
     "vue-router": "5.4.0"
   },
   "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
     "playwright": "1.65.0",
     "prettier": "^3.10.1",
     "serve": "14.2.8",

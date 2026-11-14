@@ -37,8 +37,8 @@ onMounted(() => panel.value?.querySelector<HTMLButtonElement>('button')?.focus()
       role="dialog"
       aria-modal="true"
       aria-labelledby="world-event-title"
-      @keydown="keydown"
       :data-category="event.category"
+      @keydown="keydown"
     >
       <header>
         <span class="category-badge"

@@ -1,4 +1,5 @@
-import { Assets, Sprite, Texture, Container, Graphics, Rectangle } from 'pixi.js'
+import type { Texture} from 'pixi.js';
+import { Assets, Sprite, Container, Graphics, Rectangle, Text } from 'pixi.js'
 import type { TimelineEvent } from '../../../content/timeline'
 import { buildings, type BuildingKind } from '../../../content/buildings'
 import { rect, label } from '../drawing'
@@ -21,9 +22,9 @@ export class BuildingSprite extends Container {
     else if (this.kind === 'airport') this.airport()
     else if (this.kind === 'mobility') this.mobility()
     else this.school()
-    if (this.kind === 'codam') {
-      label(this.facade, 'CODAM', -224, -212, 26, 0xf0e3c2, 190)
-      label(this.facade, 'CODING COLLEGE', -224, -177, 9, 0xc1cbb4, 190)
+    if (event.category === 'school') {
+      const title = label(this.facade, event.title, 0, -218, 23, 0xf2e8cb, 480)
+      title.anchor.x = 0.5
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
       // The facade is a place, not a miniature CV. Roles and periods remain
@@ -33,8 +34,10 @@ export class BuildingSprite extends Container {
     }
     if (event.id === 'fletcher' || event.id === 'get-e') {
       const y = event.id === 'fletcher' ? -261 : -163
-      rect(this.facade, -126, y + 3, 252, 37, 0xf7f5e9)
-      void Assets.load<Texture>(`/companies/${event.id}.png`)
+      // Brand assets retain transparent pixels; no backing rectangle.
+      for (const child of this.facade.children)
+        if (child instanceof Text && child.y === y + 10) child.visible = false
+      void Assets.load<Texture>(`/companies/${event.id}-white.png`)
         .then((texture) => {
           if (this.destroyed) return
           const logo = new Sprite(texture)
@@ -68,33 +71,44 @@ export class BuildingSprite extends Container {
     )
     rect(this.facade, -edge, -8, edge * 2, 8, 0x3c5a47)
     rect(this.facade, -edge - 9, -3, edge * 2 + 18, 3, 0xb8b28b)
-    // Dark threshold remains fixed; the two leaves actually retract into the wall.
-    rect(this.facade, -33, -92, 66, 92, 0x203e36)
-    rect(this.facade, -39, -99, 78, 7, 0xa6ad87)
-    this.doors.y = -90
-    rect(this.left, -30, 0, 29, 90, 0x668b7e)
-    rect(this.left, -25, 7, 19, 57, 0x9fbeb0)
-    rect(this.left, -6, 65, 2, 10, 0xe1cc92)
-    rect(this.right, 1, 0, 29, 90, 0x668b7e)
-    rect(this.right, 6, 7, 19, 57, 0x9fbeb0)
-    rect(this.right, 4, 65, 2, 10, 0xe1cc92)
-    this.doors.addChild(this.left, this.right)
-    this.facade.addChild(this.doors, this.lights, this.entranceHighlight)
-    rect(this.facade, -48, -4, 96, 4, 0xb8b48d)
-    const target = new Container()
-    tapTarget(target, enter, new Rectangle(-43, -100, 86, 104))
-    this.facade.addChild(target)
-    if (this.kind !== 'airport') {
-      const hint = label(
-        this.facade,
-        locale === 'nl' ? 'INGANG' : 'ENTRANCE',
-        0,
-        -116,
-        8,
-        0xd4d9ba,
-        110,
-      )
-      hint.anchor.x = 0.5
+    if (event.category !== 'school') {
+      // Dark threshold remains fixed; the two leaves actually retract into the wall.
+      rect(this.facade, -33, -92, 66, 92, 0x203e36)
+      rect(this.facade, -39, -99, 78, 7, 0xa6ad87)
+      this.doors.y = -90
+      rect(this.left, -30, 0, 29, 90, 0x668b7e)
+      rect(this.left, -25, 7, 19, 57, 0x9fbeb0)
+      rect(this.left, -6, 65, 2, 10, 0xe1cc92)
+      rect(this.right, 1, 0, 29, 90, 0x668b7e)
+      rect(this.right, 6, 7, 19, 57, 0x9fbeb0)
+      rect(this.right, 4, 65, 2, 10, 0xe1cc92)
+      this.doors.addChild(this.left, this.right)
+      this.facade.addChild(this.doors, this.lights, this.entranceHighlight)
+      rect(this.facade, -48, -4, 96, 4, 0xb8b48d)
+      const target = new Container()
+      tapTarget(target, enter, new Rectangle(-43, -100, 86, 104))
+      this.facade.addChild(target)
+      if (this.kind !== 'airport') {
+        const hint = label(
+          this.facade,
+          locale === 'nl' ? 'INGANG' : 'ENTRANCE',
+          0,
+          -116,
+          8,
+          0xd4d9ba,
+          110,
+        )
+        hint.anchor.x = 0.5
+      }
+    } else {
+      const lines = [event.period || event.label, event.role || '', event.location || '']
+      const ys = [-145, -111, -48]
+      lines.forEach((text, i) => {
+        const inscription = label(this.facade, text, 0, ys[i]!, i === 1 ? 14 : 12, 0xf5eed8, 176)
+        inscription.anchor.x = 0.5
+        inscription.style.align = 'center'
+      })
+      this.facade.addChild(this.lights)
     }
     for (const x of this.kind === 'mobility' ? [-230] : [-230, 230]) {
       rect(this.facade, x - 14, -24, 28, 24, 0x7d8265)

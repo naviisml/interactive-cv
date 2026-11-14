@@ -8,3 +8,5 @@ export const buildings: Record<string, BuildingKind> = {
   appjection: 'mobility',
 }
 export const isBuilding = (id: string) => id in buildings
+
+export const canEnterBuilding = (id: string) => ['fletcher', 'get-e', 'appjection'].includes(id)
