@@ -13,7 +13,8 @@ test('interaction anchors belong to real objects rather than a chapter overlay',
     hotel.map((cue) => cue.x),
     [0, 182],
   )
-  assert.equal(hotel[0]!.title.nl, 'Ga naar binnen')
+  assert.equal(hotel[0]!.title.nl, 'Ontdek deze baan')
+  assert.match(hotel[0]!.hint.en, /work.*Tap or E/)
   assert.equal(cuesForScene('first-lines')[0]?.action, 'first-code')
   assert.deepEqual(cuesForScene('navel-development'), [])
   assert.equal(cuesForScene('skills-road').length, 3)
@@ -30,6 +31,19 @@ test('approaching the bell prioritizes it over the door, leaving hides the cue',
   assert.equal(at(0), 'door')
   assert.equal(at(150), 'bell')
   assert.equal(at(500), undefined)
+  const choose = (x: number, hovered = '') =>
+    selectWorldCue(
+      specs.map((cue) => ({
+        id: 'fletcher:' + cue.key,
+        distance: Math.abs(x - cue.x),
+        radius: cue.radius,
+        hovered: cue.key === hovered,
+      })),
+      'fletcher:door',
+    )
+  assert.equal(choose(80), 'fletcher:door', 'unvisited door stays the tutorial target')
+  assert.equal(choose(150), 'fletcher:bell', 'the bell remains reachable when passing the door')
+  assert.equal(choose(80, 'bell'), 'fletcher:bell', 'pointer hover always takes precedence')
 })
 
 test('hover selects actual pointed-to object and only one tooltip can show', () => {
@@ -61,4 +75,5 @@ test('only the first entrance teaches doors, and the campsite keeps all four act
   assert.equal(showsWorldHint('fletcher', 'door'), true)
   for (const id of ['get-e', 'appjection']) assert.equal(showsWorldHint(id, 'door'), false)
   for (const cue of cuesForScene('contact')) assert.equal(showsWorldHint('contact', cue.key), false)
+  assert.equal(showsWorldHint('panta-rhei', 'ball'), false, 'the hoop has no tutorial bubble')
 })
