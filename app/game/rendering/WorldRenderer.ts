@@ -5,12 +5,11 @@ import {
   firstCodeScreen,
   type SurfaceRect,
 } from '../core/monitorSurface'
-import { Application, Container, Rectangle } from 'pixi.js'
+import { Application, Container } from 'pixi.js'
 import { BuildingActivityScene } from './scenes/BuildingActivityScene'
 import { CampsiteScene } from './scenes/CampsiteScene'
 import { FirstLinesScene } from './scenes/FirstLinesScene'
 import { FootstepScene } from './scenes/FootstepScene'
-import { tapTarget } from './interactions'
 import { AtmosphereScene } from './scenes/AtmosphereScene'
 import { TerrainScene } from './scenes/TerrainScene'
 import { SkillsRoadScene } from './scenes/SkillsRoadScene'
@@ -18,7 +17,7 @@ import { BuildingSprite } from './sprites/BuildingSprite'
 import { LevelEntranceScene } from './scenes/LevelEntranceScene'
 import { isBuilding } from '../../content/buildings'
 import { circuitConnected, pipelineSteps } from '../core/learningActivities'
-import { cuesForScene, selectWorldCue, type WorldCueAction } from '../core/worldCues'
+import { cuesForScene, selectWorldCue, showsWorldHint, type WorldCueAction } from '../core/worldCues'
 import { WorldInteractionCue } from './WorldInteractionCue'
 import { skillGroups } from '../../content/skills'
 import { doorOpenness } from '../core/buildingVisit'
@@ -78,8 +77,6 @@ export class WorldRenderer {
   private zoom = 1
   private viewCamera = 0
   private initialized = false
-  private presentationProgress = 0
-  private presentationActive = false
   constructor(
     private host: HTMLElement,
     private model: WorldModel,
@@ -163,7 +160,7 @@ export class WorldRenderer {
         this.model.locale,
         (index) => this.activities.markCueUsed(id, ['tooling', 'web', 'cloud'][index]!),
       )
-    if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
+    if (id === 'navel-development') return new ComputerSprite(this.model.locale)
     if (id === 'contact')
       return new CampsiteScene(this.model.locale, (action) =>
         this.activities.markCueUsed(id, action === 'fire' ? 'campfire' : action),
@@ -188,7 +185,6 @@ export class WorldRenderer {
     if (spec) this.activities.markCueUsed(id, spec.key)
     if (action === 'enter') this.callbacks.details(entry.index)
     else if (action === 'first-code') this.callbacks.openFirstComputer()
-    else if (action === 'projects') this.callbacks.startComputer()
     else if (action === 'luggage') this.activities.trigger(id, 'luggage')
     else if (action === 'basketball') this.activities.trigger(id, 'basketball', 0.65)
     else if (action === 'departure') this.activities.trigger(id, 'departure', 0.85)
@@ -248,8 +244,7 @@ export class WorldRenderer {
     const tooltip =
       this.showTooltips &&
       focusedCue &&
-      focusedCue.node.spec.key !== 'door' &&
-      !['get-e', 'fletcher', 'appjection'].includes(focusedCue.entry.event.id) &&
+      showsWorldHint(focusedCue.entry.event.id, focusedCue.node.spec.key) &&
       !this.activities.wasCueUsed(focusedCue.entry.event.id, focusedCue.node.spec.key)
         ? selected
         : undefined
@@ -264,8 +259,6 @@ export class WorldRenderer {
         )
       else if (sprite instanceof FirstLinesScene)
         sprite.setInteractionGlow(selected === id + ':computer', frame.time, this.reduced)
-      else if (sprite instanceof ComputerSprite)
-        sprite.setInteractionGlow(selected === id + ':projects', frame.time, this.reduced)
       else if (sprite instanceof SkillsRoadScene)
         sprite.setInteractionGlow(
           selected === id + ':tooling'
@@ -375,7 +368,7 @@ export class WorldRenderer {
       this.codeWasOpen = !!frame.codeOpen
     }
     const freeze =
-      (frame.paused || frame.presentation.active) &&
+      frame.paused &&
       ['outside', 'inside'].includes(frame.visit.phase) &&
       !this.screenAnimating
     if (freeze && this.frozen && !this.dirty) {
@@ -384,20 +377,16 @@ export class WorldRenderer {
     }
     this.frozen = freeze
     this.dirty = false
-    this.presentationProgress = frame.presentation.progress
-    this.presentationActive = frame.presentation.active
     const width = this.app.screen.width,
       height = this.app.screen.height,
       base = height - frame.groundInset,
       dt = this.previous ? Math.min(0.2, (frame.time - this.previous) / 1000) : 0
     this.previous = frame.time
     this.activities.tick(dt, frame.paused)
-    const computerView =
-      frame.codeOpen ||
-      frame.presentation.active ||
-      (frame.activeId === 'navel-development' &&
-        Math.abs(frame.motion.x - (frame.presentation.center - 360)) < 210 &&
-        !frame.navigating)
+    const projectEntry = this.model.entries.find(entry => entry.event.id === 'navel-development')
+    const projectDistance = frame.motion.x - (projectEntry?.x ?? Infinity)
+    const projectView = frame.activeId === 'navel-development' && projectDistance > -570 && projectDistance < 380 && !frame.navigating
+    const computerView = frame.codeOpen || projectView
     const campView = frame.activeId === 'contact' && width < 700
     const closeView =
       width < 700 &&
@@ -432,7 +421,7 @@ export class WorldRenderer {
               ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
               : frame.scale
     const targetCamera = computerView
-      ? (frame.codeOpen ? (firstEntry?.x ?? 780) + 149 : frame.presentation.center + 15) -
+      ? (frame.codeOpen ? (firstEntry?.x ?? 780) + 149 : (projectEntry?.x ?? 0) + 15) -
         width / (2 * targetZoom)
       : Math.max(
           0,
@@ -475,18 +464,6 @@ export class WorldRenderer {
       let node = this.scenes.get(entry.event.id)
       if (!node) {
         node = this.makeScene(entry)
-        if (node instanceof ComputerSprite)
-          tapTarget(
-            node,
-            () =>
-              this.presentationActive
-                ? this.callbacks.seek(
-                    Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
-                  )
-                : (this.activities.markCueUsed(entry.event.id, 'projects'),
-                  this.callbacks.startComputer()),
-            new Rectangle(-296, -354, 662, 244),
-          )
         if (node instanceof BuildingSprite) {
           const activity = new BuildingActivityScene(
             entry.event.id,
@@ -519,17 +496,9 @@ export class WorldRenderer {
           this.reduced,
           this.model.geometry.terrain ?? [],
         )
-      if (node instanceof ComputerSprite)
-        node.update(
-          frame.presentation.progress,
-          this.zoom,
-          frame.presentation.active,
-          frame.time,
-          this.reduced,
-        )
       if (node instanceof ComputerSprite || node instanceof FirstLinesScene) {
         const isProject = node instanceof ComputerSprite
-        const expanded = isProject ? frame.presentation.active : !!frame.codeOpen
+        const expanded = isProject ? projectView : !!frame.codeOpen
         const idle = isProject ? projectScreen : firstCodeScreen
         const padding = width < 700 ? 8 : 24
         const ground = terrainHeight(entry.x, this.model.geometry.terrain)
@@ -541,7 +510,12 @@ export class WorldRenderer {
                 height - 32,
                 base + (frame.cameraY - ground + idle.y + idle.height) * this.zoom,
               )
-        const desired = expanded
+        // Keep the project display on its stand. Small screens gain reading height,
+        // while both sides of the monitor stay fixed inside the world.
+        const projectHeight = Math.max(idle.height, Math.min(206, height * 0.42) / this.zoom)
+        const desired = isProject && expanded
+          ? { ...idle, y: idle.y + idle.height - projectHeight, height: projectHeight }
+          : expanded
           ? {
               x: this.viewCamera + padding / this.zoom - entry.x,
               y: (16 - base) / this.zoom - frame.cameraY + ground,
@@ -619,7 +593,7 @@ export class WorldRenderer {
     this.terrain.update(frame.time, this.reduced)
     this.dust.update(frame, this.model, this.reduced)
     this.character.update(
-      { ...frame, running: frame.running && !frame.presentation.active },
+      frame,
       this.model,
     )
     this.app.render()
@@ -690,7 +664,6 @@ export class WorldRenderer {
       )
       this.app.canvas.dataset.skillCount = String(this.activities.exploredSkills.length)
       this.app.canvas.dataset.visit = frame.visit.phase
-      this.app.canvas.dataset.presentation = frame.presentation.progress.toFixed(3)
     }
   }
   destroy() {

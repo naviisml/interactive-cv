@@ -6,7 +6,6 @@ import { skillGroups, SKILL_ROAD_SPAN, skillLogos } from '../app/content/skills.
 import { hasDetails } from '../app/content/timeline.ts'
 import { dutchEvents } from '../app/content/locales/nl.ts'
 import { journeyLayout, currentSlot } from '../app/game/core/journeyLayout.ts'
-import { stepPresentation, presentationSlide } from '../app/game/core/presentation.ts'
 import { createWorld } from '../app/game/core/world.ts'
 import { terrainHeight } from '../app/game/core/physics.ts'
 test('every chapter has Dutch content and Skills/computer have no modal', () => {
@@ -40,14 +39,6 @@ test('long scene spans remain current until the actual zone boundary and stay le
     terrainHeight(skill.x + SKILL_ROAD_SPAN / 2 - 180, world.geometry.terrain),
   )
   for (let i = 1; i < slots.length; i++) assert.equal(slots[i - 1]!.end, slots[i]!.start)
-})
-test('walking can advance, stop and reverse a presentation without escaping its bounds', () => {
-  assert.equal(stepPresentation(0.4, 0, 100), 0.4)
-  assert.ok(stepPresentation(0.4, 1, 100) > 0.4)
-  assert.ok(stepPresentation(0.4, -1, 100) < 0.4)
-  assert.equal(stepPresentation(0.99, 1, 100), 1)
-  assert.equal(stepPresentation(0.01, -1, 100), 0)
-  assert.equal(presentationSlide(1, 7), 6)
 })
 test('English and Dutch interfaces have the same translation keys', () => {
   const read = (code: string) =>

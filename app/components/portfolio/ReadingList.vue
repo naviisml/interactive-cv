@@ -49,6 +49,7 @@ const order = computed(() => props.entries.map((entry) => entry.index))
           >
         </p>
         <p class="reading-summary">{{ event.summary }}</p>
+        <NuxtLink v-if="event.id === 'first-lines'" class="reading-link" to="/about">{{ t('nav.about') }} →</NuxtLink>
         <template v-if="!isBriefEvent(event)"
           ><p v-for="paragraph in storyParagraphs(event)" :key="paragraph">
             {{ paragraph }}

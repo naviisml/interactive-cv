@@ -17,13 +17,11 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   screen: [viewport: ScreenViewport | null]
-  startComputer: []
   readFallback: []
   availability: [available: boolean]
   openFirstComputer: []
   skill: [name: string, count: number]
   details: [index: number]
-  seek: [progress: number]
 }>()
 const { t, locale } = useI18n()
 const accessibleArc = ref(0.65)
@@ -32,10 +30,6 @@ const currentIndex = computed(
   () => props.model.entries.find((entry) => entry.event.id === props.activeId)?.index,
 )
 
-function openProjects() {
-  props.activities.markCueUsed('navel-development', 'projects')
-  emit('startComputer')
-}
 function openFirstComputer() {
   props.activities.markCueUsed('first-lines', 'computer')
   emit('openFirstComputer')
@@ -145,11 +139,9 @@ onMounted(async () => {
     if (disposed || !host.value) return
     renderer = new WorldRenderer(host.value, props.model, props.activities, {
       screen: (viewport) => emit('screen', viewport),
-      startComputer: () => emit('startComputer'),
       openFirstComputer: () => emit('openFirstComputer'),
       skill: (name, count) => emit('skill', name, count),
       details: (index) => emit('details', index),
-      seek: (progress) => emit('seek', progress),
     })
     await renderer.init()
     if (disposed) return
@@ -189,7 +181,6 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
     <div
       v-if="
         currentAction ||
-        activeId === 'navel-development' ||
         activeId === 'skills-road' ||
         activeId === 'first-lines' ||
         activeId === 'contact'
@@ -266,14 +257,12 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
         "
         class="school-inscription"
       >
+        {{ locale === 'nl' ? 'Mijn opleiding' : 'My education' }} ·
         {{ model.entries.find((entry) => entry.event.id === activeId)?.event.period }} ·
         {{ model.entries.find((entry) => entry.event.id === activeId)?.event.role }} ·
         {{ model.entries.find((entry) => entry.event.id === activeId)?.event.location }}
       </p>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
-      <button v-if="activeId === 'navel-development'" @click="openProjects">
-        {{ t('company.start') }}
-      </button>
     </div>
     <div v-if="error" class="renderer-fallback" role="alert">
       <strong>{{

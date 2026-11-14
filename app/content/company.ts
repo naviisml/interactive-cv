@@ -31,4 +31,3 @@ export function companySlides(timeline: TimelineEvent[]) {
   })
 }
 export const COMPUTER_WATCH_OFFSET = -360
-export const COMPANY_STORY_DISTANCE = 2200

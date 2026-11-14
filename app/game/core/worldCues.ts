@@ -5,7 +5,6 @@
 export type WorldCueAction =
   | 'enter'
   | 'first-code'
-  | 'projects'
   | 'basketball'
   | 'luggage'
   | 'departure'
@@ -68,20 +67,6 @@ export function cuesForScene(id: string): WorldCueSpec[] {
         ),
         popupOffset: 154,
       },
-    ]
-  if (id === 'navel-development')
-    return [
-      cue(
-        'projects',
-        'projects',
-        20,
-        -210,
-        'Explore my projects',
-        'Bekijk mijn projecten',
-        'Tap screen or press E',
-        'Tik op scherm of druk op E',
-        300,
-      ),
     ]
   if (id === 'skills-road')
     return [
@@ -270,4 +255,9 @@ export function selectWorldCue(candidates: CueCandidate[]): string | undefined {
   const eligible = candidates.filter((c) => c.hovered || c.distance <= c.radius)
   eligible.sort((a, b) => Number(!!b.hovered) - Number(!!a.hovered) || a.distance - b.distance)
   return eligible[0]?.id
+}
+
+export function showsWorldHint(scene: string, key: string) {
+  if (key === 'door') return scene === 'fletcher'
+  return !['contact', 'fletcher', 'get-e', 'appjection'].includes(scene)
 }

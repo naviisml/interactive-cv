@@ -32,9 +32,9 @@ export default defineNuxtConfig({
   typescript: { strict: true },
   nitro: {
     prerender: {
-      routes: timeline
+      routes: ['/about', ...timeline
         .filter((event) => event.kind !== 'milestone')
-        .map((event) => `/events/${event.id}`),
+        .map((event) => `/events/${event.id}`)],
     },
   },
 })

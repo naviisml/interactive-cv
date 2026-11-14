@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBuildingVisit } from '~/game/engine/useBuildingVisit'
 import { canEnterBuilding } from '~/content/buildings'
-import { useJourney } from '~/game/engine/useJourney'
+import { JOURNEY_START_X, useJourney } from '~/game/engine/useJourney'
 import { useWorldViewport } from '~/game/engine/useWorldViewport'
 import { companySlides } from '~/content/company'
 import { ActivitySystem } from '~/game/engine/ActivitySystem'
@@ -86,10 +86,6 @@ const skillFeedback = computed(() =>
     : '',
 )
 const {
-  presentation,
-  startPresentation,
-  exitPresentation,
-  seekPresentation,
   subscribe,
   sprinting,
   touchSprint,
@@ -115,8 +111,7 @@ const {
   scrollByDistance,
   endScrollTravel,
 } = journey
-const introOrigin = motion.x
-const introOpacity = computed(() => 1 - Math.min(1, Math.max(0, (motion.x - introOrigin) / 160)))
+const introOpacity = computed(() => 1 - Math.min(1, Math.max(0, (motion.x - JOURNEY_START_X) / 160)))
 const introDismissed = computed(() => introOpacity.value < .02)
 const scenery = computed(() =>
   sceneryTransition(
@@ -129,11 +124,11 @@ const scenery = computed(() =>
   ),
 )
 
+const projects = computed(() => companySlides(localized.cvTimeline.value))
 const rendererModel = computed(() => ({
   width: WORLD_WIDTH.value,
   geometry: worldGeometry.value,
   entries: entries.value.map((entry) => ({ ...entry, x: eventPosition(entry.index) })),
-  slides: companySlides(localized.cvTimeline.value),
   locale: locale.value,
   tutorial: t('world.route'),
   levelTitles: Object.fromEntries(
@@ -156,7 +151,6 @@ function getWorldFrame() {
     urban: scenery.value.urban,
     technical: scenery.value.technical,
     activeId: timeline.value[nearestIndex.value]?.id ?? '',
-    presentation: { ...presentation },
     visit: { ...visit },
     navigating: running.value,
   }
@@ -252,8 +246,7 @@ const worldPanelOpen = computed(
   () =>
     !!detailEvent.value ||
     buildingVisit.blocking.value ||
-    firstCodeOpen.value ||
-    presentation.active,
+    firstCodeOpen.value,
 )
 let buildingOpener: HTMLElement | undefined
 function enterBuilding(index: number, event?: MouseEvent) {
@@ -280,6 +273,10 @@ watch(destination, (value) => {
   if (Math.abs(motion.x - eventPosition(index)) < 3) detailIndex.value = index
 })
 async function navigateLevel(id: LevelId) {
+  if (id === 'about') {
+    await navigateTo('/about')
+    return
+  }
   buildingVisit.cancel()
   if (selectedFilter.value !== 'all') {
     await changeFilter('all')
@@ -295,7 +292,6 @@ function gestureStart(event: PointerEvent) {
   if (
     activities.charging ||
     paused.value ||
-    presentation.active ||
     event.pointerType !== 'pen' ||
     !event.isPrimary ||
     (event.target as HTMLElement)?.closest(
@@ -339,7 +335,7 @@ function gestureEnd(event: PointerEvent) {
 let touchGesture:
   { id: number; startX: number; startY: number; lastX: number; axis: SwipeAxis } | undefined
 function touchStart(event: TouchEvent) {
-  if (activities.charging || paused.value || presentation.active) return
+  if (activities.charging || paused.value) return
   touchGesture = undefined
   endScrollTravel()
   if (
@@ -412,7 +408,6 @@ function wheelTravel(event: WheelEvent) {
     event.ctrlKey ||
     paused.value ||
     activities.charging ||
-    presentation.active ||
     (event.target as HTMLElement)?.closest('[data-world-panel]')
   )
     return
@@ -464,11 +459,6 @@ async function toggleList() {
     scrollToEvent(listActive.value)
   }
 }
-async function closeProjectArchive() {
-  exitPresentation()
-  await nextTick()
-  worldRoot.value?.focus({ preventScroll: true })
-}
 function navigateTimeline(index: number) {
   buildingVisit.cancel()
   if (listMode.value) scrollToEvent(index)
@@ -486,7 +476,6 @@ function aimKeyboard(event: KeyboardEvent) {
 function interact(event: KeyboardEvent) {
   if (
     paused.value ||
-    presentation.active ||
     event.defaultPrevented ||
     event.repeat ||
     listMode.value ||
@@ -516,6 +505,7 @@ onNuxtReady(async () => {
   )
     listMode.value = true
   worldReady.value = true
+  if (!listMode.value && router.currentRoute.value.query.chapter === 'first-lines') goTo(firstInLevel('about'))
   if (
     !listMode.value &&
     (document.activeElement === document.body ||
@@ -604,6 +594,7 @@ onBeforeUnmount(() => {
                 : 'Swipe through the world or use the arrows. Tap objects to discover what they do.'
             }}
           </p>
+          <NuxtLink class="intro-story" to="/about">{{ locale === 'nl' ? 'Lees mijn verhaal' : 'Read my story' }}</NuxtLink>
           <button class="intro-start" @click="dismissIntro">
             {{ locale === 'nl' ? 'Begin met ontdekken' : 'Start exploring' }} →
           </button>
@@ -623,7 +614,7 @@ onBeforeUnmount(() => {
         @lostpointercapture="gestureEnd"
         @wheel="wheelTravel"
       >
-        <div class="world-scene" :inert="worldPanelOpen && !presentation.active">
+        <div class="world-scene" :inert="worldPanelOpen">
           <ClientOnly
             ><GameCanvas
               v-if="worldReady"
@@ -638,8 +629,6 @@ onBeforeUnmount(() => {
               @screen="screenViewport = $event"
               @skill="(name, count) => (exploredSkill = { name, count })"
               @details="handleSceneDetails"
-              @seek="seekPresentation"
-              @start-computer="startPresentation"
               @read-fallback="toggleList"
               @open-first-computer="openFirstComputer"
           /></ClientOnly>
@@ -648,7 +637,6 @@ onBeforeUnmount(() => {
               {{ current.title }}. {{ skillFeedback }}
             </p>
             <MovementControls
-              v-if="!presentation.active"
               :near-ladder="!!nearLadder"
               :paused="paused"
               @direction="touchDirection = $event"
@@ -665,20 +653,14 @@ onBeforeUnmount(() => {
         />
         <ChapterPanel v-if="detailEvent" :event="detailEvent" @close="closeDetail" />
         <div
-          v-if="(firstCodeOpen || presentation.active) && screenViewport"
+          v-if="screenViewport && (firstCodeOpen || screenViewport.kind === 'projects')"
           class="monitor-app"
           :data-computer="screenViewport.kind"
           :style="monitorStyle"
           data-world-panel
         >
           <FirstCodeLab v-if="firstCodeOpen && screenViewport.ready" @close="closeFirstComputer" />
-          <ProjectArchive
-            v-if="presentation.active && screenViewport.ready"
-            :progress="presentation.progress"
-            :slides="rendererModel.slides"
-            @seek="seekPresentation"
-            @exit="closeProjectArchive"
-          />
+          <ProjectScreen v-if="screenViewport.kind === 'projects' && screenViewport.ready" :slides="projects" />
         </div>
       </section>
     </div>
@@ -687,7 +669,7 @@ onBeforeUnmount(() => {
         :entries="entries"
         :projects="
           localized.cvTimeline.value.filter(
-            (e) => rendererModel.slides.some((s) => s.id === e.id) && e.id !== 'navel-development',
+            (e) => projects.some((s) => s.id === e.id) && e.id !== 'navel-development',
           )
         "
         :active="listActive"
@@ -779,6 +761,7 @@ onBeforeUnmount(() => {
 .intro-short {
   display: none;
 }
+.intro-story { display: inline-flex; align-items: center; min-height: 44px; margin-right: 14px; pointer-events: auto; text-decoration: underline; }
 .intro-start {
   pointer-events: auto;
   min-height: 46px;

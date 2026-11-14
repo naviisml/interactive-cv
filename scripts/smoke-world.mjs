@@ -424,7 +424,7 @@ async function scenario(label, width, height, mobile) {
       await page.waitForFunction(
         () => document.querySelector('canvas')?.dataset.focusedObject === 'fletcher:door',
       )
-      assert.equal(await canvas.getAttribute('data-cue'), '', 'doors never show tooltip balloons')
+      assert.equal(await canvas.getAttribute('data-cue'), 'fletcher:door', 'the first entrance teaches the door interaction')
       assert.equal(await page.locator('.world-caption').count(), 0)
       assert.equal(
         await page
@@ -485,61 +485,7 @@ async function scenario(label, width, height, mobile) {
         0,
         'a second floating project CTA must not cover the interactive computer',
       )
-      assert.equal(
-        await page.locator('.archive-shell').count(),
-        0,
-        'arriving does not silently open the project archive',
-      )
-      // The in-world screen remains clickable, and keyboard users get an
-      // unobtrusive focus-revealed action with the same behavior.
-      const computerAction = page.locator('.canvas-accessibility').getByRole('button', {
-        name: 'Explore my projects',
-        exact: true,
-      })
-      await computerAction.focus()
-      await computerAction.click()
-      const archive = page.locator('.archive-shell')
-      await archive.waitFor({ state: 'visible', timeout: 20000 })
-      assert.equal(
-        await archive.locator('.archive-file').count(),
-        7,
-        'all project dossiers are available',
-      )
-      assert.equal(
-        await page.locator('.company-controls').count(),
-        0,
-        'old slideshow controls are removed',
-      )
-      await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
-      const first = archive.locator('.archive-document h1')
-      await first.getByText('Navel Development').waitFor()
-      await archive.getByRole('button', { name: 'Next project', exact: true }).click()
-      await first.getByText('GmodStore').waitFor()
-      await archive.locator('.artifact-node').first().click()
-      assert.equal(await archive.locator('.artifact-node[aria-pressed="true"]').count(), 1)
-      await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
-      await first.getByText('Navel Cloud').waitFor()
-      const diagram = archive.locator('.artifact')
-      assert.equal(await diagram.locator('.artifact-node').count(), 5)
-      await diagram.getByRole('button', { name: /Docker Swarm/ }).click()
-      assert.match(
-        await diagram.locator('.artifact-info').innerText(),
-        /Each website runs as its own service/,
-      )
-      const x = Number(await canvas.getAttribute('data-player-x'))
-      await archive.focus()
-      await page.keyboard.press('ArrowLeft')
-      await first.getByText('Aquablu').waitFor()
-      assert.ok(
-        Math.abs(Number(await canvas.getAttribute('data-player-x')) - x) < 1,
-        'keyboard navigation changes dossiers, not the character position',
-      )
-      await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
-      await page.keyboard.press('Escape')
-      await archive.waitFor({ state: 'hidden' })
-      await page.waitForFunction(
-        () => document.querySelector('canvas')?.dataset.presentation === '1.000',
-      )
+      await checkProjectScreen(page, label)
       assert.equal(
         await page
           .locator('.journey-footer')
@@ -805,6 +751,23 @@ async function visualAuditScenario() {
     await page.close()
   }
 }
+async function checkProjectScreen(page, label) {
+  const screen = page.locator('.project-screen')
+  await screen.waitFor()
+  await assertWorldMonitor(page, '.project-screen')
+  const select = screen.getByRole('combobox')
+  assert.equal(await select.locator('option').count(), 7)
+  await select.selectOption('navel-cloud')
+  await screen.getByRole('heading', { name: 'Navel Cloud' }).waitFor()
+  assert.match(await screen.locator('article').innerText(), /Docker Swarm/)
+  assert.equal(await page.locator('.journey-footer').evaluate(el => el.inert), false)
+  await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
+  const world = page.locator('.world')
+  await world.focus()
+  await page.keyboard.down('ArrowLeft')
+  try { await screen.waitFor({ state: 'hidden', timeout: 15000 }) }
+  finally { await page.keyboard.up('ArrowLeft') }
+}
 async function mobileArchiveScenario(label, width, height) {
   const page = await browser.newPage({
     viewport: { width, height },
@@ -822,94 +785,7 @@ async function mobileArchiveScenario(label, width, height) {
       .getByRole('button', { name: /Navel Development/ })
       .click()
     await waitForArrival(page, 'navel-development')
-    const computerAction = page
-      .locator('.canvas-accessibility')
-      .getByRole('button', { name: 'Explore my projects', exact: true })
-    await computerAction.focus()
-    await computerAction.press('Enter')
-    const archive = page.locator('.archive-shell')
-    await archive.waitFor({ state: 'visible', timeout: 20000 })
-    const bounds = await archive.boundingBox()
-    const world = await page.locator('.world').boundingBox()
-    assert.ok(bounds && world, 'project archive fits within the world')
-    const monitor = JSON.parse(await page.locator('canvas').getAttribute('data-monitor'))
-    assert.ok(
-      Math.abs(bounds.width - monitor.width) < 2 && Math.abs(bounds.height - monitor.height) < 2,
-    )
-    assert.ok(
-      Math.abs(bounds.x - world.x - monitor.x) < 2 && Math.abs(bounds.y - world.y - monitor.y) < 2,
-    )
-    assert.ok(
-      bounds.height < world.height - 60,
-      'the desk and world remain visible around the expanded monitor',
-    )
-    const geometry = await archive.evaluate((el) => {
-      const frame = el.getBoundingClientRect()
-      const selectors = [
-        '.archive-window',
-        '.archive-topbar',
-        '.archive-workspace',
-        '.archive-main-scroll',
-        '.archive-document',
-        '.archive-close',
-        '.archive-footer-nav',
-      ]
-      return selectors.map((selector) => {
-        const node = el.querySelector(selector)
-        const box = node.getBoundingClientRect()
-        return { selector, left: box.left - frame.left, right: box.right - frame.right }
-      })
-    })
-    for (const node of geometry)
-      assert.ok(
-        node.left >= -1 && node.right <= 1,
-        `${node.selector} must fit inside the mobile screen: ${JSON.stringify(node)}`,
-      )
-    assert.ok(
-      await archive
-        .locator('.archive-summary')
-        .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
-      'project summaries wrap within the mobile document',
-    )
-
-    assert.equal(await archive.locator('.archive-file').count(), 7)
-    await archive.screenshot({ path: `test-results/world/${label}-project-archive.png` })
-    await archive.getByRole('button', { name: '07. Navel Cloud', exact: true }).click()
-    await archive.locator('.archive-document h1').getByText('Navel Cloud').waitFor()
-    const list = archive.locator('.archive-projects')
-    const active = archive.locator('.archive-file.is-active')
-    const listBox = await list.boundingBox()
-    const activeBox = await active.boundingBox()
-    assert.ok(
-      listBox &&
-        activeBox &&
-        activeBox.x >= listBox.x - 3 &&
-        activeBox.x + activeBox.width <= listBox.x + listBox.width + 3,
-      'mobile file index keeps the selected project in view',
-    )
-    await archive
-      .locator('.artifact')
-      .getByRole('button', { name: /Traefik/ })
-      .click()
-    await archive
-      .locator('.artifact-info')
-      .getByText(/Routing traffic/)
-      .waitFor()
-    await archive.locator('.archive-main-scroll').evaluate((el) => {
-      el.scrollTop = el.scrollHeight
-    })
-    await archive.locator('.archive-story h2').waitFor({ state: 'visible' })
-    await archive.screenshot({ path: `test-results/world/${label}-project-details.png` })
-    assert.ok(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-      'project archive does not create horizontal document overflow',
-    )
-    await archive.getByRole('button', { name: 'Return to world', exact: true }).click()
-    await archive.waitFor({ state: 'hidden' })
-    assert.ok(
-      (await page.locator('.movement-controls').count()) ||
-        (await page.locator('.world').isVisible()),
-    )
+    await checkProjectScreen(page, label)
     assert.deepEqual(errors, [])
     console.log(`PASS_${label}: interactive project archive, mobile scroll and return`)
   } catch (error) {
@@ -1051,6 +927,10 @@ async function polishScenario(label, width, height, mobile) {
   page.on('pageerror', (e) => errors.push(e.message))
   try {
     await page.goto(base, { waitUntil: 'networkidle' })
+    await page.getByRole('link', { name: 'Read my story' }).click()
+    await page.getByRole('heading', { name: 'Where it began' }).waitFor()
+    assert.match(await page.locator('.story-page').innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
+    await page.getByRole('link', { name: 'Back to the world' }).click()
     const canvas = page.locator('canvas[data-renderer="pixi"]')
     await canvas.waitFor()
     await page.waitForFunction(() => !!document.querySelector('canvas')?.dataset.playerX)
@@ -1113,30 +993,7 @@ async function polishScenario(label, width, height, mobile) {
     await page.waitForTimeout(900)
     await go(/Navel Development/)
     await waitForArrival(page, 'navel-development')
-    const projects = page
-      .locator('.canvas-accessibility')
-      .getByRole('button', { name: 'Explore my projects', exact: true })
-    await projects.focus()
-    await projects.press('Enter')
-    await page.locator('.archive-shell').waitFor({ timeout: 15000 })
-    await assertWorldMonitor(page, '.archive-shell')
-    await page.waitForTimeout(200)
-    await page.screenshot({ path: `test-results/world/${label}-world-project-monitor.png` })
-    if (mobile) {
-      const world = await page.locator('.world').boundingBox()
-      const monitor = await page.locator('.monitor-app').boundingBox()
-      const y = Math.ceil(monitor.y + monitor.height + 16)
-      const clip = { x: 16, y, width: width - 32, height: Math.min(100, Math.floor(world.y + world.height - y - 8)) }
-      assert.ok(clip.height > 30, 'the expanded screen leaves the desk in view')
-      const deskWithApp = await page.screenshot({ clip })
-      await page.locator('.monitor-app').evaluate(el => { el.style.visibility = 'hidden' })
-      const deskWithoutApp = await page.screenshot({ clip })
-      await page.screenshot({ path: `test-results/world/${label}-monitor-desk-diagnostic.png` })
-      await page.locator('.monitor-app').evaluate(el => { el.style.visibility = '' })
-      assert.deepEqual(deskWithApp, deskWithoutApp, 'the HTML screen never erases canvas pixels below the bezel')
-    }
-    await page.getByRole('button', { name: 'Return to world', exact: true }).click()
-    await page.waitForTimeout(900)
+    await checkProjectScreen(page, label)
     if (label === 'phone') {
       await go(/Get-E/)
       await waitForArrival(page, 'get-e')

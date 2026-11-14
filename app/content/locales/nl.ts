@@ -5,9 +5,9 @@ export const dutchEvents: Record<string, Partial<TimelineEvent>> = {
     chapter: 'Waar het begon',
     summary: 'Van Habbo-retroservers en HTML aanpassen naar PHP begrijpen en mijn eerste CMS bouwen.',
     body: [
-      'Het begon met Habbo. Mijn vrienden en ik wilden begrijpen hoe retroservers werkten. Eerst paste ik dingen aan via Element inspecteren en daarna rechtstreeks in HTML- en CSS-bestanden, maar PHP begreep ik nog niet.',
-      'Ik volgde drie bestaande CMS-projecten vanaf de index en schreef hun code zelf na om de logica te leren. Op RetroNet deelden we onze projecten en ervaringen. Uiteindelijk bouwde en verkocht ik mijn eigen CMS.',
-      'We verkochten ook credits die je kon kopen via bellen of sms’en. De VPS moest betaald worden, dus ik spaarde wat er overbleef.',
+      "Ik ben Navarone Ismail, developer uit Amsterdam met Nederlandse en Egyptische roots. Toen ik elf was, wilde ik vooral met mijn vrienden Habbo spelen. We ontdekten een emulator waarmee we ons eigen hotel konden hosten. Zodra het draaide, wilde ik dat ons hotel er anders uitzag dan de andere.",
+      "Ik drukte op F12, veranderde iets op de pagina en keek wat er gebeurde. Na een refresh was mijn aanpassing weg. Dus zocht ik in de bestanden naar datzelfde stukje HTML of CSS. De eerste keer dat mijn wijziging bleef staan, voelde als winst. PHP kostte me meer moeite. Ik pakte drie bestaande contentmanagementsystemen, begon bij elk systeem in het indexbestand en volgde de code stap voor stap. Ik schreef de onderdelen zelf opnieuw totdat ik begreep waarom ze werkten.",
+      "Op het forum van RetroNet lieten we elkaar zien wat we maakten en deelden we code. Daar verkocht ik uiteindelijk mijn eigen CMS. Op onze server konden spelers ook credits kopen door te bellen of te sms’en. Ineens waren er mensen die gebruikten wat ik had geschreven, en moest ik zorgen dat de hosting betaald werd. Zo leerde ik voor het eerst wat het betekent om iets voor anderen draaiende te houden.",
     ],
   },
   'panta-rhei': {

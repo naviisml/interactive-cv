@@ -23,7 +23,9 @@ export class BuildingSprite extends Container {
     else if (this.kind === 'mobility') this.mobility()
     else this.school()
     if (event.category === 'school') {
-      const title = label(this.facade, event.title, 0, -218, 23, 0xf2e8cb, 480)
+      const education = label(this.facade, locale === 'nl' ? 'MIJN OPLEIDING' : 'MY EDUCATION', 0, -222, 14, 0xe9d5a1, 300)
+      education.anchor.x = 0.5
+      const title = label(this.facade, event.title, 0, -201, 23, 0xf2e8cb, 480)
       title.anchor.x = 0.5
     } else {
       const signY = this.kind === 'hotel' ? -261 : this.kind === 'airport' ? -163 : -218
