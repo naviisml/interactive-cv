@@ -1,0 +1,48 @@
+name: Validate mobile workspace
+
+on:
+  pull_request:
+    branches: [v1]
+    paths:
+      - 'app/components/game/ProjectArchive.vue'
+      - 'app/components/game/ProjectArtifact.vue'
+      - 'scripts/smoke-world.mjs'
+      - '.github/workflows/mobile-workspace.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-workspace-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run generate
+      - name: Check mobile document bounds and controls
+        env:
+          SMOKE_ARCHIVE_ONLY: '1'
+        run: |
+          npm run serve:generated > /tmp/portfolio-static.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
+            sleep 2
+          done
+          npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-workspace-scenes
+          path: test-results/world
+          retention-days: 7

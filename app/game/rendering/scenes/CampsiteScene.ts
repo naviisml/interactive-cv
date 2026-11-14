@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle } from 'pixi.js'
-import { rect } from '../drawing'
+import { rect, label } from '../drawing'
 import { tapTarget } from '../interactions'
 import type { WorldFrame } from '../types'
 /** A walkable ending, rather than an overlay or a finish screen. */
@@ -14,9 +14,19 @@ export class CampsiteScene extends Container {
   private zip = new Graphics()
   private heatUntil = 0
   private time = 0
-  constructor(locale: string, private onInteraction: (action: string) => void = () => {}) {
+  constructor(
+    locale: string,
+    private onInteraction: (action: string) => void = () => {},
+  ) {
     super()
     this.addChild(new Graphics().ellipse(0, 6, 390, 17).fill({ color: 0x6c805c, alpha: 0.3 }))
+    const mailbox = new Container()
+    rect(mailbox, 365, -70, 7, 70, 0x647c64)
+    mailbox.addChild(new Graphics().roundRect(337, -115, 65, 49, 7).fill(0x466c68))
+    rect(mailbox, 347, -99, 44, 5, 0x203f37)
+    label(mailbox, 'EMAIL', 350, -85, 9, 0xf4e6c1, 48)
+    tapTarget(mailbox, () => this.interact('email'), new Rectangle(328, -128, 88, 128))
+    this.addChild(mailbox)
     // Tent in three planes, with an opening which can be zipped/unzipped.
     this.canvas.addChild(
       new Graphics()
@@ -36,11 +46,7 @@ export class CampsiteScene extends Container {
         .lineTo(61, -3)
         .stroke({ width: 2, color: 0xc5be92 }),
     )
-    tapTarget(
-      this.canvas,
-      () => this.interact('tent'),
-      new Rectangle(-310, -165, 360, 170),
-    )
+    tapTarget(this.canvas, () => this.interact('tent'), new Rectangle(-310, -165, 360, 170))
     this.canvas.addChild(this.zip)
     this.canvas.x = -130
     this.addChild(this.canvas)
@@ -57,19 +63,12 @@ export class CampsiteScene extends Container {
     rect(this, 238, -93, 35, 21, 0xd8c798)
     this.interactionGlow.eventMode = 'none'
     this.addChild(this.flame, this.stars, this.lantern, this.interactionGlow)
-    tapTarget(
-      this.lantern,
-      () => this.interact('lantern'),
-      new Rectangle(211, -110, 88, 115),
-    )
-    tapTarget(
-      this.flame,
-      () => this.interact('fire'),
-      new Rectangle(-43, -80, 88, 88),
-    )
+    tapTarget(this.lantern, () => this.interact('lantern'), new Rectangle(211, -110, 88, 115))
+    tapTarget(this.flame, () => this.interact('fire'), new Rectangle(-43, -80, 88, 88))
   }
   interact(action: string) {
-    if (action === 'tent') this.tucked = !this.tucked
+    if (action === 'email') window.location.href = 'mailto:contact@navel.dev'
+    else if (action === 'tent') this.tucked = !this.tucked
     else if (action === 'lantern') this.lit = !this.lit
     else if (action === 'fire') this.heatUntil = this.time + 1800
     else return
@@ -80,16 +79,14 @@ export class CampsiteScene extends Container {
     if (!action) return
     const alpha = reduced ? 0.64 : 0.55 + Math.sin(time / 470) * 0.16
     const style = { color: 0xffdf9e, width: 2.8, alpha }
-    if (action === 'tent') {
-      this.interactionGlow
-        .poly([-430, 0, -355, -157, -202, 0])
-        .stroke(style)
+    if (action === 'email') {
+      this.interactionGlow.roundRect(336, -116, 67, 51, 7).stroke(style)
+    } else if (action === 'tent') {
+      this.interactionGlow.poly([-430, 0, -355, -157, -202, 0]).stroke(style)
     } else if (action === 'lantern') {
       this.interactionGlow.roundRect(237, -95, 37, 24, 2).stroke(style)
     } else if (action === 'fire') {
-      this.interactionGlow
-        .poly([-25, -6, -10, -49, 15, -6])
-        .stroke(style)
+      this.interactionGlow.poly([-25, -6, -10, -49, 15, -6]).stroke(style)
     }
   }
   update(frame: WorldFrame, reduced: boolean) {

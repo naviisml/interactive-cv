@@ -30,16 +30,24 @@ export function holdTarget(
   release: () => void,
   area: Rectangle | undefined,
   cancel: () => void,
+  aim?: (deltaY: number) => void,
 ) {
   let pointerId: number | undefined
+  let lastY = 0
   node.eventMode = 'static'
   node.cursor = 'pointer'
   if (area) node.hitArea = area
   node.on('pointerdown', (event: FederatedPointerEvent) => {
     if (!start()) return
     pointerId = event.pointerId
+    lastY = event.global.y
     event.stopPropagation()
     if ('stopPropagation' in event.nativeEvent) event.nativeEvent.stopPropagation()
+  })
+  node.on('globalpointermove', (event: FederatedPointerEvent) => {
+    if (pointerId !== event.pointerId || !aim) return
+    aim(event.global.y - lastY)
+    lastY = event.global.y
   })
   const finish = (event: FederatedPointerEvent) => {
     if (pointerId !== event.pointerId) return

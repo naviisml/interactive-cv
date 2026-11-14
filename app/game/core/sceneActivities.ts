@@ -1,8 +1,8 @@
 /** Coordinates and time in seconds; presentation is separate from Pixi and input. */
 export const actionDurations = {
   basketball: 2.5,
-  departure: 6,
-  camera: 4.5,
+  departure: 7,
+  camera: 6,
   luggage: 4,
   circuit: 1.4,
   compile: 2,
@@ -33,14 +33,13 @@ export function advanceAction(state: ActionState, dt: number): ActionState {
       Number(finished && state.outcome !== 'retry' && state.outcome !== 'ticket'),
   }
 }
-export function aircraftPose(age: number) {
-  const taxi = Math.min(age, 1.4),
-    flight = Math.max(0, age - 1.4)
+export function taxiPose(age: number) {
+  const drive = Math.max(0, age - 2.5)
   return {
-    x: 130 + taxi * taxi * 28 + flight * 190,
-    y: -22 - Math.pow(flight, 1.5) * 41,
-    angle: -Math.min(12, flight * 8),
-    scale: Math.max(0.48, 1 - flight * 0.075),
+    x: 100 + drive * drive * 25,
+    alpha: age < 5 ? 1 : Math.max(0, (7 - age) / 2),
+    passengerX: 30 + Math.min(1, age / 2) * 70,
+    passengerAlpha: age < 1.8 ? 1 : Math.max(0, 1 - (age - 1.8) / 0.7),
   }
 }
 export function cameraCarPose(age: number, speed = 62) {
@@ -64,7 +63,10 @@ export function basketballPose(age: number, power = 0.65, origin = { x: 14, y: -
     const t = age / 1.1
     return {
       x: origin.x + (end - origin.x) * t,
-      y: origin.y + (-130 - origin.y) * t - 76 * Math.sin(t * Math.PI),
+      y:
+        t === 1
+          ? -130
+          : origin.y + (-130 - origin.y) * t - (40 + power * 140) * Math.sin(t * Math.PI),
     }
   }
   if (!basketballScores(power)) {

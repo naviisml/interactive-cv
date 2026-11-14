@@ -1,32 +1,21 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
 import { SCHOOL_LAB_OFFSET } from '../../core/learningActivities'
 import { SchoolActivityScene } from './SchoolActivityScene'
-import { AircraftSprite } from '../sprites/AircraftSprite'
 import { rect, label } from '../drawing'
 import { tapTarget, holdTarget } from '../interactions'
 import {
   buildingActions,
-  aircraftPose,
+  taxiPose,
   basketballPose,
   cameraCarPose,
   type SceneAction,
 } from '../../core/sceneActivities'
 import type { ActivitySystem } from '../../engine/ActivitySystem'
 import type { WorldFrame } from '../types'
-const captions: Record<SceneAction, [string, string]> = {
-  basketball: ['Schiet!', 'Shoot!'],
-  departure: ['Laat het vliegtuig vertrekken', 'Clear for take-off'],
-  camera: ['Start de testrit', 'Start the test drive'],
-  luggage: ['Bel voor de bagage', 'Ring for luggage'],
-  circuit: ['Verbind de drie kabels', 'Connect the three cables'],
-  compile: ['Bouw → test → run', 'Build → test → run'],
-}
 export class BuildingActivityScene extends Container {
   private object = new Container()
   private overlay = new Graphics()
   private objectGlow = new Graphics()
-  private status: Text
-  private statusPanel = new Graphics()
   private telemetry = new Container()
   private telemetryPanel = new Graphics()
   private telemetryText: Text
@@ -35,7 +24,9 @@ export class BuildingActivityScene extends Container {
   private net?: Graphics
   private score?: Text
   private ball?: Graphics
-  private plane?: AircraftSprite
+  private taxi?: Container
+  private passenger?: Container
+  private mail = new Graphics()
   private car?: Container
   private cart?: Container
   private school?: SchoolActivityScene
@@ -48,10 +39,9 @@ export class BuildingActivityScene extends Container {
   ) {
     super()
     this.action = buildingActions[id]!
-    // Action feedback lives above the architecture, never across its signs.
-    this.status = label(this, '', 155, -278, 14, 0x274b3d, 258)
     this.telemetry.eventMode = 'none'
-    this.telemetryPanel.roundRect(-114, -27, 228, 54, 7)
+    this.telemetryPanel
+      .roundRect(-114, -27, 228, 54, 7)
       .fill({ color: 0x173c34, alpha: 0.94 })
       .stroke({ color: 0xe0d49e, width: 1.5, alpha: 0.82 })
     this.telemetry.addChild(this.telemetryPanel)
@@ -59,11 +49,6 @@ export class BuildingActivityScene extends Container {
     this.telemetryText.anchor.x = 0.5
     this.telemetryText.style.align = 'center'
     this.telemetry.visible = false
-    this.status.anchor.x = 0.5
-    const feedbackY = this.action === 'luggage' ? -150 : this.action === 'departure' ? -245 : -278
-    this.status.y = feedbackY
-    this.statusPanel.y = feedbackY + 278
-    this.status.visible = false
     const start = () => {
       if (state.trigger(id, this.action)) this.onInteraction()
     }
@@ -108,7 +93,7 @@ export class BuildingActivityScene extends Container {
       holdTarget(
         this.ball,
         () => {
-          const started = state.beginCharge(id)
+          const started = state.beginCharge(id, 'arc')
           if (started) {
             state.charges[id]!.origin = { x: this.ball!.x, y: this.ball!.y }
             this.onInteraction()
@@ -118,23 +103,31 @@ export class BuildingActivityScene extends Container {
         () => state.releaseCharge(id, this.action),
         new Rectangle(-44, -44, 88, 88),
         () => state.cancelCharge(id),
+        (deltaY) => {
+          const charge = state.charges[id]
+          if (charge?.holding) charge.power = Math.max(0, Math.min(1, charge.power - deltaY / 160))
+        },
       )
     } else if (this.action === 'departure') {
       rect(this, -260, -4, 590, 15, 0x71897a)
       for (let x = -240; x < 320; x += 65) rect(this, x, 1, 29, 2, 0xdedcba)
-      this.plane = new AircraftSprite()
-      this.object.addChild(this.plane)
-      holdTarget(
-        this.plane,
-        () => {
-          const started = state.beginCharge(id)
-          if (started) this.onInteraction()
-          return started
-        },
-        () => state.releaseCharge(id, this.action),
-        new Rectangle(-110, -40, 220, 90),
-        () => state.cancelCharge(id),
-      )
+      const pickupSign = new Container()
+      rect(pickupSign, -101, -62, 4, 62, 0x527365)
+      rect(pickupSign, -132, -88, 67, 30, 0x345e56)
+      label(pickupSign, 'PICKUP', -125, -80, 11, 0xf5e6bd, 60)
+      tapTarget(pickupSign, start, new Rectangle(-143, -105, 88, 105))
+      this.addChild(pickupSign)
+      this.taxi = this.makeCar(0xd7b958)
+      rect(this.taxi, -8, -66, 37, 10, 0xf4e6b6)
+      label(this.taxi, 'TAXI', -4, -66, 8, 0x29483d, 30)
+      this.object.addChild(this.taxi)
+      this.passenger = new Container()
+      this.passenger.addChild(new Graphics().circle(0, -51, 7).fill(0xc8a37e))
+      rect(this.passenger, -7, -43, 14, 26, 0x426e72)
+      for (const x of [-6, 3]) rect(this.passenger, x, -17, 4, 17, 0x314f46)
+      rect(this.passenger, -24, -24, 14, 24, 0xb88e60)
+      this.object.addChild(this.passenger)
+      tapTarget(this.taxi, start, new Rectangle(-86, -76, 175, 86))
     } else if (this.action === 'camera') {
       rect(this, -280, -12, 620, 20, 0x5b7368)
       for (let x = -260; x < 320; x += 72) rect(this, x, -3, 35, 2, 0xc4c6a5)
@@ -154,6 +147,11 @@ export class BuildingActivityScene extends Container {
           new Graphics().circle(x, -14, 12).fill(0x29463f).circle(x, -14, 5).fill(0xa2b09a),
         )
       rect(car, 66, -31, 10, 5, 0xe5d69b)
+      rect(this, -190, -75, 6, 75, 0x5b7561)
+      this.addChild(new Graphics().roundRect(-214, -111, 57, 43, 5).fill(0x436f72))
+      rect(this, -205, -95, 38, 4, 0x203f37)
+      label(this, 'APPJECTION', -210, -86, 7, 0xf5edd3, 50)
+      this.addChild(this.mail)
       this.car = car
       this.object.addChild(car)
       holdTarget(
@@ -185,15 +183,40 @@ export class BuildingActivityScene extends Container {
       for (const x of [-22, 23]) this.cart.addChild(new Graphics().circle(x, -5, 5).fill(0x35584a))
       this.object.addChild(this.cart)
     } else {
-      this.school = new SchoolActivityScene(this.action as 'circuit' | 'compile', state, locale, this.onInteraction)
+      this.school = new SchoolActivityScene(
+        this.action as 'circuit' | 'compile',
+        state,
+        locale,
+        this.onInteraction,
+      )
       this.school.x = SCHOOL_LAB_OFFSET
       this.addChild(this.school)
     }
     this.objectGlow.eventMode = 'none'
-    this.addChild(this.object, this.overlay, this.statusPanel, this.status, this.objectGlow, this.telemetry)
+    this.addChild(this.object, this.overlay, this.objectGlow, this.telemetry)
+    if (this.net) this.addChild(this.net)
+  }
+  private makeCar(color: number) {
+    const car = new Container()
+    car.addChild(
+      new Graphics()
+        .poly([-62, -17, -57, -35, -29, -37, -12, -57, 34, -57, 54, -37, 75, -30, 78, -16])
+        .fill(color)
+        .poly([-6, -53, 30, -53, 45, -37, -18, -37])
+        .fill(0xb6d0c2),
+    )
+    for (const x of [-36, 49])
+      car.addChild(
+        new Graphics().circle(x, -14, 12).fill(0x29463f).circle(x, -14, 5).fill(0xa2b09a),
+      )
+    rect(car, 66, -31, 10, 5, 0xf5e2aa)
+    return car
   }
   /** Measurements follow the moving prop, independently of first-use tooltips. */
-  private updateTelemetry(frame: WorldFrame, record: ActivitySystem['actions'][string] | undefined) {
+  private updateTelemetry(
+    frame: WorldFrame,
+    record: ActivitySystem['actions'][string] | undefined,
+  ) {
     const charge = this.state.charges[this.id]
     const completed = record?.completed ?? 0
     if (completed > this.previousCompletions) this.telemetryUntil = frame.time + 2600
@@ -206,50 +229,68 @@ export class BuildingActivityScene extends Container {
     let x = 0
     let y = -120
     if (this.action === 'camera') {
-      const speed = Math.round(10 + (charge?.holding ? charge.power : record?.power ?? 0.38) * 80)
+      const speed = Math.round(10 + (charge?.holding ? charge.power : (record?.power ?? 0.38)) * 80)
       const phase = charge?.holding
-        ? nl ? 'Laat los om te rijden' : 'Release to drive'
+        ? nl
+          ? 'Laat los om te rijden'
+          : 'Release to drive'
         : record?.running
-          ? nl ? 'Testrit bezig' : 'Test run'
+          ? nl
+            ? 'Testrit bezig'
+            : 'Test run'
           : record?.outcome === 'ticket'
-            ? nl ? 'Geflitst' : 'Speeding ticket'
+            ? nl
+              ? 'Geflitst'
+              : 'Speeding ticket'
             : record?.outcome === 'success'
-              ? nl ? 'Binnen limiet' : 'Within the limit'
-              : nl ? 'Probeer opnieuw' : 'Try again'
+              ? nl
+                ? 'Binnen limiet'
+                : 'Within the limit'
+              : nl
+                ? 'Probeer opnieuw'
+                : 'Try again'
       message = `${nl ? 'Snelheid' : 'Speed'}: ${speed} km/h\n${phase}`
       x = this.car?.x ?? 70
       y = -123
     } else if (this.action === 'departure') {
-      const power = charge?.holding ? charge.power : record?.power ?? 0
-      // Throttle is modeled; speed is a clearly labeled simulated estimate.
-      const simulatedSpeed = Math.round(power * 260)
-      const phase = charge?.holding
-        ? nl ? 'Vermogen opbouwen' : 'Building throttle'
-        : record?.running
-          ? record?.outcome === 'success'
-            ? (nl ? 'Stijgt op' : 'Taking off')
-            : (nl ? 'Te weinig vermogen' : 'Insufficient throttle')
-          : record?.outcome === 'success'
-            ? nl ? 'Opgestegen' : 'Airborne'
-            : nl ? 'Niet opgestegen' : 'No take-off'
-      message = `${nl ? 'Sim. snelheid' : 'Sim. speed'}: ${simulatedSpeed} km/h · ${Math.round(power * 100)}%\n${phase}`
-      x = this.plane?.x ?? 130
-      y = (this.plane?.y ?? -22) - 102
+      message = record?.running
+        ? record.age < 2.5
+          ? nl
+            ? 'Reiziger stapt in'
+            : 'Passenger boarding'
+          : nl
+            ? 'Transfer naar bestemming'
+            : 'Transfer to destination'
+        : nl
+          ? 'Reiziger opgehaald · tik om te herhalen'
+          : 'Passenger collected · tap to replay'
+      x = this.taxi?.x ?? 100
+      y = -220
     } else if (this.action === 'basketball') {
-      const power = charge?.holding ? charge.power : record?.power ?? 0
+      const power = charge?.holding ? charge.power : (record?.power ?? 0)
       message = charge?.holding
-        ? `${nl ? 'Worpsterkte' : 'Shot power'}: ${Math.round(power * 100)}%\n${nl ? 'Laat los om te schieten' : 'Release to shoot'}`
+        ? `${nl ? 'Booghoogte' : 'Shot arc'}: ${Math.round(power * 100)}%\n${nl ? 'Laat los om te schieten' : 'Release to shoot'}`
         : record?.running
-          ? nl ? 'Bal onderweg' : 'Ball in flight'
+          ? nl
+            ? 'Bal onderweg'
+            : 'Ball in flight'
           : record?.outcome === 'success'
-            ? nl ? 'Raak!' : 'Scored!'
-            : nl ? 'Mis · probeer opnieuw' : 'Missed · try again'
+            ? nl
+              ? 'Raak!'
+              : 'Scored!'
+            : nl
+              ? 'Mis · probeer opnieuw'
+              : 'Missed · try again'
       x = this.ball?.x ?? 65
-      y = Math.min(-87, (this.ball?.y ?? -10) - 82)
+      y = Math.min(-260, (this.ball?.y ?? -10) - 82)
     } else if (this.action === 'luggage') {
       message = record?.running
-        ? nl ? 'Bagage onderweg…' : 'Luggage on its way…'
-        : nl ? 'Bagage bezorgd' : 'Luggage delivered'
+        ? nl
+          ? 'Bagage onderweg…'
+          : 'Luggage on its way…'
+        : nl
+          ? 'Bagage bezorgd'
+          : 'Luggage delivered'
       x = 182
       y = -133
     } else {
@@ -293,75 +334,51 @@ export class BuildingActivityScene extends Container {
     const style = { color: 0xffe6aa, width: 3.1, alpha: 0.69 + pulse * 0.28 }
     const halo = { color: 0xffdd99, width: 10, alpha: 0.11 + pulse * 0.12 }
     if (this.ball) {
-      glow.circle(this.ball.x, this.ball.y, 11).stroke(halo)
-        .circle(this.ball.x, this.ball.y, 11).stroke(style)
-    } else if (this.plane) {
-      glow.position.copyFrom(this.plane.position)
-      glow.scale.set(this.plane.scale.x)
-      glow.rotation = this.plane.rotation
-      const outline = [
-        -103, 0, -87, 0, -93, -31, -79, -31, -58, -4,
-        66, -4, 86, 1, 103, 10, 92, 15, -83, 15, -106, 7,
-      ]
-      glow.poly(outline).stroke(halo).poly(outline).stroke(style)
-    } else if (this.car) {
-      glow.position.copyFrom(this.car.position)
+      glow
+        .circle(this.ball.x, this.ball.y, 11)
+        .stroke(halo)
+        .circle(this.ball.x, this.ball.y, 11)
+        .stroke(style)
+    } else if (this.car || this.taxi) {
+      glow.position.copyFrom((this.car ?? this.taxi)!.position)
       const outline = [-62, -17, -57, -35, -29, -37, -12, -57, 34, -57, 54, -37, 75, -30, 78, -16]
       glow.poly(outline).stroke(halo).poly(outline).stroke(style)
     } else if (this.cart) {
-      const bellShape = () => glow.moveTo(170, -59)
-        .bezierCurveTo(171, -77, 193, -77, 194, -59)
-        .lineTo(170, -59)
+      const bellShape = () =>
+        glow.moveTo(170, -59).bezierCurveTo(171, -77, 193, -77, 194, -59).lineTo(170, -59)
       bellShape().stroke(halo)
-      bellShape().stroke(style)
-        .rect(168, -56, 28, 4)
-        .fill({ color: 0xffe3aa, alpha: 0.17 })
+      bellShape().stroke(style).rect(168, -56, 28, 4).fill({ color: 0xffe3aa, alpha: 0.17 })
     }
   }
   /** Visible object position, in building-local world coordinates. */
   focusPoint(): { x: number; y: number } | undefined {
     if (this.ball) return { x: this.ball.x, y: this.ball.y }
-    if (this.plane) return { x: this.plane.x, y: this.plane.y - 8 }
+    if (this.taxi)
+      return this.state.actions[this.id]?.completed && !this.state.actions[this.id]?.running
+        ? { x: -99, y: -76 }
+        : { x: this.taxi.x, y: -35 }
     if (this.car) return { x: this.car.x, y: this.car.y - 35 }
     if (this.cart) return { x: 182, y: -62 } // The bell stays put while luggage moves.
     return undefined
   }
   update(frame: WorldFrame, entryX: number, reduced: boolean, ground = 0) {
+    const distanceToTrigger = Math.abs(frame.motion.x - entryX - 100)
+    if (
+      (this.taxi || this.car) &&
+      distanceToTrigger < 230 &&
+      !frame.paused &&
+      frame.visit.phase === 'outside'
+    ) {
+      this.state.autoPlayOnce(this.id, this.action)
+    }
     const record = this.state.actions[this.id],
       running = record?.running ?? false,
-      age = record?.age ?? 0,
-      nl = this.locale === 'nl'
+      age = record?.age ?? 0
     this.overlay.clear()
-    this.statusPanel.clear()
     const charge = this.state.charges[this.id]
     const charging = !!charge?.holding
-    const distance = Math.abs(frame.motion.x - entryX)
-    const showStatus = !frame.navigating && frame.visit.phase === 'outside' && distance < 310
-    const opacity = Math.min(1, Math.max(0, (310 - distance) / 85))
-    this.status.visible = showStatus
-    this.status.alpha = opacity
-    this.statusPanel.alpha = opacity
-    if (showStatus) {
-      // The label reads like an architectural annotation, not a second HUD.
-      this.statusPanel
-        .roundRect(18, -288, 280, 64, 5)
-        .fill({ color: 0x19392f, alpha: 0.17 })
-        .roundRect(14, -292, 280, 64, 5)
-        .fill({ color: 0xf4f0df, alpha: 0.97 })
-        .stroke({ width: 1.5, color: 0x8da78f, alpha: 0.9 })
-      if (charging) {
-        this.statusPanel
-          .roundRect(28, -241, 250, 5, 2)
-          .fill(0xc4ceba)
-          .roundRect(28, -241, 250 * charge.power, 5, 2)
-          .fill(charge.power >= 0.8 ? 0xb97758 : 0x4d8a66)
-        if (this.action === 'basketball')
-          for (const threshold of [0.52, 0.78])
-            this.statusPanel.rect(28 + 250 * threshold, -244, 2, 11).fill(0x24483a)
-      }
-    }
     if (this.ball) {
-      const pickup = charging ? Math.min(1, (charge.power * 1.75) / 0.18) : 0
+      const pickup = charging ? 1 : 0
       const p = running
         ? basketballPose(age, record?.power, record?.origin)
         : {
@@ -377,6 +394,9 @@ export class BuildingActivityScene extends Container {
           ? Math.sin((age - 1.1) * Math.PI * 6) * 3
           : 0
       this.net!.clear()
+        .moveTo(180, -129)
+        .bezierCurveTo(180, -123, 220, -123, 220, -129)
+        .stroke({ width: 3, color: 0xb8845f })
       for (let i = 0; i < 6; i++) {
         const x = 182 + i * 7
         this.net!.moveTo(x, -126)
@@ -394,99 +414,54 @@ export class BuildingActivityScene extends Container {
             alpha: 0.65,
           })
         }
-      this.status.text = charging
-        ? nl
-          ? 'Houd vast… laat los in de groene zone'
-          : 'Hold… release in the target zone'
-        : running
-          ? nl
-            ? 'Schot onderweg…'
-            : 'Shot in flight…'
-          : record?.completed
-            ? `${record.outcome === 'success' ? (nl ? 'Raak!' : 'Basket!') : nl ? 'Gemist · probeer opnieuw' : 'Missed · try again'}  ${nl ? 'Raak' : 'Scored'}: ${record.successes ?? 0}`
-            : nl
-              ? 'Houd de bal vast om te mikken'
-              : 'Hold the ball to aim and release'
-    } else if (this.plane) {
-      const success = record?.outcome === 'success'
-      const p = running
-        ? success
-          ? aircraftPose(age)
-          : { x: 130 + Math.min(age, 2) * 30, y: -22, angle: 0, scale: 1 }
-        : { x: 130, y: -22, angle: 0, scale: 1 }
-      this.plane.position.set(p.x, p.y)
-      this.plane.angle = reduced ? 0 : p.angle
-      this.plane.scale.set(p.scale * 0.95)
-      this.plane.visible = true
-      this.status.text = charging
-        ? `${nl ? 'Motorvermogen' : 'Engine power'}: ${Math.round(charge.power * 100)}% — ${nl ? 'houd ingedrukt' : 'keep holding'}`
-        : running
-          ? success
-            ? age < 1.4
-              ? nl
-                ? 'Versnelt over de baan…'
-                : 'Accelerating down the runway…'
-              : nl
-                ? 'Opgestegen!'
-                : 'Airborne!'
-            : nl
-              ? 'Niet genoeg snelheid om op te stijgen'
-              : 'Not enough speed for take-off'
-          : record?.completed
-            ? success
-              ? nl
-                ? 'Vlucht geslaagd · opnieuw?'
-                : 'Take-off successful · retry?'
-              : nl
-                ? 'Te weinig vermogen · opnieuw?'
-                : 'Too little power · retry?'
-            : nl
-              ? 'Houd vliegtuig vast om vermogen op te bouwen'
-              : 'Press and hold the plane to build speed'
+    } else if (this.taxi) {
+      const p = taxiPose(age)
+      this.taxi.position.set(running || record?.completed ? p.x : 100, -5)
+      this.taxi.alpha = running || record?.completed ? p.alpha : 1
+      this.passenger!.position.set(running || record?.completed ? p.passengerX : 30, 0)
+      this.passenger!.alpha = running || record?.completed ? p.passengerAlpha : 1
+      if (running && age > 1.4 && age < 2.5)
+        this.overlay
+          .poly([92, -42, 72, -30, 72, -9, 92, -16])
+          .fill(0xd7b958)
+          .poly([89, -38, 76, -29, 76, -20, 89, -25])
+          .fill(0xb6d0c2)
     } else if (this.car) {
       const speed = Math.round(10 + (record?.power ?? 0.38) * 80)
       const p = running ? cameraCarPose(age, speed) : { x: 70, flash: false }
       this.car.position.set(p.x, -5)
+      this.car.alpha = running ? Math.min(1, Math.max(0, (4 - age) / 1.1)) : 1
+      this.mail.clear()
+      if (record?.outcome === 'ticket' && age > 0.65 && age < 1.5) {
+        const lift = (age - 0.65) * 50
+        this.mail.rect(138, -155 - lift, 25, 34).fill(0xf4ebd1)
+        for (let i = 0; i < 4; i++) this.mail.rect(142, -148 - lift + i * 6, 17, 2).fill(0x8a866a)
+      }
+      if (record?.outcome === 'ticket' && age > 1.5 && (running || record.completed)) {
+        const t = Math.min(1, (age - 1.5) / 3)
+        const mx = 150 + (-186 - 150) * t,
+          my = -142 + 56 * t - Math.sin(t * Math.PI) * 100
+        this.mail
+          .roundRect(mx - 16, my - 11, 32, 22, 2)
+          .fill(0xf4ebd1)
+          .stroke({ width: 1, color: 0x8a866a })
+          .moveTo(mx - 16, my - 11)
+          .lineTo(mx, my + 1)
+          .lineTo(mx + 16, my - 11)
+          .stroke({ width: 1, color: 0x8a866a })
+        if (t === 1) this.mail.alpha = Math.max(0, 1 - (age - 4.5))
+        else this.mail.alpha = 1
+      }
       if (p.flash)
         this.overlay.rect(123, -150, 55, 44).fill({ color: 0xfff2c7, alpha: reduced ? 0.3 : 0.9 })
-      this.status.text = charging
-        ? `${nl ? 'Snelheid' : 'Speed'}: ${Math.round(10 + charge.power * 80)} km/h — ${nl ? 'laat los om te rijden' : 'release to drive'}`
-        : running
-          ? `${speed} km/h — ${p.flash ? (nl ? 'Geflitst!' : 'Speed camera flash!') : nl ? 'Passage…' : 'Passing camera…'}`
-          : record?.completed
-            ? record.outcome === 'success'
-              ? nl
-                ? 'Binnen de limiet · opnieuw?'
-                : 'Within the limit · retry?'
-              : record.outcome === 'ticket'
-                ? nl
-                  ? 'Te hard gereden · probeer opnieuw'
-                  : 'Too fast · try again'
-                : nl
-                  ? 'Te langzaam · houd langer vast'
-                  : 'Too slow · press longer'
-            : nl
-              ? 'Houd de auto vast, laat los voor 50 km/h'
-              : 'Press and hold the car, release near 50 km/h'
     } else if (this.cart) {
       this.cart.position.set(running ? 210 - Math.min(1, age / 3) * 210 : 210, 0)
       this.cart.alpha = running && age > 3 ? Math.max(0, 1 - (age - 3)) : 1
-      this.status.text = running
-        ? nl
-          ? 'Bagage komt eraan…'
-          : 'Luggage on its way…'
-        : record?.completed
-          ? nl
-            ? 'Bezorgd · bel opnieuw'
-            : 'Delivered · ring again'
-          : captions.luggage[nl ? 0 : 1]
     } else {
       this.school?.update(frame, reduced)
     }
     // Feedback now belongs to the actual object via WorldInteractionCue. Never
     // draw a second huge rectangular panel across the building facade.
-    this.status.visible = false
-    this.statusPanel.visible = false
     this.updateTelemetry(frame, record)
   }
 }

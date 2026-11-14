@@ -23,9 +23,25 @@ const emit = defineEmits<{
   seek: [progress: number]
 }>()
 const { t, locale } = useI18n()
+const accessibleArc = ref(0.65)
 const currentAction = computed(() => buildingActions[props.activeId])
-const currentIndex = computed(() => props.model.entries.find((entry) => entry.event.id === props.activeId)?.index)
+const currentIndex = computed(
+  () => props.model.entries.find((entry) => entry.event.id === props.activeId)?.index,
+)
 
+function openProjects() {
+  props.activities.markCueUsed('navel-development', 'projects')
+  emit('startComputer')
+}
+function openFirstComputer() {
+  props.activities.markCueUsed('first-lines', 'computer')
+  emit('openFirstComputer')
+}
+function enterCurrentBuilding() {
+  if (currentIndex.value === undefined) return
+  props.activities.markCueUsed(props.activeId, 'door')
+  emit('details', currentIndex.value)
+}
 function runAccessibleAction(index = 0) {
   const id = props.activeId,
     action = buildingActions[id]
@@ -35,7 +51,7 @@ function runAccessibleAction(index = 0) {
     compile: 'rover',
     basketball: 'ball',
     luggage: 'bell',
-    departure: 'plane',
+    departure: 'taxi',
     camera: 'car',
   }[action]
   if (cue) props.activities.markCueUsed(id, cue)
@@ -53,7 +69,7 @@ function runAccessibleAction(index = 0) {
           ? 0.85
           : action === 'camera'
             ? 0.33
-            : 0.65
+            : accessibleArc.value
         : undefined,
     )
 }
@@ -167,16 +183,20 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
 <template>
   <div ref="host" class="game-canvas">
     <div
-      v-if="currentAction || activeId === 'navel-development' || activeId === 'skills-road' || activeId === 'first-lines'"
+      v-if="
+        currentAction ||
+        activeId === 'navel-development' ||
+        activeId === 'skills-road' ||
+        activeId === 'first-lines' ||
+        activeId === 'contact'
+      "
       class="canvas-accessibility"
       @keydown.esc.stop.prevent="host?.closest<HTMLElement>('.world')?.focus()"
     >
-      <button v-if="activeId === 'first-lines'"
-        @click="props.activities.markCueUsed('first-lines', 'computer'); emit('openFirstComputer')">
+      <button v-if="activeId === 'first-lines'" @click="openFirstComputer">
         {{ locale === 'nl' ? 'Open de eerste computer' : 'Open the first computer' }}
       </button>
-      <button v-if="currentAction && currentIndex !== undefined"
-        @click="props.activities.markCueUsed(activeId, 'door'); emit('details', currentIndex)">
+      <button v-if="currentAction && currentIndex !== undefined" @click="enterCurrentBuilding">
         {{ t('building.enter') }}
       </button>
       <template v-if="currentAction === 'circuit'">
@@ -195,7 +215,14 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
           {{ command }}
         </button>
       </template>
-      <button v-else-if="currentAction" @click="runAccessibleAction()">
+      <label v-if="currentAction === 'basketball'" class="accessible-aim">
+        {{ locale === 'nl' ? 'Booghoogte' : 'Shot arc' }}
+        <input v-model.number="accessibleArc" type="range" min="0" max="1" step="0.05" />
+      </label>
+      <button
+        v-if="currentAction && !['circuit', 'compile'].includes(currentAction)"
+        @click="runAccessibleAction()"
+      >
         {{ t('scene.' + currentAction) }}
       </button>
       <template v-if="activeId === 'skills-road'">
@@ -222,9 +249,11 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
           {{ workers }} {{ locale === 'nl' ? 'workers' : 'workers' }}
         </button>
       </template>
+      <a v-if="activeId === 'contact'" href="mailto:contact@navel.dev">
+        {{ locale === 'nl' ? 'Stuur me een e-mail' : 'Send me an email' }}
+      </a>
       <span v-if="learningStatus" role="status">{{ learningStatus }}</span>
-      <button v-if="activeId === 'navel-development'"
-        @click="props.activities.markCueUsed('navel-development', 'projects'); emit('startComputer')">
+      <button v-if="activeId === 'navel-development'" @click="openProjects">
         {{ t('company.start') }}
       </button>
     </div>
@@ -272,7 +301,8 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
   background: #e7e4ce;
   color: #315443;
 }
-.canvas-accessibility button {
+.canvas-accessibility button,
+.canvas-accessibility a {
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid #809875;

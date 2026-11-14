@@ -26,8 +26,7 @@ export class ActivitySystem {
       const saved: unknown = JSON.parse(window.localStorage.getItem(this.cuesStorageKey) ?? '[]')
       if (Array.isArray(saved))
         for (const key of saved)
-          if (typeof key === 'string' && /^[a-z0-9-]+:[a-z0-9-]+$/.test(key))
-            this.usedCues.add(key)
+          if (typeof key === 'string' && /^[a-z0-9-]+:[a-z0-9-]+$/.test(key)) this.usedCues.add(key)
     } catch {
       // Storage is optional (including in private browsing).
     }
@@ -85,8 +84,17 @@ export class ActivitySystem {
     return true
   }
   actions: Record<string, ActionState> = {}
-  charges: Record<string, { holding: boolean; power: number; origin?: { x: number; y: number } }> =
-    {}
+  readonly autoPlayed = new Set<string>()
+  autoPlayOnce(id: string, action: SceneAction) {
+    if (this.autoPlayed.has(id) || this.actions[id]?.running || this.charges[id]?.holding)
+      return false
+    this.autoPlayed.add(id)
+    return this.actions[id] ? false : this.trigger(id, action, 0.85)
+  }
+  charges: Record<
+    string,
+    { holding: boolean; power: number; mode: 'power' | 'arc'; origin?: { x: number; y: number } }
+  > = {}
   get charging() {
     return Object.values(this.charges).some((charge) => charge.holding)
   }
@@ -108,9 +116,7 @@ export class ActivitySystem {
           ? 'success'
           : 'retry'
         : action === 'departure'
-          ? strength >= 0.72
-            ? 'success'
-            : 'retry'
+          ? 'success'
           : action === 'camera'
             ? strength >= 0.25 && strength <= 0.5
               ? 'success'
@@ -129,9 +135,9 @@ export class ActivitySystem {
     }
     return true
   }
-  beginCharge(id: string) {
+  beginCharge(id: string, mode: 'power' | 'arc' = 'power') {
     if (this.charging || this.actions[id]?.running) return false
-    this.charges[id] = { holding: true, power: 0 }
+    this.charges[id] = { holding: true, power: mode === 'arc' ? 0.65 : 0, mode }
     return true
   }
   releaseCharge(id: string, action: SceneAction) {
@@ -150,8 +156,9 @@ export class ActivitySystem {
     }
     tickRover(this.rover, dt)
     if (this.actions['skill-systems']) advanceQueue(this.cloud, dt)
-    for (const [id, charge] of Object.entries(this.charges))
-      if (charge.holding) charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
+    for (const charge of Object.values(this.charges))
+      if (charge.holding && charge.mode === 'power')
+        charge.power = Math.min(1, charge.power + Math.max(0, dt) / 1.75)
     for (const [id, state] of Object.entries(this.actions))
       this.actions[id] = advanceAction(state, dt)
   }

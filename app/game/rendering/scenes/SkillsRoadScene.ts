@@ -140,7 +140,16 @@ export class SkillsRoadScene extends Container {
       glow.eventMode = 'none'
       node.addChild(glow)
       this.addChild(node)
-      this.stations.push({ node, x, machine, statusBackdrop, status, pipelineControls, glow, logos })
+      this.stations.push({
+        node,
+        x,
+        machine,
+        statusBackdrop,
+        status,
+        pipelineControls,
+        glow,
+        logos,
+      })
     })
   }
   activate(index: number) {
@@ -159,12 +168,17 @@ export class SkillsRoadScene extends Container {
       station.glow.clear()
       if (i !== index) continue
       const pulse = reduced ? 0.5 : (1 + Math.sin(time / 520)) * 0.5
-      const drawFrame = () => station.glow
-        .moveTo(-160, -265).lineTo(160, -265)
-        .moveTo(-147, -257).lineTo(-147, 0)
-        .moveTo(150, -257).lineTo(150, 0)
-        .moveTo(-137, -65).lineTo(137, -65)
-      drawFrame().stroke({ color: 0xf8dc9d, width: 10, alpha: 0.10 + pulse * 0.1 })
+      const drawFrame = () =>
+        station.glow
+          .moveTo(-160, -265)
+          .lineTo(160, -265)
+          .moveTo(-147, -257)
+          .lineTo(-147, 0)
+          .moveTo(150, -257)
+          .lineTo(150, 0)
+          .moveTo(-137, -65)
+          .lineTo(137, -65)
+      drawFrame().stroke({ color: 0xf8dc9d, width: 10, alpha: 0.1 + pulse * 0.1 })
       drawFrame().stroke({ color: 0xffe9b3, width: 3, alpha: 0.68 + pulse * 0.21 })
     }
   }
@@ -179,9 +193,14 @@ export class SkillsRoadScene extends Container {
       const near = Math.abs(frame.motion.x - (this.x + x)) < 65
       const onGround = Math.abs(frame.motion.y + ground - floor) < 15
       const action = this.activity.actions['skill-' + group.id]
-      if (near && onGround && !frame.navigating && !frame.paused && !action) this.activate(i)
+      if (near && onGround && !frame.paused && !action) this.activate(i)
       const active = !!action
-      const p = i === 0 ? this.activity.pipeline.completed / pipelineSteps.length : action ? Math.min(1, action.age / 2) : 0
+      const p =
+        i === 0
+          ? this.activity.pipeline.completed / pipelineSteps.length
+          : action
+            ? Math.min(1, action.age / 2)
+            : 0
       if (p === 1) this.activity.completeStation(group.id)
       machine.clear()
       const pipelineFailed = i === 0 && this.activity.pipeline.status === 'error'
@@ -219,12 +238,20 @@ export class SkillsRoadScene extends Container {
         const pipeline = this.activity.pipeline
         status.text =
           pipeline.status === 'success'
-            ? nl ? 'Pipeline geslaagd. Klaar voor productie.' : 'Pipeline passed. Deployed to production.'
+            ? nl
+              ? 'Pipeline geslaagd. Klaar voor productie.'
+              : 'Pipeline passed. Deployed to production.'
             : pipeline.status === 'error'
-              ? nl ? 'Verkeerde volgorde. Start opnieuw met Commit.' : 'Wrong order. Restart at Commit.'
+              ? nl
+                ? 'Verkeerde volgorde. Start opnieuw met Commit.'
+                : 'Wrong order. Restart at Commit.'
               : active
-                ? nl ? 'Kies Commit → Test → Build → Deploy.' : 'Select Commit → Test → Build → Deploy.'
-                : nl ? 'Loop over de lichtplaat om te starten.' : 'Walk over the light plate to start.'
+                ? nl
+                  ? 'Kies Commit → Test → Build → Deploy.'
+                  : 'Select Commit → Test → Build → Deploy.'
+                : nl
+                  ? 'Loop over de lichtplaat om te starten.'
+                  : 'Walk over the light plate to start.'
         station.pipelineControls.forEach((control, step) => {
           const passed = pipeline.completed > step
           control
@@ -240,7 +267,27 @@ export class SkillsRoadScene extends Container {
       if (i === 0) {
         machine.roundRect(-130, -59, 260, 18, 5).fill(0x35594b)
         for (let n = 0; n < 10; n++) machine.circle(-117 + n * 25, -50, 4).fill(0x89a480)
-        const bx = -112 + p * 218
+        const demo = active && !reduced && this.activity.pipeline.status !== 'success'
+        const travel = demo ? (time * 0.28) % 1 : p
+        const bx = -112 + travel * 218
+        if (active) {
+          for (let n = 0; n < 4; n++) {
+            const px = -103 + n * 67
+            const lift = reduced ? 0 : Math.max(0, Math.sin(time * 4 - n * 1.4)) * 12
+            machine
+              .rect(px - 9, -140, 18, 10)
+              .fill(0x718f7a)
+              .rect(px - 3, -131, 6, 20 - lift)
+              .fill(0xbcc8a4)
+              .rect(px - 12, -113 - lift, 24, 5)
+              .fill(0xe0c88d)
+          }
+          const scan = reduced ? 0 : Math.sin(time * 3) * 104
+          machine
+            .moveTo(scan, -88)
+            .lineTo(scan, -45)
+            .stroke({ width: 2, color: 0xf3dc97, alpha: 0.6 })
+        }
         machine
           .rect(bx - 15, -86, 30, 26)
           .fill(active ? 0xc9af7a : 0x78967b)
@@ -248,7 +295,7 @@ export class SkillsRoadScene extends Container {
           .fill(0xeee0ae)
         for (let n = 0; n < 3; n++)
           machine.circle(-85 + n * 85, -96, 5).fill(p > (n + 1) / 4 ? 0xb5d48e : 0x668772)
-        if (active && p < 1 && !reduced)
+        if (active && !reduced)
           for (let n = 0; n < 5; n++)
             machine
               .rect(bx - 20 + ((n * 13) % 40), -95 - ((time * 26 + n * 8) % 35), 2, 3)

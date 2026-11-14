@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js'
+import { Assets, Sprite, Texture, Container, Graphics } from 'pixi.js'
 import type { companySlides } from '../../../content/company'
 import { label, rect } from '../drawing'
 /** A workstation with an explicit idle/start state; not an unexplained text rectangle. */
@@ -13,6 +13,31 @@ export class ComputerSprite extends Container {
     private locale: string,
   ) {
     super()
+    // Aquablu's client office sits beside the independent-work desktop.
+    const office = new Container()
+    office.position.set(670, 0)
+    rect(office, -135, -225, 270, 225, 0x668b82)
+    rect(office, -145, -234, 290, 10, 0x355e53)
+    rect(office, -120, -210, 240, 43, 0xf5f3e8)
+    for (const x of [-109, 64]) {
+      rect(office, x, -145, 45, 63, 0xabc9bb)
+      rect(office, x + 21, -145, 3, 63, 0x426d62)
+      rect(office, x, -114, 45, 3, 0x426d62)
+    }
+    rect(office, -26, -93, 52, 93, 0x31574e)
+    rect(office, -19, -86, 38, 55, 0x9bbfb2)
+    rect(office, -145, -5, 290, 5, 0x385d4d)
+    void Assets.load<Texture>('/companies/aquablu.png')
+      .then((texture) => {
+        if (this.destroyed) return
+        const logo = new Sprite(texture)
+        logo.anchor.set(0.5)
+        logo.scale.set(Math.min(192 / texture.width, 30 / texture.height))
+        logo.position.set(0, -188)
+        office.addChild(logo)
+      })
+      .catch(() => {})
+    this.addChild(office)
     // Desk, legs, tower, keyboard and mouse establish scale before the monitor wakes.
     rect(this, -337, -80, 785, 12, 0xa99b72)
     this.addChild(new Graphics().poly([-337, -80, -310, -94, 426, -94, 448, -80]).fill(0xc0ad7d))
@@ -59,8 +84,10 @@ export class ComputerSprite extends Container {
       .stroke({ color: 0xffdba4, width: 16, alpha: 0.11 + pulse * 0.1 })
       .roundRect(-313, -369, 675, 247, 9)
       .stroke({ color: 0xffedbc, width: 4, alpha: 0.67 + pulse * 0.23 })
-    if (!reduced) this.bezelGlow.rect(-302 + shimmer, -374, 44, 5)
-      .fill({ color: 0xffffdd, alpha: 0.35 + pulse * 0.35 })
+    if (!reduced)
+      this.bezelGlow
+        .rect(-302 + shimmer, -374, 44, 5)
+        .fill({ color: 0xffffdd, alpha: 0.35 + pulse * 0.35 })
   }
   update(_progress: number, _scale = 1, active = false, time = 0, reduced = false) {
     const nl = this.locale === 'nl'
@@ -74,7 +101,15 @@ export class ComputerSprite extends Container {
       label(this.screen, 'PROJECT ARCHIVE', -118, -343, 11, 0xbad0b4, 260)
       label(this.screen, '07 FILES', 259, -343, 10, 0xe6d5ac, 100)
       if (active) {
-        label(this.screen, nl ? 'ARCHIEF GEOPEND' : 'ARCHIVE OPEN', 25, -268, 32, 0x2d5543, 560).anchor.x = 0.5
+        label(
+          this.screen,
+          nl ? 'ARCHIEF GEOPEND' : 'ARCHIVE OPEN',
+          25,
+          -268,
+          32,
+          0x2d5543,
+          560,
+        ).anchor.x = 0.5
         label(this.screen, 'NAVEL DEVELOPMENT', 25, -219, 15, 0x6f8a70, 360).anchor.x = 0.5
       } else {
         // A readable desktop metaphor rather than the previous text-only slideshow.
@@ -83,18 +118,39 @@ export class ComputerSprite extends Container {
         for (const [i, slide] of this.slides.entries()) {
           const y = -286 + i * 20
           if (i === 0) rect(this.screen, -290, y - 3, 167, 20, 0x547664)
-          label(this.screen, `${String(i + 1).padStart(2, '0')}  ${slide.title}`, -279, y, 11,
-            i === 0 ? 0xffefc6 : 0xd3e1ce, 164)
+          label(
+            this.screen,
+            `${String(i + 1).padStart(2, '0')}  ${slide.title}`,
+            -279,
+            y,
+            11,
+            i === 0 ? 0xffefc6 : 0xd3e1ce,
+            164,
+          )
         }
         label(this.screen, 'NAVEL DEVELOPMENT', -90, -306, 12, 0x729078, 360)
         label(this.screen, nl ? 'Mijn werk.' : 'Selected work.', -90, -273, 30, 0x284a3c, 400)
-        label(this.screen,
-          nl ? 'Projecten, techniek en het verhaal erachter.'
-             : 'Projects, systems and the work behind them.',
-          -90, -220, 15, 0x55725c, 395)
+        label(
+          this.screen,
+          nl
+            ? 'Projecten, techniek en het verhaal erachter.'
+            : 'Projects, systems and the work behind them.',
+          -90,
+          -220,
+          15,
+          0x55725c,
+          395,
+        )
         rect(this.screen, -90, -178, 218, 27, 0x345e4b)
-        label(this.screen, nl ? 'OPEN PROJECTARCHIEF  ↗' : 'OPEN PROJECT ARCHIVE  ↗',
-          -78, -171, 11, 0xf3e9c9, 200)
+        label(
+          this.screen,
+          nl ? 'OPEN PROJECTARCHIEF  ↗' : 'OPEN PROJECT ARCHIVE  ↗',
+          -78,
+          -171,
+          11,
+          0xf3e9c9,
+          200,
+        )
         // Small stacked folders suggest exploring, rather than scrolling slides.
         for (let i = 2; i >= 0; i--) {
           const x = 240 + i * 15
@@ -108,9 +164,12 @@ export class ComputerSprite extends Container {
       }
     }
     this.track.clear()
-    this.lamp.clear().circle(337, -129, 2).fill({
-      color: 0xc6dc99, alpha: reduced ? 0.7 : 0.6 + Math.sin(time / 750) * 0.25,
-    })
+    this.lamp
+      .clear()
+      .circle(337, -129, 2)
+      .fill({
+        color: 0xc6dc99,
+        alpha: reduced ? 0.7 : 0.6 + Math.sin(time / 750) * 0.25,
+      })
   }
-
 }

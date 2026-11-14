@@ -45,7 +45,9 @@ export class WorldRenderer {
     const bounds = this.host.getBoundingClientRect()
     this.pointer = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
-  private leavePointer = () => { this.pointer = undefined }
+  private leavePointer = () => {
+    this.pointer = undefined
+  }
   private observer?: ResizeObserver
   private disposed = false
   private reduced = false
@@ -152,7 +154,8 @@ export class WorldRenderer {
     if (id === 'navel-development') return new ComputerSprite(this.model.slides, this.model.locale)
     if (id === 'contact')
       return new CampsiteScene(this.model.locale, (action) =>
-        this.activities.markCueUsed(id, action === 'fire' ? 'campfire' : action))
+        this.activities.markCueUsed(id, action === 'fire' ? 'campfire' : action),
+      )
     return new FirstLinesScene(() => {
       this.activities.markCueUsed(id, 'computer')
       this.callbacks.openFirstComputer()
@@ -178,15 +181,21 @@ export class WorldRenderer {
     else if (action === 'basketball') this.activities.trigger(id, 'basketball', 0.65)
     else if (action === 'departure') this.activities.trigger(id, 'departure', 0.85)
     else if (action === 'camera') this.activities.trigger(id, 'camera', 0.36)
-    else if (action === 'circuit') this.activities.circuit[0] = (this.activities.circuit[0]! + 1) % 4
-    else if (action === 'rover') this.activities.rover.commands.length
-      ? this.activities.runRover()
-      : this.activities.editRover('step')
+    else if (action === 'circuit')
+      this.activities.circuit[0] = (this.activities.circuit[0]! + 1) % 4
+    else if (action === 'rover')
+      this.activities.rover.commands.length
+        ? this.activities.runRover()
+        : this.activities.editRover('step')
     else if (action.startsWith('skill-')) {
       const index = Number(action.slice(6))
       if (this.activities.activateSkillGroup(index)) {
         const group = skillGroups[index]
-        if (group) this.callbacks.skill(group.title[this.model.locale === 'nl' ? 'nl' : 'en'], this.activities.exploredSkills.length)
+        if (group)
+          this.callbacks.skill(
+            group.title[this.model.locale === 'nl' ? 'nl' : 'en'],
+            this.activities.exploredSkills.length,
+          )
       }
     } else {
       const camp = this.scenes.get('contact')
@@ -195,7 +204,8 @@ export class WorldRenderer {
     return true
   }
   private drawCues(frame: WorldFrame, base: number, width: number, height: number) {
-    const actionCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] = []
+    const actionCandidates: { id: string; distance: number; radius: number; hovered: boolean }[] =
+      []
     const positions = new Map<string, { screenX: number; screenY: number; near: boolean }>()
     for (const [id, { node, entry }] of this.cues) {
       const x = entry.x + node.spec.x
@@ -204,17 +214,17 @@ export class WorldRenderer {
         entry.event.id === 'skills-road'
           ? ground - terrainHeight(x, this.model.geometry.terrain)
           : 0
-      const actionPoint =
-        this.activitiesByScene.get(entry.event.id)?.focusPoint() 
+      const actionPoint = this.activitiesByScene.get(entry.event.id)?.focusPoint()
       const dynamic = actionPoint && node.spec.key !== 'door' ? actionPoint : undefined
       node.position.set(dynamic?.x ?? node.spec.x, (dynamic?.y ?? node.spec.y) + localSlope)
       const projectedX = (entry.x + node.x - this.viewCamera) * this.zoom
       const projectedY = base + (frame.cameraY - ground + node.y) * this.zoom
       const visible =
-        projectedX > 28 && projectedX < width - 28 &&
-        projectedY > 24 && projectedY < height - 20
+        projectedX > 28 && projectedX < width - 28 && projectedY > 24 && projectedY < height - 20
       const distance = Math.abs(frame.motion.x - (entry.x + node.x))
-      const hovered = !!this.pointer && visible &&
+      const hovered =
+        !!this.pointer &&
+        visible &&
         Math.hypot(this.pointer.x - projectedX, this.pointer.y - projectedY) < 48
       const near = visible && (hovered || distance < node.spec.radius)
       positions.set(id, { screenX: projectedX, screenY: projectedY, near })
@@ -224,7 +234,9 @@ export class WorldRenderer {
     // Glow and E use the same focus regardless of first use or tooltip settings.
     const selected = activeWorld ? selectWorldCue(actionCandidates) : undefined
     const focusedCue = selected ? this.cues.get(selected) : undefined
-    const tooltip = this.showTooltips && focusedCue &&
+    const tooltip =
+      this.showTooltips &&
+      focusedCue &&
       focusedCue.node.spec.key !== 'door' &&
       !this.activities.wasCueUsed(focusedCue.entry.event.id, focusedCue.node.spec.key)
         ? selected
@@ -232,28 +244,45 @@ export class WorldRenderer {
     // Only the currently focused physical object glows; a tooltip is optional.
     for (const [id, sprite] of this.scenes) {
       if (sprite instanceof BuildingSprite)
-        sprite.setEntranceHighlight(selected === id + ':door',
-          selected === id + ':door', frame.time, this.reduced)
+        sprite.setEntranceHighlight(
+          selected === id + ':door',
+          selected === id + ':door',
+          frame.time,
+          this.reduced,
+        )
       else if (sprite instanceof FirstLinesScene)
         sprite.setInteractionGlow(selected === id + ':computer', frame.time, this.reduced)
       else if (sprite instanceof ComputerSprite)
         sprite.setInteractionGlow(selected === id + ':projects', frame.time, this.reduced)
       else if (sprite instanceof SkillsRoadScene)
         sprite.setInteractionGlow(
-          selected === id + ':tooling' ? 0 :
-          selected === id + ':web' ? 1 :
-          selected === id + ':cloud' ? 2 : undefined,
-          frame.time, this.reduced)
+          selected === id + ':tooling'
+            ? 0
+            : selected === id + ':web'
+              ? 1
+              : selected === id + ':cloud'
+                ? 2
+                : undefined,
+          frame.time,
+          this.reduced,
+        )
       else if (sprite instanceof CampsiteScene)
         sprite.setInteractionGlow(
-          selected === id + ':tent' ? 'tent' :
-          selected === id + ':campfire' ? 'fire' :
-          selected === id + ':lantern' ? 'lantern' : undefined,
-          frame.time, this.reduced)
+          selected === id + ':tent'
+            ? 'tent'
+            : selected === id + ':campfire'
+              ? 'fire'
+              : selected === id + ':lantern'
+                ? 'lantern'
+                : selected === id + ':email'
+                  ? 'email'
+                  : undefined,
+          frame.time,
+          this.reduced,
+        )
     }
     for (const [id, activity] of this.activitiesByScene) {
-      const selectedActivity = selected?.startsWith(id + ':') &&
-        selected !== id + ':door'
+      const selectedActivity = selected?.startsWith(id + ':') && selected !== id + ':door'
       activity.setInteractionGlow(!!selectedActivity, frame.time, this.reduced)
     }
     const picked = selected ? this.cues.get(selected) : undefined
@@ -268,21 +297,35 @@ export class WorldRenderer {
         if (record.running) feedback = nl ? 'Bezig…' : 'In progress…'
         else if (record.outcome === 'retry' || record.outcome === 'ticket')
           feedback = nl ? 'Probeer opnieuw' : 'Try again'
-        else feedback = entry.event.id === 'fletcher'
-          ? (nl ? 'Bagage bezorgd · bel opnieuw' : 'Delivered · ring again')
-          : (nl ? 'Geslaagd · probeer opnieuw' : 'Completed · try again')
+        else
+          feedback =
+            entry.event.id === 'fletcher'
+              ? nl
+                ? 'Bagage bezorgd · bel opnieuw'
+                : 'Delivered · ring again'
+              : nl
+                ? 'Geslaagd · probeer opnieuw'
+                : 'Completed · try again'
       }
       if (entry.event.id === 'skills-road') {
         if (node.spec.key === 'tooling') {
           const pipeline = this.activities.pipeline
-          feedback = pipeline.status === 'success'
-            ? (nl ? 'Pipeline geslaagd · deployed' : 'Pipeline passed · deployed')
-            : pipeline.status === 'error'
-              ? (nl ? 'Verkeerde volgorde · opnieuw' : 'Wrong order · retry')
-              : pipeline.completed > 0
-                ? `${pipeline.completed}/4 · ${pipelineSteps[pipeline.completed] ?? 'deploy'}`
-                : undefined
-        } else if (node.spec.key === 'web' && (this.activities.web.records || this.activities.web.theme)) {
+          feedback =
+            pipeline.status === 'success'
+              ? nl
+                ? 'Pipeline geslaagd · deployed'
+                : 'Pipeline passed · deployed'
+              : pipeline.status === 'error'
+                ? nl
+                  ? 'Verkeerde volgorde · opnieuw'
+                  : 'Wrong order · retry'
+                : pipeline.completed > 0
+                  ? `${pipeline.completed}/4 · ${pipelineSteps[pipeline.completed] ?? 'deploy'}`
+                  : undefined
+        } else if (
+          node.spec.key === 'web' &&
+          (this.activities.web.records || this.activities.web.theme)
+        ) {
           feedback = nl ? 'Live pagina bijgewerkt' : 'Live page updated'
         } else if (node.spec.key === 'cloud' && this.activities.actions['skill-systems']) {
           feedback = `${nl ? 'Wachtrij' : 'Queue'} ${Math.ceil(this.activities.cloud.queued)} · ${this.activities.cloud.workers} workers`
@@ -294,8 +337,15 @@ export class WorldRenderer {
       const popupOffset = node.spec.popupOffset ?? 106
       const top = p.screenY - (popupOffset + 27) * this.zoom
       const pushDown = Math.max(0, (16 - top) / this.zoom)
-      node.update(frame.time, p.near && frame.visit.phase === 'outside', selectedThis, this.reduced,
-        feedback, (safeX - p.screenX) / this.zoom, pushDown)
+      node.update(
+        frame.time,
+        p.near && frame.visit.phase === 'outside',
+        selectedThis,
+        this.reduced,
+        feedback,
+        (safeX - p.screenX) / this.zoom,
+        pushDown,
+      )
     }
     if (frame.paused) this.currentCue = undefined
     this.app.canvas.dataset.cue = tooltip ?? ''
@@ -356,7 +406,7 @@ export class WorldRenderer {
         : computerView
           ? Math.min(frame.scale, (width - 24) / 675)
           : campView
-            ? Math.min(frame.scale, (width - 24) / 800)
+            ? Math.min(frame.scale, (width - 24) / 900)
             : isBuilding(frame.activeId)
               ? Math.min(frame.scale, Math.max(0.6, (height - frame.groundInset - 125) / 290))
               : frame.scale
@@ -367,7 +417,7 @@ export class WorldRenderer {
           Math.min(
             this.model.width - width / targetZoom,
             frame.motion.x -
-              (width / targetZoom) * (campView ? 0.65 : closeView ? portraitAnchor : 0.38),
+              (width / targetZoom) * (campView ? 0.58 : closeView ? portraitAnchor : 0.38),
           ),
         )
     if (!this.initialized) {
@@ -393,8 +443,7 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
-        for (const key of this.cues.keys())
-          if (key.startsWith(id + ':')) this.cues.delete(key)
+        for (const key of this.cues.keys()) if (key.startsWith(id + ':')) this.cues.delete(key)
         this.activitiesByScene.delete(id)
       }
     for (const entry of visible) {
@@ -409,7 +458,8 @@ export class WorldRenderer {
                 ? this.callbacks.seek(
                     Math.min(1, this.presentationProgress + 1 / this.model.slides.length),
                   )
-                : (this.activities.markCueUsed(entry.event.id, 'projects'), this.callbacks.startComputer()),
+                : (this.activities.markCueUsed(entry.event.id, 'projects'),
+                  this.callbacks.startComputer()),
             new Rectangle(-296, -354, 662, 244),
           )
         if (node instanceof BuildingSprite) {
@@ -428,7 +478,10 @@ export class WorldRenderer {
         this.scenes.set(entry.event.id, node)
         this.scenery.addChild(node)
         for (const spec of cuesForScene(entry.event.id)) {
-          const interaction = new WorldInteractionCue(spec, this.model.locale === 'nl' ? 'nl' : 'en')
+          const interaction = new WorldInteractionCue(
+            spec,
+            this.model.locale === 'nl' ? 'nl' : 'en',
+          )
           node.addChild(interaction)
           this.cues.set(entry.event.id + ':' + spec.key, { node: interaction, entry })
         }
