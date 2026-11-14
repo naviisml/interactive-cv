@@ -896,24 +896,32 @@ async function graphicsFailureScenario() {
   }
 }
 async function assertWorldMonitor(page, selector) {
-  await page.waitForFunction(
-    () => JSON.parse(document.querySelector('canvas')?.dataset.monitor || '{}').ready,
+  // WebKit can paint the Pixi bezel one frame before the projected HTML app.
+  // Read both rectangles in the same frame, polling until they share bounds.
+  const alignment = await page.waitForFunction(
+    (selector) => {
+      const canvas = document.querySelector('canvas[data-renderer="pixi"]')
+      const app = document.querySelector(selector)
+      const world = document.querySelector('.world')
+      const surface = JSON.parse(canvas?.dataset.monitor || '{}')
+      if (!surface.ready || !app || !world) return false
+      const a = app.getBoundingClientRect()
+      const w = world.getBoundingClientRect()
+      const differences = [
+        Math.abs(a.x - w.x - surface.x),
+        Math.abs(a.y - w.y - surface.y),
+        Math.abs(a.width - surface.width),
+        Math.abs(a.height - surface.height),
+      ]
+      return differences.every((difference) => difference < 2)
+        ? { appHeight: a.height, worldHeight: w.height }
+        : false
+    },
+    selector,
+    { timeout: 15000 },
   )
-  const app = await page.locator(selector).boundingBox()
-  const world = await page.locator('.world').boundingBox()
-  const surface = JSON.parse(await page.locator('canvas').getAttribute('data-monitor'))
-  assert.ok(app && world && surface)
-  for (const [actual, expected] of [
-    [app.x - world.x, surface.x],
-    [app.y - world.y, surface.y],
-    [app.width, surface.width],
-    [app.height, surface.height],
-  ])
-    assert.ok(
-      Math.abs(actual - expected) < 2,
-      'the app must remain inside the world-rendered monitor surface',
-    )
-  assert.ok(app.height < world.height - 60, 'the actual desk and ground stay visible')
+  const bounds = await alignment.jsonValue()
+  assert.ok(bounds.appHeight < bounds.worldHeight - 60, 'the actual desk and ground stay visible')
   assert.equal(await page.locator('.archive-scrim,.world-modal').count(), 0)
 }
 async function polishScenario(label, width, height, mobile) {
