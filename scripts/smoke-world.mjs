@@ -40,7 +40,7 @@ async function waitForArrival(page, scene) {
                 ? -440
                 : 0,
     },
-    { timeout: 25000 },
+    { timeout: process.env.BROWSER_ENGINE === 'webkit' ? 45000 : 25000 },
   )
 }
 async function tapWorld(page, canvas, id, x, y, touch) {
@@ -934,6 +934,7 @@ async function polishScenario(label, width, height, mobile) {
     await page.getByRole('button', { name: 'Read my story' }).click()
     const about = page.getByRole('dialog', { name: 'Where it began' })
     await about.waitFor()
+    assert.equal(await page.locator('.intro-hero').evaluate((el) => getComputedStyle(el).visibility), 'hidden')
     assert.equal(new URL(page.url()).pathname, '/', 'the About interaction never leaves the game route')
     assert.match(await about.innerText(), /Habbo[\s\S]*F12[\s\S]*RetroNet/)
     assert.equal(await canvas.count(), 1, 'the Pixi scene remains mounted while reading About')
