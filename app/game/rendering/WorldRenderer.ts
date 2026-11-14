@@ -239,7 +239,9 @@ export class WorldRenderer {
     }
     const activeWorld = frame.visit.phase === 'outside' && !frame.paused
     // Glow and E use the same focus regardless of first use or tooltip settings.
-    const selected = activeWorld ? selectWorldCue(actionCandidates) : undefined
+    const firstDoor =
+      !this.activities.wasCueUsed('fletcher', 'door') ? 'fletcher:door' : undefined
+    const selected = activeWorld ? selectWorldCue(actionCandidates, firstDoor) : undefined
     const focusedCue = selected ? this.cues.get(selected) : undefined
     const tooltip =
       this.showTooltips &&
