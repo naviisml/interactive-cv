@@ -256,7 +256,11 @@ export interface CueCandidate {
 export function selectWorldCue(candidates: CueCandidate[], firstDoor?: string): string | undefined {
   const eligible = candidates.filter((c) => c.hovered || c.distance <= c.radius)
   eligible.sort((a, b) => Number(!!b.hovered) - Number(!!a.hovered) || a.distance - b.distance)
-  if (!eligible[0]?.hovered && firstDoor && eligible.some((cue) => cue.id === firstDoor))
+  if (
+    !eligible[0]?.hovered &&
+    firstDoor &&
+    eligible.some((cue) => cue.id === firstDoor && cue.distance < 110)
+  )
     return firstDoor
   return eligible[0]?.id
 }
