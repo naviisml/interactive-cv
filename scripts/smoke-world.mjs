@@ -1103,6 +1103,8 @@ async function polishScenario(label, width, height, mobile) {
     await tapWorld(page, canvas, 'first-lines', 150, -140, mobile)
     await page.locator('.first-code-lab').waitFor({ timeout: 15000 })
     await assertWorldMonitor(page, '.first-code-lab')
+    const editor = await page.locator('.first-code-lab textarea').boundingBox()
+    assert.ok(editor?.height >= 130, 'the world monitor leaves usable space for editing code')
     await page.screenshot({ path: `test-results/world/${label}-world-code-monitor.png` })
     await page.locator('.first-code-lab .code-close').click()
     await page.waitForTimeout(900)

@@ -166,6 +166,8 @@ onMounted(() => dialog.value?.querySelector<HTMLButtonElement>('.code-close')?.f
   touch-action: pan-y;
 }
 .lab-window {
+  container-type: size;
+  container-name: code-window;
   width: 100%;
   height: 100%;
   max-height: 100%;
@@ -460,6 +462,19 @@ textarea:focus-visible {
   }
   footer button {
     width: 100%;
+  }
+}
+@container code-window (max-height: 420px) {
+  .lab-intro {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  footer {
+    display: none;
   }
 }
 </style>
