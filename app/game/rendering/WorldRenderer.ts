@@ -26,7 +26,7 @@ import { doorOpenness } from '../core/buildingVisit'
 import { CharacterSprite } from './sprites/CharacterSprite'
 import { ComputerSprite } from './sprites/ComputerSprite'
 
-import { terrainHeight, cameraTarget } from '../core/physics'
+import { terrainHeight } from '../core/physics'
 import type { ActivitySystem } from '../engine/ActivitySystem'
 import type { RendererCallbacks, SceneEntry, WorldFrame, WorldModel } from './types'
 export class WorldRenderer {
@@ -140,6 +140,7 @@ export class WorldRenderer {
     this.gates.build(model)
     for (const sprite of this.scenes.values()) sprite.destroy({ children: true })
     this.scenes.clear()
+    this.surfaces.clear()
     this.cues.clear()
     this.currentCue = undefined
     this.activitiesByScene.clear()
@@ -194,11 +195,10 @@ export class WorldRenderer {
     else if (action === 'camera') this.activities.trigger(id, 'camera', 0.36)
     else if (action === 'circuit')
       this.activities.circuit[0] = (this.activities.circuit[0]! + 1) % 4
-    else if (action === 'rover')
-      this.activities.rover.commands.length
-        ? this.activities.runRover()
-        : this.activities.editRover('step')
-    else if (action.startsWith('skill-')) {
+    else if (action === 'rover') {
+      if (this.activities.rover.commands.length) this.activities.runRover()
+      else this.activities.editRover('step')
+    } else if (action.startsWith('skill-')) {
       const index = Number(action.slice(6))
       if (this.activities.activateSkillGroup(index)) {
         const group = skillGroups[index]
@@ -463,6 +463,7 @@ export class WorldRenderer {
       if (!ids.has(id)) {
         node.destroy({ children: true })
         this.scenes.delete(id)
+        this.surfaces.delete(id)
         for (const key of this.cues.keys()) if (key.startsWith(id + ':')) this.cues.delete(key)
         this.activitiesByScene.delete(id)
       }
@@ -530,12 +531,20 @@ export class WorldRenderer {
         const idle = isProject ? projectScreen : firstCodeScreen
         const padding = width < 700 ? 8 : 24
         const ground = terrainHeight(entry.x, this.model.geometry.terrain)
+        // The lower screen edge remains attached to the original stand.
+        const screenBottom =
+          height < 350
+            ? height - 16
+            : Math.min(
+                height - 32,
+                base + (frame.cameraY - ground + idle.y + idle.height) * this.zoom,
+              )
         const desired = expanded
           ? {
               x: this.viewCamera + padding / this.zoom - entry.x,
               y: (16 - base) / this.zoom - frame.cameraY + ground,
               width: (width - padding * 2) / this.zoom,
-              height: Math.max(80, height - (height < 350 ? 32 : 116)) / this.zoom,
+              height: Math.max(80, screenBottom - 16) / this.zoom,
             }
           : idle
         const area = approachSurface(

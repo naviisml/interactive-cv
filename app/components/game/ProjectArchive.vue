@@ -176,7 +176,7 @@ onMounted(() => nextTick(() => shell.value?.focus({ preventScroll: true })))
                     alt="Aquablu"
                     width="158"
                     height="42"
-                  />
+                  >
                   <h1>{{ project.title }}</h1>
                   <p class="archive-summary">{{ project.summary }}</p>
                 </div>

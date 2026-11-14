@@ -76,7 +76,7 @@ Tests cover movement at different frame rates, reverse supports, ladders, jumps,
 
 `app/content/journey.ts` is the **walking route**, not the full CV. Navel Development owns one stop. Its seven project slides are resolved from the complete, localized CV with `companySlides`; they are also expandable inside its list entry. Do not add these projects to the route again.
 
-`app/content/buildings.ts` assigns the six school/employer facades. `BuildingSprite` draws grounded doors and facade signs. Door clicks, E and the accessible nearby entrance button all call `useBuildingVisit`. The visit state advances through approach → opening → entering → inside → leaving → closing. `buildingVisit.ts` controls door openness and actor visibility from that same state. `BuildingInterior` holds the localized story/tools boards and return door. Navigation cancels a visit; closing returns control at the exact doorway.
+`app/content/buildings.ts` assigns the six school/employer facades. `BuildingSprite` draws employer doors and facade signs; school dates, studies and locations are inscribed directly on their facade with no enter target. Door clicks, E and the accessible nearby entrance button all call `useBuildingVisit`. The visit state advances through approach → opening → entering → inside → leaving → closing. `buildingVisit.ts` controls door openness and actor visibility from that same state. `BuildingInterior` holds the localized story/tools boards and return door. Navigation cancels a visit; closing returns control at the exact doorway.
 
 `skillGroups` in `app/content/skills.ts` owns compact clusters and category labels. A discovery belongs to `ActivitySystem`, so culling or changing language does not reset it. `LevelEntranceScene` draws exactly one depth-layered arch for each section. Its far plane is behind the actor; its near pillar is in the foreground so crossing it produces real occlusion.
 
@@ -105,4 +105,6 @@ Browser regressions cover outside-menu click-through, background inertness, reta
 
 ## Intro and desktop
 
-The opening is split evenly on desktop and stacked compactly on phones. Actual movement dismisses it once per client visit. The scene expands in place, with reduced-motion support. Computer apps occupy a desktop workspace rather than a dimmed modal.
+The hero overlays one full-size world with a fading gradient. The hero fades with distance from the starting position and returns when walking back, without changing world bounds. The fixed world shell follows the visible viewport height, including Safari browser chrome changes. Computer screens expand from their original Pixi surfaces; their HTML apps use the same projected bounds, and the bezel stays attached to the stand above the original desk.
+
+`npm run lint` prepares Nuxt and runs ESLint with zero warnings allowed. `npm run lint:fix` applies safe automatic fixes. The main validation workflow includes linting.

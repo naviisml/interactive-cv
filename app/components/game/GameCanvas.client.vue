@@ -59,7 +59,7 @@ function runAccessibleAction(index = 0) {
   }[action]
   if (cue) props.activities.markCueUsed(id, cue)
   if (action === 'circuit')
-    props.activities.circuit[index] = (props.activities.circuit[index]! + 1) % 4
+    props.activities.rotateWire(index)
   else if (action === 'compile') {
     if (index === 3) props.activities.runRover()
     else props.activities.editRover((['step', 'jump', 'undo'] as const)[index]!)
@@ -91,12 +91,12 @@ function runPipelineStep(step: PipelineStep) {
 }
 function adjustWeb(action: 'theme' | 'data') {
   activateSkills(1)
-  if (action === 'theme') props.activities.web.theme = (props.activities.web.theme + 1) % 3
-  else props.activities.web.records = (props.activities.web.records % 3) + 1
+  if (action === 'theme') props.activities.setWebTheme((props.activities.web.theme + 1) % 3)
+  else props.activities.setWebRecords((props.activities.web.records % 3) + 1)
 }
 function scaleWorkers(workers: number) {
   activateSkills(2)
-  props.activities.cloud.workers = workers
+  props.activities.setWorkers(workers)
 }
 const learningStatus = ref('')
 let lastLearningReadout = 0
@@ -224,7 +224,7 @@ defineExpose({ interactNearest: () => renderer?.interactNearest() ?? false })
       </template>
       <label v-if="currentAction === 'basketball'" class="accessible-aim">
         {{ locale === 'nl' ? 'Booghoogte' : 'Shot arc' }}
-        <input v-model.number="accessibleArc" type="range" min="0" max="1" step="0.05" />
+        <input v-model.number="accessibleArc" type="range" min="0" max="1" step="0.05" >
       </label>
       <button
         v-if="currentAction && !['circuit', 'compile'].includes(currentAction)"

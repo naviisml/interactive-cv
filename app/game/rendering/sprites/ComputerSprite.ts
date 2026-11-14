@@ -54,6 +54,7 @@ export class ComputerSprite extends Container {
       .rect(rect.x, rect.y, rect.width, rect.height)
       .fill(0xe8ecdf)
     this.surfaceMask.clear().rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff)
+    this.surfaceMask.visible = !expanded
     this.screen.visible = !expanded
     this.bezelGlow.visible = !expanded
   }

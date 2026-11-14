@@ -97,6 +97,16 @@ async function chargeWorld(page, canvas, id, x, y, ms) {
   }
   await page.mouse.up()
 }
+async function walkToIntroDistance(page, direction, origin) {
+  await page.locator('.world').focus()
+  await page.keyboard.down(direction)
+  try {
+    await page.waitForFunction(({direction,origin}) => {
+      const x = Number(document.querySelector('canvas')?.dataset.playerX)
+      return direction === 'ArrowRight' ? x > origin + 200 : x <= origin + 1
+    }, { direction, origin }, { timeout: 15000 })
+  } finally { await page.keyboard.up(direction) }
+}
 async function scenario(label, width, height, mobile) {
   const page = await browser.newPage({
     viewport: { width, height },
@@ -114,27 +124,14 @@ async function scenario(label, width, height, mobile) {
     await page.locator('.intro-hero h1').waitFor({ state: 'visible' })
     await page.screenshot({ path: `test-results/world/${label}-intro.png` })
     const openingWorld = await page.locator('.world').boundingBox()
-    await page.locator('.world').focus()
-    await page.keyboard.down('ArrowRight')
-    await page.waitForTimeout(180)
-    await page.keyboard.up('ArrowRight')
-    await page.waitForTimeout(850)
-    assert.equal(
-      await page
-        .locator('.explore-stage')
-        .evaluate((el) => el.classList.contains('intro-dismissed')),
-      true,
-    )
-    await page.keyboard.down('ArrowLeft')
-    await page.waitForTimeout(250)
-    await page.keyboard.up('ArrowLeft')
-    assert.equal(
-      await page.locator('.intro-hero').getAttribute('aria-hidden'),
-      'true',
-      'walking back never restores the intro',
-    )
+    const introOrigin = Number(await canvas.getAttribute('data-player-x'))
+    await walkToIntroDistance(page, 'ArrowRight', introOrigin)
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.intro-hero')).opacity === '0')
+    await walkToIntroDistance(page, 'ArrowLeft', introOrigin)
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.intro-hero')).opacity) > .98)
+    assert.equal(await page.locator('.intro-hero').getAttribute('aria-hidden'), 'false', 'returning to the starting point reveals the hero')
     const afterHero = await page.locator('.world').boundingBox()
-    assert.deepEqual(afterHero, openingWorld, 'hero dismissal never moves or resizes the game')
+    assert.deepEqual(afterHero, openingWorld, 'fading the hero in either direction never moves or resizes the game')
     const header = await page.locator('.portfolio-header').boundingBox(),
       stage = await page.locator('.world').boundingBox(),
       footer = await page.locator('.journey-footer').boundingBox()
@@ -1061,18 +1058,18 @@ async function polishScenario(label, width, height, mobile) {
       'hero overlays a full-sized scene',
     )
     await page.screenshot({ path: `test-results/world/${label}-overlay-hero.png` })
-    await page.locator('.world').focus()
-    await page.keyboard.down('ArrowRight')
-    await page.waitForTimeout(220)
-    await page.keyboard.up('ArrowRight')
-    await page.waitForFunction(
-      () => getComputedStyle(document.querySelector('.intro-hero')).opacity === '0',
-    )
-    assert.deepEqual(
-      await page.locator('.world').boundingBox(),
-      initial,
-      'world geometry stays fixed during the fade',
-    )
+    const origin = Number(await canvas.getAttribute('data-player-x'))
+    await walkToIntroDistance(page, 'ArrowRight', origin)
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.intro-hero')).opacity === '0')
+    assert.deepEqual(await page.locator('.world').boundingBox(), initial, 'the hero fade keeps world geometry fixed')
+    await walkToIntroDistance(page, 'ArrowLeft', origin)
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.intro-hero')).opacity) > .98)
+    assert.deepEqual(await page.locator('.world').boundingBox(), initial, 'the returning hero also keeps the world fixed')
+    const github = page.locator('.header-github-link')
+    assert.equal(await github.getAttribute('href'), 'https://github.com/naviisml')
+    const githubBox = await github.boundingBox()
+    const languageBox = await page.locator('.language-switch').boundingBox()
+    assert.ok(githubBox && languageBox && githubBox.x + githubBox.width <= languageBox.x + 1, 'GitHub link fits beside language and toggles')
     for (const resized of mobile ? [height - 100, height] : [height]) {
       await page.setViewportSize({ width, height: resized })
       await page.waitForTimeout(350)

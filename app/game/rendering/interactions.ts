@@ -1,4 +1,4 @@
-import { Container, Rectangle, type FederatedPointerEvent } from 'pixi.js'
+import type { Container, Rectangle, FederatedPointerEvent} from 'pixi.js';
 /** Pointer taps share the canvas with swiping; drags must never fire a scene action. */
 export function tapTarget(node: Container, action: () => void, area?: Rectangle) {
   let start: { x: number; y: number; pointerId: number } | undefined

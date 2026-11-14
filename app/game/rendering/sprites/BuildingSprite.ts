@@ -1,4 +1,5 @@
-import { Assets, Sprite, Texture, Container, Graphics, Rectangle, Text } from 'pixi.js'
+import type { Texture} from 'pixi.js';
+import { Assets, Sprite, Container, Graphics, Rectangle, Text } from 'pixi.js'
 import type { TimelineEvent } from '../../../content/timeline'
 import { buildings, type BuildingKind } from '../../../content/buildings'
 import { rect, label } from '../drawing'

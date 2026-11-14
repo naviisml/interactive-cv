@@ -1,4 +1,5 @@
-import { Container, Graphics, Rectangle, Text } from 'pixi.js'
+import type { Text } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js'
 import {
   circuitConnected,
   circuitSeed,

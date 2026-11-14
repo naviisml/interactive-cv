@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Menu, X, List, Map, MessageSquareText, MessageSquareOff, ChevronDown } from '@lucide/vue'
+import { Menu, X, List, Map as MapIcon, MessageSquareText, MessageSquareOff, ChevronDown } from '@lucide/vue'
 import { levels, type LevelId } from '~/content/journey'
 defineProps<{
   active: LevelId
@@ -91,6 +91,9 @@ function toggleView() {
       </nav>
     </div>
     <div class="header-actions">
+      <a class="header-icon-toggle header-github-link" href="https://github.com/naviisml" target="_blank" rel="noopener noreferrer" :aria-label="locale === 'nl' ? 'GitHub-profiel van Navarone' : 'Navarone on GitHub'" title="GitHub">
+        <img src="/skills/github.png" width="20" height="20" alt="" >
+      </a>
       <label class="language-switch">
         <span class="sr-only">{{ t('nav.language') }}</span>
         <select
@@ -111,7 +114,7 @@ function toggleView() {
         :aria-pressed="listMode"
         @click="toggleView"
       >
-        <component :is="listMode ? Map : List" :size="19" aria-hidden="true" />
+        <component :is="listMode ? MapIcon : List" :size="19" aria-hidden="true" />
       </button>
       <button
         class="header-icon-toggle header-tooltip-toggle"

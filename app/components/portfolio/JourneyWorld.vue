@@ -37,7 +37,6 @@ const entries = computed(() =>
 )
 const filters = ['all', 'work', 'projects', 'school', 'skills'] as const
 const worldCanvas = ref<{ interactNearest: () => boolean }>()
-const introDismissed = useState('journey-intro-dismissed', () => false)
 const sceneChanging = ref(false)
 const worldReady = ref(false)
 const rendererUnavailable = ref(false)
@@ -55,7 +54,7 @@ async function restoreInteractionFocus() {
   interactionOpener = undefined
 }
 function dismissIntro() {
-  introDismissed.value = true
+  goTo(0)
   worldRoot.value?.focus()
 }
 function openFirstComputer(event?: MouseEvent) {
@@ -109,7 +108,6 @@ const {
   touchVertical,
   nearLadder,
   nearestIndex,
-  nearby,
   progress,
   goTo,
   jump,
@@ -117,12 +115,9 @@ const {
   scrollByDistance,
   endScrollTravel,
 } = journey
-watch(
-  () => motion.x,
-  (x, previous) => {
-    if (Math.abs(x - previous) > 0.1) introDismissed.value = true
-  },
-)
+const introOrigin = motion.x
+const introOpacity = computed(() => 1 - Math.min(1, Math.max(0, (motion.x - introOrigin) / 160)))
+const introDismissed = computed(() => introOpacity.value < .02)
 const scenery = computed(() =>
   sceneryTransition(
     motion.x,
@@ -562,9 +557,9 @@ onBeforeUnmount(() => {
       :inert="worldPanelOpen"
       :active="activeLevel.id"
       :list-mode="listMode"
+      :tooltips-enabled="tooltipsEnabled"
       @navigate="navigateLevel"
       @toggle-list="toggleList"
-      :tooltips-enabled="tooltipsEnabled"
       @toggle-tooltips="setTooltips"
     />
     <nav v-if="listMode" class="journey-filters" aria-label="Timeline categories">
@@ -580,7 +575,7 @@ onBeforeUnmount(() => {
       </button>
     </nav>
     <div v-if="!listMode" class="explore-stage" :class="{ 'intro-dismissed': introDismissed }">
-      <aside class="intro-hero" :inert="introDismissed" :aria-hidden="introDismissed">
+      <aside :style="{ opacity: introOpacity }" class="intro-hero" :inert="introDismissed" :aria-hidden="introDismissed">
         <div class="intro-copy">
           <p class="eyebrow">NAVARONE ISMAIL / SOFTWARE DEVELOPER</p>
           <h1>{{ locale === 'nl' ? 'Welkom in mijn portfolio.' : 'Welcome to my portfolio.' }}</h1>
@@ -620,27 +615,27 @@ onBeforeUnmount(() => {
         :style="{ '--ground-y': `${view.groundInset}px` }"
         :class="`level-${activeLevel.id}`"
         tabindex="-1"
+        :aria-label="t('common.worldLabel')"
         @pointerdown="gestureStart"
         @pointermove="gestureMove"
         @pointerup="gestureEnd"
         @pointercancel="gestureEnd"
         @lostpointercapture="gestureEnd"
         @wheel="wheelTravel"
-        :aria-label="t('common.worldLabel')"
       >
         <div class="world-scene" :inert="worldPanelOpen && !presentation.active">
           <ClientOnly
             ><GameCanvas
               v-if="worldReady"
               ref="worldCanvas"
-              @availability="rendererUnavailable = !$event"
-              @screen="screenViewport = $event"
               :model="rendererModel"
               :active-id="current.id"
               :show-tooltips="tooltipsEnabled"
               :get-frame="getWorldFrame"
               :subscribe="subscribe"
               :activities="activities"
+              @availability="rendererUnavailable = !$event"
+              @screen="screenViewport = $event"
               @skill="(name, count) => (exploredSkill = { name, count })"
               @details="handleSceneDetails"
               @seek="seekPresentation"
@@ -739,12 +734,20 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: grid;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
   z-index: 2;
+  background: none;
+  transition: opacity 0.18s ease;
+}
+.intro-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(90deg, #f8f5edf5 8%, #f8f5eddd 48%, #f8f5ed00 100%);
-  transition: opacity 0.6s ease;
 }
 .intro-copy {
+  position: relative;
+  z-index: 1;
   width: min(640px, 90%);
   min-width: 0;
   padding: 28px clamp(24px, 4vw, 72px);
@@ -800,8 +803,14 @@ onBeforeUnmount(() => {
   .intro-hero {
     width: 100%;
     inset: 0 0 auto;
-    background: linear-gradient(115deg, #f8f5edf2 5%, #f8f5edcc 60%, #f8f5ed00);
+    background: none;
     align-items: start;
+  }
+  .intro-hero::before {
+    bottom: -72px;
+    background: linear-gradient(115deg, #f8f5edf2 5%, #f8f5edcc 60%, #f8f5ed00);
+    mask-image: linear-gradient(#000 55%, transparent 100%);
+    -webkit-mask-image: linear-gradient(#000 55%, transparent 100%);
   }
   .intro-copy {
     width: 100%;

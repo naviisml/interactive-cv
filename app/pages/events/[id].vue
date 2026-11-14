@@ -16,7 +16,7 @@ useSeoMeta({ title: () => `${event.value?.title} · Navi`, description: () => ev
       <p class="eyebrow">{{ event.label }} <span> / </span> {{ event.kind }}</p>
       <h1>{{ event.title }}</h1>
       <p v-if="event.role" class="event-role">
-        {{ event.role }}<br /><span
+        {{ event.role }}<br ><span
           >{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template
           ><template v-if="event.via"> · via {{ event.via }}</template></span
         >

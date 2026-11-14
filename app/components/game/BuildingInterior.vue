@@ -64,7 +64,7 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
     <header class="room-header">
       <span>{{
         t(event.category === 'school' ? 'building.education' : 'building.workplace')
-      }}</span><button @click="emit('leave')" :aria-label="t('building.leave')">
+      }}</span><button :aria-label="t('building.leave')" @click="emit('leave')">
         <X :size="23" />
       </button>
     </header>
@@ -92,7 +92,7 @@ onMounted(() => room.value?.querySelector<HTMLButtonElement>('button')?.focus())
             <component :is="section.icon" :size="18" />{{ section.title }}
           </button>
         </nav>
-        <div class="room-board" :class="{ 'is-stack': tab === 1 }" aria-live="polite" :key="tab">
+        <div :key="tab" class="room-board" :class="{ 'is-stack': tab === 1 }" aria-live="polite">
           <template v-if="tab === 0"
             ><p v-for="(paragraph, i) in sections[0]!.text" :key="i">{{ paragraph }}</p>
             <ul v-if="event.category === 'school' && event.tags?.length" class="stack-tags">

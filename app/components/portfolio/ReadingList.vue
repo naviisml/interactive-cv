@@ -24,9 +24,9 @@ const order = computed(() => props.entries.map((entry) => entry.index))
     </div>
     <article
       v-for="{ event, index } in entries"
+      :id="`chapter-${event.id}`"
       :key="event.id"
       :data-timeline-index="index"
-      :id="`chapter-${event.id}`"
       class="reading-event"
       :data-category="event.category"
       :class="{ 'is-current': index === active, 'is-past': index < active }"
@@ -43,7 +43,7 @@ const order = computed(() => props.entries.map((entry) => entry.index))
         </p>
         <h2>{{ event.title }}</h2>
         <p v-if="event.role" class="reading-role">
-          {{ event.role }}<br /><span
+          {{ event.role }}<br ><span
             >{{ event.period }}<template v-if="event.location"> · {{ event.location }}</template
             ><template v-if="event.via"> · via {{ event.via }}</template></span
           >

@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-01-01',
   devtools: { enabled: false },
   components: [{ path: '~/components', pathPrefix: false }],
-  modules: ['@nuxtjs/i18n'],
+  modules: ['@nuxtjs/i18n', '@nuxt/eslint'],
   i18n: {
     strategy: 'no_prefix',
     defaultLocale: 'en',

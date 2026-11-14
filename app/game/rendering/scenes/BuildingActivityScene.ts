@@ -1,4 +1,5 @@
-import { Container, Graphics, Rectangle, Text } from 'pixi.js'
+import type { Text } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js'
 import { SCHOOL_LAB_OFFSET } from '../../core/learningActivities'
 import { SchoolActivityScene } from './SchoolActivityScene'
 import { rect, label } from '../drawing'
@@ -19,6 +20,7 @@ export class BuildingActivityScene extends Container {
   private telemetry = new Container()
   private telemetryPanel = new Graphics()
   private telemetryText: Text
+  private holdHint?: Text
   private previousCompletions = 0
   private telemetryUntil = 0
   private net?: Graphics
@@ -48,6 +50,25 @@ export class BuildingActivityScene extends Container {
     this.telemetryText = label(this.telemetry, '', 0, -16, 12, 0xf4ecd5, 209)
     this.telemetryText.anchor.x = 0.5
     this.telemetryText.style.align = 'center'
+    if (this.action === 'camera') {
+      this.holdHint = label(
+        this.telemetry,
+        locale === 'nl'
+          ? 'Houd vast: bouw snelheid op\nLaat los om te rijden · limiet 50'
+          : 'Hold to build speed\nRelease to drive · limit 50',
+        0,
+        -14,
+        12,
+        0x244c3d,
+        235,
+      )
+      this.holdHint.anchor.x = 0.5
+      this.holdHint.style.align = 'center'
+      this.holdHint.style.stroke = { color: 0xf5f0de, width: 2 }
+      this.telemetryText.y = -46
+      this.telemetryText.style.fontSize = 20
+      this.telemetryText.style.fontWeight = '600'
+    }
     this.telemetry.visible = false
     const start = () => {
       if (state.trigger(id, this.action)) this.onInteraction()
@@ -228,15 +249,14 @@ export class BuildingActivityScene extends Container {
     this.telemetry.visible = active && frame.visit.phase === 'outside' && !frame.paused
     if (!this.telemetry.visible) return
     const nl = this.locale === 'nl'
-    let message = ''
-    let x = 0
-    let y = -120
+    let message: string
+    let x: number
+    let y: number
     if (this.action === 'camera') {
       const speed = Math.round(10 + (charge?.holding ? charge.power : (record?.power ?? 0.38)) * 80)
-      message = `${speed} km/h · ${nl ? 'Limiet' : 'Limit'} 50
-${nl ? 'Houd vast: sneller · laat los: rijden' : 'Hold: build speed · release: drive'}`
+      message = `${speed} km/h`
       x = this.car?.x ?? 70
-      y = -133
+      y = -145
       this.telemetryText.style.fill = 0x244c3d
       this.telemetryText.style.stroke = { color: 0xf5f0de, width: 3 }
       this.telemetryPanel
@@ -309,7 +329,8 @@ ${nl ? 'Houd vast: sneller · laat los: rijden' : 'Hold: build speed · release:
     if (
       !active ||
       this.school ||
-      (this.taxi && (this.taxi.alpha < 0.1 || this.taxi.eventMode === 'none'))
+      (this.taxi && (this.taxi.alpha < 0.1 || this.taxi.eventMode === 'none')) ||
+      (this.car && this.car.alpha < 0.1)
     )
       return
     const pulse = reduced ? 0.5 : (1 + Math.sin(time / 480)) * 0.5
@@ -411,6 +432,7 @@ ${nl ? 'Houd vast: sneller · laat los: rijden' : 'Hold: build speed · release:
       const speed = Math.round(10 + (record?.power ?? 0.38) * 80)
       const p = running ? cameraCarPose(age, speed) : { x: 225, flash: false }
       this.car.position.set(p.x, -5)
+      this.car.eventMode = running ? 'none' : 'static'
       this.car.alpha = running ? Math.min(1, Math.max(0, (4 - age) / 1.1)) : 1
       this.mail.clear()
       if (record?.outcome === 'ticket' && age > 0.65 && age < 1.5) {
